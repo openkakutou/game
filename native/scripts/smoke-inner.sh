@@ -8,7 +8,7 @@ export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1
 sleep 1
 
 # 1. Whole flow, driven by real key events.
-./dist/quickversus-linux-amd64 -content testdata/content -width 960 -height 720 >"$out/run.log" 2>&1 &
+./dist/openkakutou-linux-amd64 -content testdata/content -width 960 -height 720 >"$out/run.log" 2>&1 &
 pid=$!
 sleep 2
 shot() { import -window root "$out/$1.png"; }
@@ -35,7 +35,7 @@ sky=$(convert "$out/5-match.png" -format '%[hex:u.p{200,300}]' info:)
 [ "$sky" = "5A96E6" ] || { echo "stage background layer missing: top-left pixel is $sky, want 5A96E6"; exit 1; }
 
 # 1b. Player 2 set to CPU on the setup screen: the CPU must walk on its own.
-./dist/quickversus-linux-amd64 -content testdata/content -width 960 -height 720 &
+./dist/openkakutou-linux-amd64 -content testdata/content -width 960 -height 720 &
 pid=$!
 sleep 2
 key Return; key Right Return; key Return   # P1, P2, stage
@@ -47,8 +47,8 @@ kill $pid; wait $pid 2>/dev/null || true
 cmp -s "$out/5-match.png" "$out/10-match-cpu.png" && { echo "CPU did not move"; exit 1; }
 
 # 2. Deterministic in-program capture and error screen.
-./dist/quickversus-linux-amd64 -content testdata/content -frames 5 -capture "$out/7-capture.png"
-./dist/quickversus-linux-amd64 -content /nonexistent -frames 5 -capture "$out/8-error.png"
+./dist/openkakutou-linux-amd64 -content testdata/content -frames 5 -capture "$out/7-capture.png"
+./dist/openkakutou-linux-amd64 -content /nonexistent -frames 5 -capture "$out/8-error.png"
 
 for f in "$out"/*.png; do
   colors=$(identify -format %k "$f")

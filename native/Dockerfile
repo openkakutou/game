@@ -1,4 +1,4 @@
-# Native (Go + go-gl + SDL2) build/test toolchain for mode-quick-versus.
+# Native (Go + go-gl + SDL2) build/test toolchain for game.
 # Everything native runs inside this image so a fresh checkout reproduces the
 # build without installing SDL2 headers, a display server or a cross
 # compiler on the host. macOS cannot be built from Linux: see

@@ -1,4 +1,4 @@
-// Command quickversus is the native (Windows/Mac/Linux) Quick Versus game:
+// Command openkakutou is the native (Windows/Mac/Linux) Quick Versus game:
 // raw go-gl + SDL2, importing character/stage/sff/engine as Go packages.
 package main
 
@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"github.com/openkakutou/engine/input"
-	"github.com/openkakutou/mode-quick-versus/native/internal/audio"
-	"github.com/openkakutou/mode-quick-versus/native/internal/game"
-	"github.com/openkakutou/mode-quick-versus/native/internal/gfx"
+	"github.com/openkakutou/game/native/internal/audio"
+	"github.com/openkakutou/game/native/internal/game"
+	"github.com/openkakutou/game/native/internal/gfx"
 )
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "quickversus:", err)
+		fmt.Fprintln(os.Stderr, "openkakutou:", err)
 		os.Exit(1)
 	}
 }

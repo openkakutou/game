@@ -2,7 +2,7 @@ package gfx
 
 import (
 	"github.com/openkakutou/engine/input"
-	"github.com/openkakutou/mode-quick-versus/native/internal/game"
+	"github.com/openkakutou/game/native/internal/game"
 	"github.com/veandco/go-sdl2/sdl"
 )
 

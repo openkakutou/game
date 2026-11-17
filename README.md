@@ -1,4 +1,4 @@
-# mode-quick-versus
+# game
 
 The first complete, standalone, playable [OpenKakutou](https://github.com/openkakutou) game: a standard two-player, one-character-each versus match. It consumes the WebAssembly builds of the `character`, `stage`, `sff`, and `engine` libraries, plus its own lifebar-rendering logic (mirroring `lifebar-viewer-web`'s in-app parsing approach), and owns its own character-selection, match, and result flow. Not a component meant to be embedded — a finished game on its own.
 

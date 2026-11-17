@@ -6,7 +6,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The default tag carries a hash of the Dockerfile, so editing it rebuilds the
 # image instead of reusing a stale one (QV_NATIVE_IMAGE overrides the tag).
-image="${QV_NATIVE_IMAGE:-quickversus-native:$(sha256sum "$here/Dockerfile" | cut -c1-12)}"
+image="${QV_NATIVE_IMAGE:-openkakutou-native:$(sha256sum "$here/Dockerfile" | cut -c1-12)}"
 if ! docker image inspect "$image" >/dev/null 2>&1; then
   docker build -t "$image" -f "$here/Dockerfile" "$here"
 fi

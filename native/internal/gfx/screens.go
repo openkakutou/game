@@ -7,7 +7,7 @@ import (
 	"github.com/openkakutou/character/air"
 	"github.com/openkakutou/engine/match"
 	"github.com/openkakutou/engine/round"
-	"github.com/openkakutou/mode-quick-versus/native/internal/game"
+	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/sff"
 	"github.com/openkakutou/stage"
 )

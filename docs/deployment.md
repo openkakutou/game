@@ -13,7 +13,7 @@ This project ships two entirely separate release targets (roadmap `.vibe/decisio
 3. Runs the full test suite (`npm test`), lint (`biome check`), the production build (`npm run build`), and the visual regression suite (`npm run test:visual`) — any failure stops the pipeline before anything is published.
 4. Uploads `dist/` as a Pages artifact and deploys it.
 
-The live app is reachable at `https://openkakutou.github.io/mode-quick-versus/` once this pipeline has run successfully at least once against `main`. `dist/` is a fully static bundle — `vite.config.ts`'s `base: "./"` and every WASM bridge's default fetch URL (`./wasm/...`) are relative, so the build works unmodified whether served from a domain root or a GitHub Pages project subpath.
+The live app is reachable at `https://openkakutou.github.io/game/` once this pipeline has run successfully at least once against `main`. `dist/` is a fully static bundle — `vite.config.ts`'s `base: "./"` and every WASM bridge's default fetch URL (`./wasm/...`) are relative, so the build works unmodified whether served from a domain root or a GitHub Pages project subpath.
 
 A missing or version-mismatched WASM asset at runtime (the pipeline's own download step used the wrong tag, or a CDN/cache served a stale file) no longer produces a blank page: the affected screen shows a clear, visible error message instead (see `docs/architecture.md`'s "never throw" bridge note).
 
@@ -25,13 +25,13 @@ Everything native is built and tested inside a Docker image (`native/Dockerfile`
 
 ```bash
 native/scripts/test.sh              # gofmt check, go vet, unit tests
-native/scripts/build.sh linux       # -> native/dist/quickversus-linux-amd64
-native/scripts/build.sh windows     # -> native/dist/quickversus-windows-amd64.exe + SDL2.dll + SDL2_mixer.dll (keep them together)
+native/scripts/build.sh linux       # -> native/dist/openkakutou-linux-amd64
+native/scripts/build.sh windows     # -> native/dist/openkakutou-windows-amd64.exe + SDL2.dll + SDL2_mixer.dll (keep them together)
 native/scripts/smoke.sh             # runs the Linux build under Xvfb, drives it with real key presses
                                     #   (select -> stage -> setup -> match), screenshots to native/dist/smoke/
 ```
 
-Running it: `quickversus -content <dir>` where `<dir>` holds `chars/<name>/<name>.def` (one folder per character) and `stages/*.def`. A tiny fixture lives in `native/testdata/content`. Controls match the web build: P1 WASD + F/G/H/R/T/Y, P2 arrows + J/K/L/I/O/P; menus use arrows/WASD, Enter, Esc. `-frames N -capture out.png` renders N frames, saves a screenshot and exits.
+Running it: `openkakutou -content <dir>` where `<dir>` holds `chars/<name>/<name>.def` (one folder per character) and `stages/*.def`. A tiny fixture lives in `native/testdata/content`. Controls match the web build: P1 WASD + F/G/H/R/T/Y, P2 arrows + J/K/L/I/O/P; menus use arrows/WASD, Enter, Esc. `-frames N -capture out.png` renders N frames, saves a screenshot and exits.
 
 **Audio** (SDL2_mixer): the stage music loops for the whole match and the fighters' sound effects play through up to 16 channels. Tests and the Xvfb smoke run use the dummy audio driver (`SDL_AUDIODRIVER=dummy`, set by `native/scripts/docker.sh`), so they prove the mixer opens, the music loads and the effects reach it, not what is audible. Without a usable audio device the game logs one warning and stays silent. Test audio fixtures: `native/testdata/README.md`. At runtime Linux needs the `libsdl2-mixer-2.0-0` package (plus `libvorbisfile3`/`libmpg123-0` for ogg/mp3 music) and macOS needs `brew install sdl2_mixer`.
 

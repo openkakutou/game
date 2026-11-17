@@ -28,4 +28,4 @@ ebiten:     12.0356ms, 11.5212ms, 11.7194ms (16617, 17359, 17066 draws/sec)
 
 ## Recommendation
 
-Supports adopting `go-gl`+SDL2 for `mode-quick-versus`'s rendering (roadmap `.vibe/decisions/022`), consistent with both the Product Owner's stated priority (control over optimizations, no game-engine dependency) and the Ikemen GO precedent. Android's desktop-GL-vs-GLES gap is not resolved by this spike and needs its own investigation before that target is confirmed.
+Supports adopting `go-gl`+SDL2 for `game`'s rendering (roadmap `.vibe/decisions/022`), consistent with both the Product Owner's stated priority (control over optimizations, no game-engine dependency) and the Ikemen GO precedent. Android's desktop-GL-vs-GLES gap is not resolved by this spike and needs its own investigation before that target is confirmed.

@@ -30,10 +30,10 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: quickversus-native-linux-windows
+          name: openkakutou-native-linux-windows
           path: |
-            native/dist/quickversus-linux-amd64
-            native/dist/quickversus-windows-amd64.exe
+            native/dist/openkakutou-linux-amd64
+            native/dist/openkakutou-windows-amd64.exe
             native/dist/SDL2.dll
             native/dist/SDL2_mixer.dll
             native/dist/smoke/*.png
@@ -62,9 +62,9 @@ jobs:
         run: go vet ./... && go test ./...
       - name: Build
         working-directory: native
-        run: go build -o dist/quickversus-macos ./cmd/quickversus
+        run: go build -o dist/openkakutou-macos ./cmd/openkakutou
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: quickversus-native-macos
-          path: native/dist/quickversus-macos
+          name: openkakutou-native-macos
+          path: native/dist/openkakutou-macos

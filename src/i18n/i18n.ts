@@ -25,7 +25,7 @@ export type { I18nInstance } from "@openkakutou/web-ui-kit";
 
 /** This app's own i18next namespace -- must stay unique among every
  * OpenKakutou app sharing `web-ui-kit`'s reserved `"wuik"` namespace. */
-export const NAMESPACE = "mode-quick-versus";
+export const NAMESPACE = "game";
 
 /**
  * Every OpenKakutou web app is deployed as its own GitHub Pages project
@@ -34,7 +34,7 @@ export const NAMESPACE = "mode-quick-versus";
  * storage key would leak a locale choice made in this app into every other
  * OpenKakutou app on that origin. See `.vibe/decisions/006`.
  */
-export const STORAGE_KEY = "mode-quick-versus-locale";
+export const STORAGE_KEY = "game-locale";
 
 const resources: LocaleCatalogs = { en, fr };
 

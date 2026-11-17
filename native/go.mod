@@ -1,4 +1,4 @@
-module github.com/openkakutou/mode-quick-versus/native
+module github.com/openkakutou/game/native
 
 go 1.26.7
 

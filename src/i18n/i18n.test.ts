@@ -44,7 +44,7 @@ describe("i18n", () => {
     const { initAppI18n, STORAGE_KEY, getI18n } = await import("./i18n.ts");
     await initAppI18n();
     await getI18n()?.changeLanguage("fr");
-    expect(STORAGE_KEY).toBe("mode-quick-versus-locale");
+    expect(STORAGE_KEY).toBe("game-locale");
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe("fr");
     expect(window.localStorage.getItem("wuik-locale")).toBeNull();
   });
