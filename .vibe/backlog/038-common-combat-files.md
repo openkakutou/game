@@ -1,6 +1,6 @@
 ---
 status: todo
-depends_on: [037]
+depends_on: [037, 050]
 ---
 # Load common combat files from `common/`
 
