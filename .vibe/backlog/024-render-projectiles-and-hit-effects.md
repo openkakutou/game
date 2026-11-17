@@ -13,3 +13,4 @@ Once engine reports projectiles, hit pause and guard states, draw them in both b
 
 ## Notes
 Cross-repo: waits for engine#022 and #024.
+Cross-repo: also waits for engine#029 (Explod: hit sparks). Combat-completeness milestone, roadmap decision `036`.

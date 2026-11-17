@@ -13,3 +13,4 @@ The CPU is a minimal approach-and-attack bot. Add blocking, anti-air, varied att
 
 ## Notes
 Cross-repo: blocking needs engine#023 (guarding).
+Combat-completeness milestone, roadmap decision `036`: comes after the engine steps.
