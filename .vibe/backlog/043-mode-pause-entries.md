@@ -1,0 +1,12 @@
+---
+status: todo
+depends_on: [021, 031]
+---
+# Pause menu entries provided by the mode
+
+## Description
+Roadmap decision `030`: the pause menu lists the game's entries (resume, restart, options, move list, back to select, quit) plus entries a mode declares from a fixed set the game offers (e.g. reset positions, dummy settings for training).
+
+## Acceptance Criteria
+- [ ] A mode can add entries only from the offered set; an unknown entry is a validation error
+- [ ] Quick versus shows only the game's entries
