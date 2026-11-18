@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-18
+
 ### Added
 - The native game loads every state file of a character as Ikemen GO does, `.cns` and `.zss`, including its common states, which are searched in the character folder and then in the game's `common/` folder. A common file found nowhere is reported instead of stopping the load.
 
@@ -117,7 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The character roster discovery/selection screen: characters configured in a deployable roster manifest are validated and displayed with their name and a portrait; a character that fails to load shows a clear error card instead of crashing or being silently dropped. Player 1 and Player 2 each pick a character independently, including picking the same character for a mirror match, and can't continue until both have picked.
 
-[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.14.0...v0.15.0
