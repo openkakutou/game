@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Content root and cross-platform file rules
 
