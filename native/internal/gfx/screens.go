@@ -198,7 +198,7 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 // stage's own sheet. A missing sheet or sprite just leaves its layers on the
 // placeholder tile.
 func (r *Renderer) loadStageSprites(f *game.Flow) {
-	path := game.StageSpritePath(f.StageDefPath, f.Stage)
+	path := game.StageSpritePath(f.ContentRoot, f.StageDefPath, f.Stage)
 	if path == "" {
 		return
 	}

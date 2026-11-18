@@ -187,9 +187,10 @@ func TestUpdate_MissingMusicFileLeavesSilenceAndWarnsOnceNamingThePath(t *testin
 func TestUpdate_GarbageMusicFileLeavesSilence(t *testing.T) {
 	p, warns := newPlayer(t)
 	f := matchFlow(t)
-	garbage := filepath.Join(t.TempDir(), "bad.mp3")
-	writeFile(t, garbage, []byte("this is not audio at all"))
-	f.Stage.MusicFile = garbage
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "bad.mp3"), []byte("this is not audio at all"))
+	f.StageDefPath = filepath.Join(dir, "stage.def")
+	f.Stage.MusicFile = "bad.mp3"
 	p.Update(f)
 	if mix.PlayingMusic() || len(*warns) != 1 {
 		t.Errorf("playing=%v warnings=%v, want silence and one warning", mix.PlayingMusic(), *warns)

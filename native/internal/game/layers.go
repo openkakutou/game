@@ -59,11 +59,21 @@ func LayerOffset(e stage.BGElement, camX float64) (x, y float64) {
 	return stage.ResolveParallaxPosition(e, -camX, 0)
 }
 
-// StageSpritePath is the stage's sprite sheet beside its .def, or "" when the
-// stage names none.
-func StageSpritePath(defPath string, st *stage.Stage) string {
+// StageSpritePath is the stage's sprite sheet: beside its .def first, then
+// from the content root (like Ikemen GO). It is "" when the stage names none
+// or the reference is rejected (symbolic link, absolute, escaping).
+func StageSpritePath(root, defPath string, st *stage.Stage) string {
 	if st.BGdef.SpriteFile == "" {
 		return ""
 	}
-	return filepath.Join(filepath.Dir(defPath), st.BGdef.SpriteFile)
+	return joinResolved(stageBases(root, defPath), st.BGdef.SpriteFile)
+}
+
+// stageBases are the folders a stage's files are looked up in, in order.
+func stageBases(root, defPath string) []string {
+	bases := []string{filepath.Dir(defPath)}
+	if root != "" {
+		bases = append(bases, root)
+	}
+	return bases
 }

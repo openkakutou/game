@@ -82,9 +82,11 @@ type Flow struct {
 	Stage    *stage.Stage
 	// StageDefPath is the chosen stage's .def, to find its sprite sheet.
 	StageDefPath string
-	Match        *Match
-	cpu          *CPU // drives player 2 during a match when Player2CPU is set
-	cpuIn        input.TickInput
+	// ContentRoot is where a stage looks for files not found beside its .def.
+	ContentRoot string
+	Match       *Match
+	cpu         *CPU // drives player 2 during a match when Player2CPU is set
+	cpuIn       input.TickInput
 	// musicFrom/musicPath memoize Music's resolved path (see Music).
 	musicFrom [2]string
 	musicPath string

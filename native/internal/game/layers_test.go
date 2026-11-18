@@ -114,10 +114,10 @@ func TestLayerOffset_ZeroDeltaStaysFixedAndUnitDeltaScrollsWithTheWorld(t *testi
 
 func TestStageSpritePath_ResolvesBesideTheStageDefOrEmptyWhenNone(t *testing.T) {
 	st := &stage.Stage{BGdef: stage.BGdef{SpriteFile: "stage0.sff"}}
-	if got, want := StageSpritePath(filepath.Join("a", "b", "arena.def"), st), filepath.Join("a", "b", "stage0.sff"); got != want {
+	if got, want := StageSpritePath("", filepath.Join("a", "b", "arena.def"), st), filepath.Join("a", "b", "stage0.sff"); got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
-	if got := StageSpritePath("a/arena.def", &stage.Stage{}); got != "" {
+	if got := StageSpritePath("", "a/arena.def", &stage.Stage{}); got != "" {
 		t.Fatalf("stage without sprite file: got %q, want empty", got)
 	}
 }

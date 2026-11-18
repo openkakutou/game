@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The native game now finds its characters and stages in the folder that holds the program (on macOS, the folder holding the app), so the same unzipped folder plays as is on Windows, macOS and Linux. Community content works whatever the letter case of its file names or its `\` separators, a stage's sprites and music are also found from the game folder as in Ikemen GO, symbolic links and paths leaving the game folder are refused, and a missing characters or stages folder is named on the error screen instead of crashing.
+
 ## [0.16.0] - 2026-10-30
 
 ### Added

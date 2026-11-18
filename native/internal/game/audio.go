@@ -2,7 +2,6 @@ package game
 
 import (
 	"encoding/binary"
-	"path/filepath"
 
 	"github.com/openkakutou/character"
 	"github.com/openkakutou/engine/evaluator"
@@ -84,7 +83,7 @@ func WAVBytes(s character.Sound) []byte {
 
 // Music reports who owns the stage music: the current match while the match
 // or result screen is shown, else nil. path is the stage's music file (relative
-// paths resolved against the stage .def directory), or "" when there is none
+// paths resolved beside the stage .def, then from the content root; "" when rejected), or "" when there is none
 // or no owner.
 func (f *Flow) Music() (path string, owner *Match) {
 	if (f.Screen != ScreenMatch && f.Screen != ScreenResult) || f.Match == nil {
@@ -96,10 +95,7 @@ func (f *Flow) Music() (path string, owner *Match) {
 	// Memoized: Music runs every frame and filepath.Join allocates.
 	if f.musicFrom != [2]string{f.StageDefPath, f.Stage.MusicFile} {
 		f.musicFrom = [2]string{f.StageDefPath, f.Stage.MusicFile}
-		f.musicPath = f.Stage.MusicFile
-		if !filepath.IsAbs(f.musicPath) {
-			f.musicPath = filepath.Join(filepath.Dir(f.StageDefPath), f.musicPath)
-		}
+		f.musicPath = joinResolved(stageBases(f.ContentRoot, f.StageDefPath), f.Stage.MusicFile)
 	}
 	return f.musicPath, f.Match
 }

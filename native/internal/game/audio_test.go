@@ -237,15 +237,6 @@ func TestMusic_StageWithoutMusicHasOwnerAndEmptyPath(t *testing.T) {
 	}
 }
 
-func TestMusic_AbsolutePathStaysAsIs(t *testing.T) {
-	f := toMatch(t)
-	abs := filepath.Join(t.TempDir(), "x.mp3")
-	f.Stage.MusicFile = abs
-	if p, _ := f.Music(); p != abs {
-		t.Errorf("path = %q, want %q", p, abs)
-	}
-}
-
 func TestMusic_FailedMatchStartLeavesNoOwner(t *testing.T) {
 	f := toMatch(t)
 	f.Stage.MusicFile = "bgm/theme.ogg"

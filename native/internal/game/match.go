@@ -48,13 +48,13 @@ func LoadFighter(defPath string) (*Fighter, error) {
 	dir := filepath.Dir(defPath)
 	commands := cmd.CommandFile{Remap: map[string]string{}}
 	if c.CommandFile != "" {
-		if raw, err := os.ReadFile(filepath.Join(dir, c.CommandFile)); err == nil {
+		if raw, err := os.ReadFile(joinResolved([]string{dir}, c.CommandFile)); err == nil {
 			if parsed, err := character.ParseCmd(raw); err == nil {
 				commands = parsed
 			}
 		}
 	}
-	return &Fighter{Char: c, Cmd: commands, SffPath: filepath.Join(dir, c.SpriteFile)}, nil
+	return &Fighter{Char: c, Cmd: commands, SffPath: joinResolved([]string{dir}, c.SpriteFile)}, nil
 }
 
 // LoadStage parses a stage .def.

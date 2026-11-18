@@ -33,7 +33,10 @@ func DiscoverCharacters(root string) ([]Entry, error) {
 		if !d.IsDir() {
 			continue
 		}
-		def := filepath.Join(root, d.Name(), d.Name()+".def")
+		def, err := ResolvePath(root, filepath.Join(d.Name(), d.Name()+".def"))
+		if err != nil {
+			continue
+		}
 		if st, err := os.Stat(def); err == nil && !st.IsDir() {
 			out = append(out, Entry{Name: d.Name(), DefPath: def})
 		}
@@ -52,7 +55,7 @@ func DiscoverStages(root string) ([]Entry, error) {
 	}
 	var out []Entry
 	for _, f := range files {
-		if f.IsDir() || !strings.EqualFold(filepath.Ext(f.Name()), ".def") {
+		if !f.Type().IsRegular() || !strings.EqualFold(filepath.Ext(f.Name()), ".def") {
 			continue
 		}
 		path := filepath.Join(root, f.Name())

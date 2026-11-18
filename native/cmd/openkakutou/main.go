@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -23,19 +24,39 @@ func main() {
 }
 
 func run() error {
-	content := flag.String("content", "content", "folder with chars/ (one folder per character) and stages/ (stage .def files)")
+	content := flag.String("content", "", "folder with chars/ (one folder per character) and stages/ (stage .def files); default: the folder holding the program (on macOS, the one holding the .app)")
 	frames := flag.Int("frames", 0, "exit after this many frames (0 = run until closed); for smoke tests")
 	capture := flag.String("capture", "", "write the last frame to this .png before exiting (needs -frames)")
 	width := flag.Int("width", 960, "window width")
 	height := flag.Int("height", 720, "window height")
 	flag.Parse()
 
-	chars, charErr := game.DiscoverCharacters(filepath.Join(*content, "chars"))
-	stages, stageErr := game.DiscoverStages(filepath.Join(*content, "stages"))
+	root := *content
+	if root == "" {
+		exe, err := os.Executable()
+		if err == nil {
+			exe, err = filepath.EvalSymlinks(exe)
+		}
+		if err != nil {
+			return fmt.Errorf("locating the program: %w", err)
+		}
+		root = game.ContentRoot(exe)
+	}
+
+	// A missing folder is reported on the error screen, naming it.
+	var chars, stages []game.Entry
+	charsDir, stagesDir, folderErr := game.ContentFolders(root)
+	if folderErr == nil {
+		var charErr, stageErr error
+		chars, charErr = game.DiscoverCharacters(charsDir)
+		stages, stageErr = game.DiscoverStages(stagesDir)
+		folderErr = errors.Join(charErr, stageErr)
+	}
 	flow := game.NewFlow(chars, stages, game.DefaultLoader())
-	if charErr != nil || stageErr != nil {
+	flow.ContentRoot = root
+	if folderErr != nil {
 		flow.Screen = game.ScreenError
-		flow.Message = fmt.Sprintf("Cannot read the content folder %q. Use -content to point at it.", *content)
+		flow.Message = fmt.Sprintf("Cannot read the content: %v. Use -content to point at the content folder.", folderErr)
 	}
 
 	win, err := gfx.NewWindow("Quick Versus", int32(*width), int32(*height))
