@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-18
+
 ### Added
 
 - The native game now finds its characters and stages in the folder that holds the program (on macOS, the folder holding the app), so the same unzipped folder plays as is on Windows, macOS and Linux. Community content works whatever the letter case of its file names or its `\` separators, a stage's sprites and music are also found from the game folder as in Ikemen GO, symbolic links and paths leaving the game folder are refused, and a missing characters or stages folder is named on the error screen instead of crashing.
@@ -112,7 +114,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The character roster discovery/selection screen: characters configured in a deployable roster manifest are validated and displayed with their name and a portrait; a character that fails to load shows a clear error card instead of crashing or being silently dropped. Player 1 and Player 2 each pick a character independently, including picking the same character for a mirror match, and can't continue until both have picked.
 
-[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.13.0...v0.14.0
