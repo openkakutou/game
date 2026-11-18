@@ -11,7 +11,7 @@ Recorded with no wall clock (frame-stepped), so the video shows exactly what the
 
 **No CPU**: scripted or recorded inputs only, like 051.
 
-Only content that works in Ikemen GO and whose license allows redistribution (the videos are published); credits are written into the video's caption file.
+Content: any character, stage or lifebar from the Product Owner's local Ikemen GO collection that works in Ikemen GO (Product Owner, 2026-11-18): only the video is published, the content itself is never distributed. Authors are still credited in the video's caption file.
 
 🔒 MUST: MUGEN 1.0/1.1 and Ikemen GO compatibility, verified through Ikemen GO.
 
@@ -19,7 +19,7 @@ Only content that works in Ikemen GO and whose license allows redistribution (th
 - [ ] One command turns a recorded replay into a side-by-side video (web-friendly format, 60 fps, both engines at the same internal resolution)
 - [ ] The video shows both engine names, the frame counter, and the frames identical before the first divergence
 - [ ] A caption file lists characters, stage, lifebar and their authors and licenses
-- [ ] At least one video produced on redistributable content, ready for roadmap#024
+- [ ] At least one video produced from the local Ikemen GO collection, ready for roadmap#024
 
 ## Notes
 Cross-repo: needs engine#036 (replay, seed, Ikemen GO trace) through 051. Consumed by roadmap#024 (showcase site). Encoding may use an external encoder (e.g. ffmpeg) as a tool, not as a runtime dependency of `game`.
