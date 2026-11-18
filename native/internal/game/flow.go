@@ -60,7 +60,13 @@ type Loader struct {
 }
 
 // DefaultLoader reads real content with the character and stage libraries.
-func DefaultLoader() Loader { return Loader{Fighter: LoadFighter, Stage: LoadStage} }
+// stateDirs are searched for state files (stcommon) a character folder lacks.
+func DefaultLoader(stateDirs ...string) Loader {
+	return Loader{
+		Fighter: func(defPath string) (*Fighter, error) { return LoadFighter(defPath, stateDirs...) },
+		Stage:   LoadStage,
+	}
+}
 
 // Flow is the screen state machine: select -> stage -> setup -> match -> result.
 type Flow struct {

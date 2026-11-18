@@ -2,12 +2,13 @@ package game
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/openkakutou/character"
 	"github.com/openkakutou/character/cmd"
-	"github.com/openkakutou/character/cns"
 	"github.com/openkakutou/engine"
 	"github.com/openkakutou/engine/input"
 	"github.com/openkakutou/engine/match"
@@ -33,17 +34,32 @@ type Fighter struct {
 	Char    *character.Character
 	Cmd     cmd.CommandFile
 	SffPath string
+	// Program is the character's state table, loaded like Ikemen GO does.
+	Program engine.FighterProgram
+	// Missing lists the state files (st, stN, cmd, stcommon entries) found in
+	// the character folder or the search folders: loading went on without them.
+	Missing []string
 
 	sounds map[soundKey]character.Sound // built lazily by FindSound
 }
 
 // LoadFighter loads a character from its .def, including its parsed .cmd
 // (a missing or broken .cmd falls back to an empty command file so the match
-// still starts, as on web).
-func LoadFighter(defPath string) (*Fighter, error) {
+// still starts, as on web) and its state table: every .cns/.zss state file
+// named by the .def, searched in the character folder then in searchDirs
+// (the game's common/ folder). Files found nowhere are listed in Missing and
+// logged on stderr, they do not fail the load.
+func LoadFighter(defPath string, searchDirs ...string) (*Fighter, error) {
 	c, err := character.Load(defPath)
 	if err != nil {
 		return nil, err
+	}
+	program, missing, err := engine.LoadFighterProgram(c, defPath, searchDirs...)
+	if err != nil {
+		return nil, fmt.Errorf("loading the states of %q: %w", defPath, err)
+	}
+	if len(missing) > 0 {
+		log.Printf("%s: state files not found: %s", defPath, strings.Join(missing, ", "))
 	}
 	dir := filepath.Dir(defPath)
 	commands := cmd.CommandFile{Remap: map[string]string{}}
@@ -54,7 +70,7 @@ func LoadFighter(defPath string) (*Fighter, error) {
 			}
 		}
 	}
-	return &Fighter{Char: c, Cmd: commands, SffPath: joinResolved([]string{dir}, c.SpriteFile)}, nil
+	return &Fighter{Char: c, Cmd: commands, SffPath: joinResolved([]string{dir}, c.SpriteFile), Program: program, Missing: missing}, nil
 }
 
 // LoadStage parses a stage .def.
@@ -143,6 +159,7 @@ type Match struct {
 
 	starting [2]match.FighterState
 	programs [2]engine.FighterProgram
+	missing  [2][]string // state files each character could not find
 	runtimes [2]engine.FighterRuntime
 	tick     int
 	cues     []Cue // PlaySnd events not yet drained
@@ -163,11 +180,8 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 	bounds := ResolveBounds(st)
 	m := &Match{Setup: setup, Bounds: bounds, Progress: progress, starting: StartingFighters(bounds)}
 	for i, f := range []*Fighter{p1, p2} {
-		states := map[int]cns.StateDef{}
-		for _, sd := range f.Char.StateDefs {
-			states[sd.Number] = sd
-		}
-		m.programs[i] = engine.NewFighterProgram(states, f.Char.Animations, f.Cmd)
+		m.programs[i] = f.Program
+		m.missing[i] = f.Missing
 	}
 	if err := m.reset(1); err != nil {
 		return nil, err
@@ -181,9 +195,9 @@ func (m *Match) reset(roundNo int) error {
 		return err
 	}
 	for i := range m.runtimes {
-		rt, err := engine.NewFighterRuntime(m.starting[i], m.programs[i].States)
+		rt, err := m.programs[i].NewRuntime(m.starting[i])
 		if err != nil {
-			return fmt.Errorf("side %d: %w", i, err)
+			return fmt.Errorf("side %d: %w%s", i, err, m.missingNote(i))
 		}
 		m.runtimes[i] = rt
 	}
@@ -193,6 +207,15 @@ func (m *Match) reset(roundNo int) error {
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
 	return nil
+}
+
+// missingNote names the state files side i's character could not find, to
+// complete a "state not found" error with its likely cause.
+func (m *Match) missingNote(i int) string {
+	if len(m.missing[i]) == 0 {
+		return ""
+	}
+	return " (state files not found: " + strings.Join(m.missing[i], ", ") + ")"
 }
 
 func (m *Match) syncAnim() {

@@ -52,7 +52,7 @@ func run() error {
 		stages, stageErr = game.DiscoverStages(stagesDir)
 		folderErr = errors.Join(charErr, stageErr)
 	}
-	flow := game.NewFlow(chars, stages, game.DefaultLoader())
+	flow := game.NewFlow(chars, stages, game.DefaultLoader(game.CommonFolder(root)))
 	flow.ContentRoot = root
 	if folderErr != nil {
 		flow.Screen = game.ScreenError

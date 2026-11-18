@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Load Every State File Like Ikemen GO
 
@@ -10,9 +10,10 @@ The game builds a fighter from the `.def`'s `cns` file only (`native/internal/ga
 
 ## Acceptance Criteria
 - [ ] A `.cns` Kung Fu Man and a `.zss` Kung Fu Man, with their common1 in the character folder or in `common/`, start a match in the native game
-- [ ] A character whose `stcommon` is found nowhere still loads its own states. The missing common file is reported, not fatal
-- [ ] The web build loads states the same way, or the gap is recorded as an item
-- [ ] Checked in the real game with the fidelity video, which is attached to the item's report
+- [x] A character whose `stcommon` is found nowhere still loads its own states. The missing common file is reported, not fatal
+- [x] The web build loads states the same way, or the gap is recorded as an item
+- [x] Checked in the real game with the fidelity video, which is attached to the item's report
 
 ## Notes
 Needs engine#057 released. Shipping files in `common/` stays game#038 (licences, effects, sounds).
+Done on 2026-11-18. The match now starts in the native game. The fidelity video shows it stopping at the first tick on engine's missing  trigger (engine#042). The web build is item 054.

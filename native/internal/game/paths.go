@@ -136,3 +136,11 @@ func ContentFolders(root string) (chars, stages string, err error) {
 	}
 	return found["chars"], found["stages"], errors.Join(errs...)
 }
+
+// CommonFolder is the common/ folder of root, where state files a character
+// does not carry (common1.cns) are searched, the counterpart of Ikemen GO's
+// data/ (roadmap decision 031). It may not exist: the state loader then
+// reports the missing files.
+func CommonFolder(root string) string {
+	return joinResolved([]string{root}, "common")
+}
