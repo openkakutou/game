@@ -20,6 +20,10 @@ key Return; shot 4-setup
 key Return                       # start match (cursor is on "Start")
 sleep 2; shot 5-match
 xdotool keydown f; sleep 1; xdotool keyup f; shot 6-match-attack
+key Escape; sleep 0.5; shot 6b-pause      # pause menu over the frozen match
+sleep 1; shot 6c-pause-held
+cmp -s "$out/6b-pause.png" "$out/6c-pause-held.png" || { echo "the match moved while paused"; exit 1; }
+key Return; sleep 0.5                     # Continue
 kill -0 $pid                     # still running = no crash
 kill $pid; wait $pid 2>/dev/null || true
 

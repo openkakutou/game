@@ -38,7 +38,7 @@ The diagram shows what the game does with its arguments: two characters skip the
 
 **Finding a stage.** The same, under `stages/`: `Training` is `stages/Training.def` or `stages/Training/Training.def`. Without `-s`, the default stage is `stages/stage0.def`, as in Ikemen GO, or else the first stage found.
 
-**Leaving.** Escape during the match quits the game, as there is no menu to go back to.
+**Leaving.** Escape during the match opens the pause menu; its Exit quits the game, as there is no menu to go back to (no Character Change entry here).
 
 ## Other options
 

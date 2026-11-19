@@ -263,7 +263,10 @@ func TestFlow_FullPathSelectionToResultAndRematch(t *testing.T) {
 	if f.Screen != ScreenMatch || f.Match.State.Round != 1 || f.Match.Progress.RoundsPlayed != 0 {
 		t.Errorf("rematch did not start fresh: screen=%v", f.Screen)
 	}
-	f.Navigate(NavCancel) // leave match
+	f.Navigate(NavCancel)  // pause
+	f.Navigate(NavDown)    // Restart
+	f.Navigate(NavDown)    // Character Change
+	f.Navigate(NavConfirm) // leave match
 	if f.Screen != ScreenSelect || f.Picking != 0 {
 		t.Errorf("cancel should return to selection, got %v", f.Screen)
 	}

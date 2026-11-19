@@ -53,6 +53,12 @@ export interface MatchAudio {
    * the life of a match) -- never throws.
    */
   playSound(sound: Sound): void;
+  /**
+   * Holds every sound (music and one-shots) where it is while the pause menu
+   * is open, and lets them carry on from there once it closes (backlog
+   * item 021). Never throws.
+   */
+  setPaused(paused: boolean): void;
   /** Stops all audio (music and any still-playing one-shots) and releases the audio context. Idempotent. */
   stop(): void;
 }
@@ -116,12 +122,13 @@ export function createMatchAudio(options: MatchAudioOptions = {}): MatchAudio {
   }
 
   let stopped = false;
+  let paused = false;
   let musicSource: AudioBufferSourceNode | null = null;
   const bufferCache = new WeakMap<Sound, AudioBuffer>();
   const activeVoices = new Set<AudioBufferSourceNode>();
 
   function handleVisibilityChange(): void {
-    if (!ctx || stopped) return;
+    if (!ctx || stopped || paused) return;
     if (doc.visibilityState === "visible" && ctx.state === "suspended") {
       // Fire-and-forget: never awaited, and never gates tick/audio work on
       // whether it has settled yet -- a still-suspended context simply
@@ -184,6 +191,16 @@ export function createMatchAudio(options: MatchAudioOptions = {}): MatchAudio {
     }
   }
 
+  function setPaused(next: boolean): void {
+    if (!ctx || stopped || next === paused) return;
+    paused = next;
+    if (paused) {
+      ctx.suspend().catch(() => {});
+      return;
+    }
+    ctx.resume().catch(() => {});
+  }
+
   function stopMusic(): void {
     if (!musicSource) return;
     try {
@@ -213,5 +230,5 @@ export function createMatchAudio(options: MatchAudioOptions = {}): MatchAudio {
     }
   }
 
-  return { playMusic, playSound, stop };
+  return { playMusic, playSound, setPaused, stop };
 }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TickInputPair } from "../input/tick-input-source.ts";
+import type { PausePadEvents } from "../pause/pause-pad.ts";
 import type { ResultOverlayOptions } from "../result/result-screen.ts";
 import type {
   NewMatchResponseData,
@@ -214,6 +215,7 @@ function fakeMatchAudio() {
   const audio = {
     playMusic: vi.fn(async () => {}),
     playSound: vi.fn(),
+    setPaused: vi.fn(),
     stop: vi.fn(),
   };
   const createAudio = vi.fn(() => audio);
@@ -226,11 +228,21 @@ function baseOptions(
   rafCallbacks: ((ts: number) => void)[];
   resultOverlay: ReturnType<typeof fakeResultOverlay>;
   matchAudio: ReturnType<typeof fakeMatchAudio>;
+  keys: EventTarget;
+  padEvents: PausePadEvents[];
 } {
   const rafCallbacks: ((ts: number) => void)[] = [];
   const resultOverlay = fakeResultOverlay();
   const matchAudio = fakeMatchAudio();
+  const keys = new EventTarget();
+  const padEvents: PausePadEvents[] = [];
   return {
+    keyTarget: keys,
+    createPausePad: () => ({
+      poll: () => padEvents.shift() ?? { start: false, nav: null },
+    }),
+    keys,
+    padEvents,
     newMatch: vi.fn(async () => newMatchResponse()),
     tick: vi.fn(async () => tickResponse()),
     resetRound: vi.fn(async () => resetRoundResponse()),
@@ -986,6 +998,113 @@ describe("renderMatch", () => {
         expect(options.closeMatch).toHaveBeenCalledWith(1);
       });
       expect(input.onBackToSelect).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("pause menu (backlog item 021)", () => {
+    function pressEscape(options: { keys: EventTarget }): void {
+      options.keys.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape" }),
+      );
+    }
+
+    it("Escape freezes the simulation and the audio until Continue", async () => {
+      const root = document.createElement("div");
+      let currentTime = 0;
+      const options = baseOptions({ now: vi.fn(() => currentTime) });
+      await renderMatch(root, baseInput(), options);
+
+      pressEscape(options);
+      const menu = root.querySelector(".pause-menu");
+      expect(menu?.hasAttribute("hidden")).toBe(false);
+      expect(options.matchAudio.audio.setPaused).toHaveBeenLastCalledWith(true);
+
+      currentTime = 1000;
+      await options.rafCallbacks[0](currentTime);
+      await options.rafCallbacks[1](currentTime + 500);
+      expect(options.tick).not.toHaveBeenCalled();
+      expect(options.rafCallbacks.length).toBe(3);
+
+      currentTime = 2000;
+      pressEscape(options); // Escape on the open menu = Continue
+      expect(menu?.hasAttribute("hidden")).toBe(true);
+      expect(options.matchAudio.audio.setPaused).toHaveBeenLastCalledWith(
+        false,
+      );
+      await options.rafCallbacks[2](2000 + 1000 / 60 + 1);
+      await vi.waitFor(() => {
+        expect(options.tick).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("a gamepad's Start opens it and its d-pad and A choose Restart", async () => {
+      const root = document.createElement("div");
+      const options = baseOptions();
+      const input = baseInput();
+      await renderMatch(root, input, options);
+
+      options.padEvents.push({ start: true, nav: null });
+      await options.rafCallbacks[0](1);
+      expect(root.querySelector(".pause-menu")?.hasAttribute("hidden")).toBe(
+        false,
+      );
+      options.padEvents.push({ start: false, nav: "down" });
+      await options.rafCallbacks[1](2);
+      options.padEvents.push({ start: false, nav: "confirm" });
+      await options.rafCallbacks[2](3);
+
+      await vi.waitFor(() => {
+        expect(options.newMatch).toHaveBeenCalledTimes(2);
+      });
+      expect(input.onBackToSelect).not.toHaveBeenCalled();
+    });
+
+    it("Character Change stops the match and goes back to selection", async () => {
+      const root = document.createElement("div");
+      const options = baseOptions();
+      const input = baseInput();
+      await renderMatch(root, input, options);
+
+      pressEscape(options);
+      const items = root.querySelectorAll<HTMLElement>(".pause-menu__item");
+      items[2].click();
+
+      expect(options.cancelAnimationFrame).toHaveBeenCalled();
+      await vi.waitFor(() => {
+        expect(options.closeMatch).toHaveBeenCalledWith(1);
+      });
+      expect(input.onBackToSelect).toHaveBeenCalledTimes(1);
+      pressEscape(options);
+      expect(root.querySelector(".pause-menu")?.hasAttribute("hidden")).toBe(
+        true,
+      );
+    });
+
+    it("does not open over a round or match result", async () => {
+      const root = document.createElement("div");
+      let currentTime = 0;
+      const options = baseOptions({
+        now: vi.fn(() => currentTime),
+        tick: vi.fn(async () =>
+          tickResponse({
+            round: { outcome: 1, winner: 0 },
+            matchOver: true,
+            matchWinner: 0,
+          }),
+        ),
+      });
+      await renderMatch(root, baseInput(), options);
+      currentTime = 1000 / 60 + 1;
+      options.rafCallbacks[0](currentTime);
+      await vi.waitFor(() => {
+        expect(
+          options.resultOverlay.overlay.showMatchResult,
+        ).toHaveBeenCalled();
+      });
+      pressEscape(options);
+      expect(root.querySelector(".pause-menu")?.hasAttribute("hidden")).toBe(
+        true,
+      );
     });
   });
 

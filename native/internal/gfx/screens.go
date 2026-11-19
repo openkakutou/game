@@ -75,12 +75,30 @@ func (r *Renderer) Draw(f *game.Flow) {
 		r.drawSetup(f)
 	case game.ScreenMatch:
 		r.drawMatch(f)
+		if f.Paused {
+			r.drawPause(f)
+		}
 	case game.ScreenResult:
 		r.drawResult(f)
 	case game.ScreenError:
 		w.TextCentered(70, 2, red, "Something went wrong")
 		r.wrapped(100, f.Message)
 		w.TextCentered(200, 1, grey, "Press enter to quit")
+	}
+}
+
+// drawPause dims the frozen match and lists the pause menu, titled PAUSE as
+// Ikemen GO's default [Pause Menu].
+func (r *Renderer) drawPause(f *game.Flow) {
+	w := r.win
+	w.Rect(0, 0, VW, VH, Color{0, 0, 0, 0.6})
+	w.TextCentered(70, 3, white, "PAUSE")
+	for i, item := range f.PauseItems() {
+		c := grey
+		if i == f.PauseCursor {
+			c = gold
+		}
+		w.TextCentered(float32(110+i*16), 1, c, item.Label())
 	}
 }
 

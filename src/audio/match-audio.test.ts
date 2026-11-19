@@ -62,6 +62,9 @@ function fakeAudioContext() {
     resume: vi.fn(async () => {
       state = "running";
     }),
+    suspend: vi.fn(async () => {
+      state = "suspended";
+    }),
     close: vi.fn(async () => {
       state = "closed";
     }),
@@ -98,6 +101,53 @@ function fakeDocument(initialVisibility: DocumentVisibilityState = "visible") {
 }
 
 describe("createMatchAudio", () => {
+  describe("setPaused", () => {
+    it("suspends the context on pause and resumes it on continue, once each", () => {
+      const { ctx } = fakeAudioContext();
+      const audio = createMatchAudio({
+        createAudioContext: () => ctx as never,
+        document: fakeDocument() as never,
+      });
+      audio.setPaused(true);
+      audio.setPaused(true);
+      expect(ctx.suspend).toHaveBeenCalledTimes(1);
+      audio.setPaused(false);
+      audio.setPaused(false);
+      expect(ctx.resume).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the context suspended when the tab comes back while paused", () => {
+      const { ctx } = fakeAudioContext();
+      const doc = fakeDocument();
+      const audio = createMatchAudio({
+        createAudioContext: () => ctx as never,
+        document: doc as never,
+      });
+      audio.setPaused(true);
+      doc.trigger("hidden");
+      doc.trigger("visible");
+      expect(ctx.resume).not.toHaveBeenCalled();
+    });
+
+    it("does nothing without an audio context or after stop", () => {
+      const silent = createMatchAudio({
+        createAudioContext: () => {
+          throw new Error("unsupported");
+        },
+        document: fakeDocument() as never,
+      });
+      expect(() => silent.setPaused(true)).not.toThrow();
+      const { ctx } = fakeAudioContext();
+      const audio = createMatchAudio({
+        createAudioContext: () => ctx as never,
+        document: fakeDocument() as never,
+      });
+      audio.stop();
+      audio.setPaused(true);
+      expect(ctx.suspend).not.toHaveBeenCalled();
+    });
+  });
+
   describe("playMusic", () => {
     it("decodes and loops the given music bytes on the audio context's destination", async () => {
       const { ctx, createdSources } = fakeAudioContext();

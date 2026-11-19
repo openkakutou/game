@@ -242,9 +242,11 @@ func TestStartQuickVersus_QuitsWhenTheMatchEndsOrThePlayerLeaves(t *testing.T) {
 
 	f = quickFlow(t)
 	f.StartQuickVersus(q, content)
-	f.Navigate(NavCancel)
+	f.Navigate(NavCancel) // pause menu: Continue, Restart, Exit
+	f.Navigate(NavUp)     // wraps to Exit
+	f.Navigate(NavConfirm)
 	if !f.Quit {
-		t.Error("leaving a quick versus match must quit, there is no menu to go back to")
+		t.Error("Exit from a quick versus match must quit, there is no menu to go back to")
 	}
 }
 

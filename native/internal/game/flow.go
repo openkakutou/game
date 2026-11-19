@@ -33,6 +33,9 @@ const (
 	NavRight
 	NavConfirm
 	NavCancel
+	// NavPause is a controller's Start button: it opens and closes the
+	// pause menu, and does nothing elsewhere.
+	NavPause
 )
 
 // Options offered on the setup screen.
@@ -108,6 +111,15 @@ type Flow struct {
 	ResultWinner match.Side
 	// Message is the error text shown on ScreenError.
 	Message string
+	// Paused is set while the pause menu is open over the match; the
+	// simulation does not advance.
+	Paused bool
+	// PauseCursor is the highlighted PauseItems entry.
+	PauseCursor int
+	// lastChars/lastStage are what the running match was started with, for
+	// Restart.
+	lastChars [2]Entry
+	lastStage Entry
 	// Quit is set when the player asks to leave the game.
 	Quit bool
 }
@@ -155,11 +167,18 @@ func (f *Flow) Navigate(n Nav) {
 			f.Quit = true
 		}
 	case ScreenMatch:
-		if n == NavCancel && f.quick != nil {
-			f.Quit = true
-		} else if n == NavCancel {
-			f.toSelect()
-		}
+		f.navMatch(n)
+	}
+}
+
+// navMatch opens the pause menu on cancel or Start, then hands it the inputs.
+func (f *Flow) navMatch(n Nav) {
+	if f.Paused {
+		f.navPause(n)
+		return
+	}
+	if n == NavCancel || n == NavPause {
+		f.Paused, f.PauseCursor = true, 0
 	}
 }
 
@@ -240,6 +259,7 @@ func (f *Flow) navResult(n Nav) {
 
 func (f *Flow) toSelect() {
 	f.Match, f.Screen, f.Picking, f.Cursor = nil, ScreenSelect, 0, f.Picks[0]
+	f.Paused = false
 }
 
 // startMatch loads both characters and the stage; any failure lands on the
@@ -250,6 +270,7 @@ func (f *Flow) startMatch() {
 
 // start loads chars and the stage se, then starts the match.
 func (f *Flow) start(chars [2]Entry, se Entry) {
+	f.lastChars, f.lastStage, f.Paused = chars, se, false
 	for i, e := range chars {
 		fighter, err := f.Loader.Fighter(e.DefPath)
 		if err != nil {
@@ -327,7 +348,7 @@ func (f *Flow) StartQuickVersus(q QuickVersus, root string) (notices []string) {
 // Tick advances the match screen by one simulation tick (60 per second) with
 // both players' held inputs. It does nothing on other screens.
 func (f *Flow) Tick(in [2]input.TickInput) {
-	if f.Screen != ScreenMatch || f.Match == nil {
+	if f.Screen != ScreenMatch || f.Match == nil || f.Paused {
 		return
 	}
 	if f.Match.RoundEnded() {

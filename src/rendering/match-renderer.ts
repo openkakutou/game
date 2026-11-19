@@ -8,6 +8,12 @@ import {
   type TickInputSource,
   createTickInputSource,
 } from "../input/tick-input-source.ts";
+import {
+  type PauseMenu,
+  type PauseMenuOptions,
+  createPauseMenu,
+} from "../pause/pause-menu.ts";
+import { type PausePad, createPausePad } from "../pause/pause-pad.ts";
 import { deriveMatchOutcome, deriveRoundOutcome } from "../result/outcome.ts";
 import {
   type ResultOverlay,
@@ -172,6 +178,12 @@ export interface MatchRendererOptions {
   createResultOverlay?: (options: ResultOverlayOptions) => ResultOverlay;
   /** Overrides the match audio controller entirely — bypassing the real `AudioContext`/Web Audio API wiring, same rationale as every other real-effect option here (backlog item 013). Defaults to a real `createMatchAudio()`. */
   createAudio?: () => MatchAudio;
+  /** Overrides the pause menu entirely -- for testing. Defaults to a real `createPauseMenu(options)` (backlog item 021). */
+  createPauseMenu?: (options: PauseMenuOptions) => PauseMenu;
+  /** Overrides the gamepad reader for Start and menu buttons -- for testing. Defaults to a real `createPausePad()`. */
+  createPausePad?: () => PausePad;
+  /** Where Escape is listened for. Defaults to `document`. */
+  keyTarget?: Pick<Document, "addEventListener" | "removeEventListener">;
 }
 
 /** A previous call's stop function, per root element, so a new call on the same root cleans up its predecessor's loop before starting its own — mirrors `stage-viewer-web`'s own established convention. */
@@ -205,6 +217,9 @@ function resolveOptions(options: MatchRendererOptions) {
       ) => createTickInputSource({ onSourceChange })),
     createResultOverlay: options.createResultOverlay ?? createResultOverlay,
     createAudio: options.createAudio ?? (() => createMatchAudio()),
+    createPauseMenu: options.createPauseMenu ?? createPauseMenu,
+    createPausePad: options.createPausePad ?? (() => createPausePad()),
+    keyTarget: options.keyTarget ?? document,
   };
 }
 
@@ -487,12 +502,28 @@ export async function renderMatch(
     },
   });
 
+  // Opened by Escape or a gamepad's Start while the match runs; the tick
+  // loop keeps scheduling frames but runs no tick until it closes (backlog
+  // item 021).
+  const pauseMenu = deps.createPauseMenu({
+    onContinue: () => resume(),
+    onRestart: () => {
+      void renderMatch(root, input, options);
+    },
+    onCharacterChange: () => {
+      stop();
+      input.onBackToSelect();
+    },
+  });
+  const pausePad = deps.createPausePad();
+
   root.append(
     hud.element,
     canvas,
     liveRegion,
     inputStatus,
     resultOverlay.element,
+    pauseMenu.element,
   );
   canvas.focus();
   liveRegion.textContent = "Match started";
@@ -520,10 +551,42 @@ export async function renderMatch(
   let pendingRoundResult: RoundResult | null = null;
   let pendingMatchOver = false;
   let pendingMatchWinner: Side = 0;
+  let paused = false;
+  // Set while a round or match result is up: the loop is frozen behind it,
+  // so there is nothing to pause.
+  let resultShown = false;
+
+  function pause(): void {
+    if (stopped || paused || resultShown) return;
+    paused = true;
+    audio.setPaused(true);
+    pauseMenu.open();
+  }
+
+  function resume(): void {
+    if (!paused) return;
+    paused = false;
+    audio.setPaused(false);
+    lastTimestamp = deps.now();
+    accumulatorMs = 0;
+    canvas.focus();
+  }
+
+  function handleKeydown(event: Event): void {
+    if ((event as KeyboardEvent).key !== "Escape") return;
+    if (pauseMenu.isOpen()) {
+      pauseMenu.navigate("cancel");
+      return;
+    }
+    pause();
+  }
+  deps.keyTarget.addEventListener("keydown", handleKeydown);
 
   function stop(): void {
     if (stopped) return;
     stopped = true;
+    deps.keyTarget.removeEventListener("keydown", handleKeydown);
+    pauseMenu.dispose();
     if (rafHandle !== null) deps.cancelAnimationFrame(rafHandle);
     effectiveInputSource.dispose();
     hud.dispose();
@@ -602,6 +665,7 @@ export async function renderMatch(
     pendingMatchWinner = 0;
     if (!round) return;
 
+    resultShown = true;
     const matchEnd = deriveMatchOutcome(matchOver, matchWinner);
     if (matchEnd) {
       resultOverlay.showMatchResult(matchEnd);
@@ -639,6 +703,7 @@ export async function renderMatch(
     latestAnimations = result.data.animations;
     stageElapsedTicks = 0;
     resultOverlay.hide();
+    resultShown = false;
 
     lastTimestamp = deps.now();
     accumulatorMs = 0;
@@ -658,6 +723,21 @@ export async function renderMatch(
 
   async function frame(timestamp: number): Promise<void> {
     if (stopped) return;
+
+    const pad = pausePad.poll();
+    if (pad.start && paused) {
+      pauseMenu.navigate("cancel");
+    } else if (pad.start) {
+      pause();
+    } else if (paused && pad.nav !== null) {
+      pauseMenu.navigate(pad.nav);
+    }
+    if (stopped) return;
+    if (paused) {
+      lastTimestamp = timestamp;
+      rafHandle = deps.requestAnimationFrame((ts) => void frame(ts));
+      return;
+    }
 
     const deltaMs = timestamp - lastTimestamp;
     lastTimestamp = timestamp;

@@ -35,6 +35,8 @@ type Player struct {
 	chunks  map[chunkKey]*mix.Chunk // a nil chunk records a failed load (warned once)
 	cues    []game.Cue
 	dropped int // cues refused for lack of a free channel
+	// paused is set while the music and effects are held for the pause menu.
+	paused bool
 	// NoMusic keeps the stage music off (-nomusic); effects still play.
 	NoMusic bool
 }
@@ -83,13 +85,31 @@ func (p *Player) Update(f *game.Flow) {
 	if p.owner == nil {
 		return
 	}
+	p.holdForPause(f.Paused)
 	p.cues = p.owner.DrainCues(p.cues)
 	for _, c := range p.cues {
 		p.playCue(f, c)
 	}
 }
 
+// holdForPause pauses the music and every playing effect when the pause menu
+// opens, and resumes them where they were when it closes.
+func (p *Player) holdForPause(paused bool) {
+	if paused == p.paused {
+		return
+	}
+	p.paused = paused
+	if paused {
+		mix.PauseMusic()
+		mix.Pause(-1)
+		return
+	}
+	mix.ResumeMusic()
+	mix.Resume(-1)
+}
+
 func (p *Player) stopAll() {
+	p.holdForPause(false)
 	mix.HaltMusic()
 	mix.HaltChannel(-1)
 	if p.music != nil {

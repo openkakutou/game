@@ -81,6 +81,7 @@ func (g *Gamepads) state(player int) (game.PadState, bool) {
 		pressed(sdl.CONTROLLER_BUTTON_X), pressed(sdl.CONTROLLER_BUTTON_Y),
 		pressed(sdl.CONTROLLER_BUTTON_LEFTSHOULDER), pressed(sdl.CONTROLLER_BUTTON_RIGHTSHOULDER),
 	}
+	s.Start = pressed(sdl.CONTROLLER_BUTTON_START)
 	return s, true
 }
 

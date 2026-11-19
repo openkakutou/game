@@ -70,5 +70,11 @@
     "continuingIn": "Prochain round dans {{seconds}}…",
     "rematch": "Revanche",
     "backToSelect": "Retour à la sélection"
+  },
+  "pause": {
+    "title": "Pause",
+    "continue": "Continuer",
+    "restart": "Recommencer",
+    "characterChange": "Changer de personnage"
   }
 }

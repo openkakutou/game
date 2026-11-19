@@ -271,3 +271,15 @@ func TestPads_NavsReusesTheCallersSlice(t *testing.T) {
 		t.Errorf("Navs allocates %v times", n)
 	}
 }
+
+func TestPads_StartButtonIsPauseOnPressOnly(t *testing.T) {
+	var p Pads
+	p.Connect(1)
+	start := PadState{Start: true}
+	if got := navsOf(&p, 0, start); len(got) != 1 || got[0] != NavPause {
+		t.Fatalf("Start press = %v, want [NavPause]", got)
+	}
+	if got := navsOf(&p, 0, start); len(got) != 0 {
+		t.Errorf("held Start repeated: %v", got)
+	}
+}

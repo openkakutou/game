@@ -18,6 +18,8 @@ type PadState struct {
 	Up, Down, Left, Right bool
 	StickX, StickY        int16
 	Buttons               [PadButtons]bool
+	// Start is the Start (menu) button, which pauses a match.
+	Start bool
 }
 
 func (s PadState) dirs() (up, down, left, right bool) {
@@ -47,8 +49,8 @@ type Pads struct {
 	prev [2]padEdges
 }
 
-// padEdges is what was pressed on the previous frame: up, down, left, right, confirm, cancel.
-type padEdges [6]bool
+// padEdges is what was pressed on the previous frame: up, down, left, right, confirm, cancel, start.
+type padEdges [7]bool
 
 // Connect assigns a newly seen controller to the first player without one and
 // returns that player. A controller that is already assigned keeps its player;
@@ -99,8 +101,8 @@ func (p *Pads) Navs(player int, s PadState, dst []Nav) []Nav {
 	}
 	var cur padEdges
 	cur[0], cur[1], cur[2], cur[3] = s.dirs()
-	cur[4], cur[5] = s.Buttons[0], s.Buttons[1]
-	navs := [6]Nav{NavUp, NavDown, NavLeft, NavRight, NavConfirm, NavCancel}
+	cur[4], cur[5], cur[6] = s.Buttons[0], s.Buttons[1], s.Start
+	navs := [7]Nav{NavUp, NavDown, NavLeft, NavRight, NavConfirm, NavCancel, NavPause}
 	for i, n := range navs {
 		if cur[i] && !p.prev[player][i] {
 			dst = append(dst, n)

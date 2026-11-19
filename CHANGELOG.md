@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Pause menu in matches, native and web: Escape or a gamepad's Start freezes the match and its sound and opens PAUSE with Continue, Restart and Character Change, plus Exit in the native game, as in Ikemen GO. Escape or Start again continues.
+
+### Changed
+- In the native game, Escape during a match now opens the pause menu instead of leaving the match at once; in a quick versus match, Exit in that menu quits.
+
 ## [0.25.0] - 2026-11-19
 
 ### Added
