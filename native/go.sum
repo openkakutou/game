@@ -4,6 +4,8 @@ github.com/openkakutou/character v0.16.0 h1:Tc4krn0ZSN1yL7OC4T4olUEJC9FJZB4ahi/I
 github.com/openkakutou/character v0.16.0/go.mod h1:iPpJxagNriywu0qLJqGIThufnr+OmWwBNILWf2Aq150=
 github.com/openkakutou/engine v1.0.1-0.20261119022122-04d5f7daf492 h1:aeNvzbc68fJfP50elAtc5VIR3720gPoQgtvWS0iTf3Y=
 github.com/openkakutou/engine v1.0.1-0.20261119022122-04d5f7daf492/go.mod h1:zR5K3q0qtfTiDcTHur2winZqhcZMp5H2OeHutVf1dl8=
+github.com/openkakutou/engine v1.0.1-0.20261119055725-a5cfe9582067 h1:mR+Opk5LzqNZTT81UdRAfMQAst93yB6du6kULEVwDsA=
+github.com/openkakutou/engine v1.0.1-0.20261119055725-a5cfe9582067/go.mod h1:zR5K3q0qtfTiDcTHur2winZqhcZMp5H2OeHutVf1dl8=
 github.com/openkakutou/sff v0.8.0 h1:lmhHV6pWRaYuAU3lAfMy6j4lkDz1O4ImZvfTi9QNXZk=
 github.com/openkakutou/sff v0.8.0/go.mod h1:82EBFkUd/eXXNgfvrHvk2ITwul+X3IEao9jwYGQL44U=
 github.com/openkakutou/snd v0.7.2 h1:CZdAs+a6E6Zp2HSIe9xMXu23vjQk3t6855E6B77kVzU=
