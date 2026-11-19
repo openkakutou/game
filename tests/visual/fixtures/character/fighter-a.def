@@ -1,2 +1,9 @@
 [Info]
 name = Visual Test Fighter A
+
+[Files]
+cmd = fighter.cmd
+cns = fighter.cns
+st = fighter.cns
+sprite = fighter.sff
+anim = fighter.air
