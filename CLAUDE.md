@@ -20,7 +20,7 @@ English — all documentation, backlog items, code comments, and other generated
 
 ## WASM dependencies on `character`, `stage`, `sff`, and `engine` <!-- keep -->
 
-Character, stage, and sprite data are parsed by the `character`, `stage`, and `sff` Go libraries (github.com/openkakutou), not reimplemented here; combat simulation (CNS/state-machine execution, physics, hit detection, round flow) runs in the `engine` Go library, also not reimplemented here. This repo consumes all four as WebAssembly modules, loaded client-side — no Go toolchain, no server, keeping this project a static site. `public/wasm/` holds the downloaded/built `.wasm` artifacts and stays gitignored — never committed.
+Character, stage, and sprite data are parsed by the `character`, `stage`, and `sff` Go libraries (github.com/openkakutou), not reimplemented here; combat simulation (CNS/state-machine execution, physics, hit detection, round flow) runs in the `engine` Go library, also not reimplemented here. On the web, `character` and `stage` are WebAssembly modules supplying drawing data, and matches run in the game core (`native/internal/core`, built to `core.wasm`), the same Go code the native game plays with — all loaded client-side, no server, keeping this project a static site (building `core.wasm` needs Go or Docker, `npm run wasm:core`). `public/wasm/` holds the downloaded/built `.wasm` artifacts and stays gitignored — never committed.
 
 Lifebar (health/power bar, round display) rendering has no separate parsing library org-wide — this repo implements its own in-app lifebar parsing, mirroring the approach already used by `lifebar-viewer-web`, rather than depending on a `lifebar` package that does not exist.
 
@@ -61,15 +61,14 @@ game/
 Native target: `native/` is a separate Go module (own `go.mod`); build and test it only through `native/scripts/*.sh` (Docker). See `docs/deployment.md`.
 
 Planned, as features land (not yet present):
-- `src/wasm/` — bridges to the `character`, `stage`, `sff`, and `engine` WASM modules
+- `src/wasm/` — bridges to the `character` and `stage` WASM modules (drawing data) and to the game core (`core.wasm`, built from `native/`), which plays the web match, CPU opponent included
 - `src/selection/` — character roster discovery/selection and stage selection screens
 - `src/setup/` — match setup screen (round count, time limit)
-- `src/hud/` — in-match HUD: lifebar/power bar/round display, driven by live `engine` state
-- `src/rendering/` — character sprite and stage composition rendering, driven by `engine`'s live state
-- `src/input/` — keyboard/gamepad input handling routed into `engine`
+- `src/hud/` — in-match HUD: lifebar/power bar/round display, driven by the game core's snapshot
+- `src/rendering/` — character sprite and stage composition rendering, driven by the game core's state snapshots
+- `src/input/` — keyboard/gamepad input handling sent to the game core
 - `src/result/` — round/match result screen, rematch/back-to-select flow
-- `src/cpu/` — minimal first-pass CPU opponent for single-player
-- `public/wasm/` — the built/downloaded `.wasm` + loader glue for all four dependencies (gitignored, see above)
+- `public/wasm/` — the built/downloaded `.wasm` + loader glue for `character`, `stage` and the game core (gitignored, see above)
 
 <!-- The import below loads the compact codebase map into every session. It is maintained by /vibe:sync; details (modules/, models.md, glossary.md) stay on-demand. -->
 @.vibe/index.md

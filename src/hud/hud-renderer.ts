@@ -1,38 +1,63 @@
 // Builds and updates the in-match HUD: a lifebar and power bar per player,
 // plus the round display (round number, each player's round wins, best-of).
-// Plain DOM (not drawn on the game canvas), built once by `createHud()` and
+// Plain DOM (not drawn on the game canvas), built once by `createHud({ bestOf })` and
 // mutated in place by `update()` -- no `createElement`/`appendChild` on the
 // update path, matching this project's no-per-frame-allocation rendering
-// discipline (see `.vibe/decisions/009`). `update()` never throws: a
-// malformed/unexpected `state`/`progress` payload swaps the whole HUD into
-// one shared, translated error region instead of a broken bar, a frozen
-// display, or a crash -- match simulation/rendering elsewhere is untouched
-// by a HUD-only error (backlog item 004's acceptance criteria).
+// discipline (see `.vibe/decisions/009`). It draws the core's match snapshot
+// as it is: the values are the core's, already validated by
+// `wasm/core-bridge.ts`, and only turned into bar fill percentages here.
 import { onLocaleChange, t } from "../i18n/i18n.ts";
-import { DEFAULT_HEALTH, MAX_POWER } from "../rendering/match-config.ts";
-import {
-  type HudRoundView,
-  type HudViewModel,
-  deriveHudViewModel,
-} from "./hud-view-model.ts";
+import type { MatchSnapshot } from "../wasm/core-types.ts";
+
+/** Health a fighter starts a round with; a full lifebar. Mirrors `native/internal/game`'s `DefaultHealth`, which the core uses. */
+export const MAX_HEALTH = 1000;
+
+/** The power value of a full power bar. Mirrors `native/internal/game`'s `MaxPower`. */
+export const MAX_POWER = 3000;
 
 export interface HudOptions {
-  /** The health value that reads as a 100% full lifebar. Defaults to `match-config.ts`'s `DEFAULT_HEALTH` placeholder. */
+  /** The number of rounds the match is the best of, from the match setup. */
+  bestOf: number;
+  /** The health value that reads as a 100% full lifebar. Defaults to `MAX_HEALTH`. */
   maxHealth?: number;
-  /** The power value that reads as a 100% full power bar. Defaults to this module's `MAX_POWER` placeholder, mirroring `engine`'s own hardcoded cap. */
+  /** The power value that reads as a 100% full power bar. Defaults to `MAX_POWER`. */
   maxPower?: number;
+}
+
+interface HudRoundView {
+  round: number;
+  wins: [number, number];
+  bestOf: number;
+}
+
+interface HudFighterView {
+  health: number;
+  power: number;
+  /** Health as a percentage of the max, clamped to [0, 100]. */
+  healthPercent: number;
+  /** Power as a percentage of the max, clamped to [0, 100]. */
+  powerPercent: number;
+}
+
+interface HudViewModel {
+  fighters: [HudFighterView, HudFighterView];
+  roundInfo: HudRoundView;
+}
+
+/** `value` as a percentage of `max`, clamped to [0, 100]; a non-positive `max` reads as 0% rather than dividing by zero. */
+function clampPercent(value: number, max: number): number {
+  if (max <= 0) return 0;
+  const percent = (value / max) * 100;
+  if (percent < 0) return 0;
+  if (percent > 100) return 100;
+  return percent;
 }
 
 export interface Hud {
   /** The HUD's root element -- the caller decides where to mount it (see `rendering/match-renderer.ts`). */
   element: HTMLElement;
-  /**
-   * Applies one rendered frame's live match state/progress. Never throws:
-   * an invalid payload swaps the whole HUD into its error region instead of
-   * partially updating (see `.vibe/decisions/009` for why the HUD degrades
-   * as one unit, not per field).
-   */
-  update(state: unknown, progress: unknown): void;
+  /** Applies one rendered frame's match snapshot. */
+  update(snapshot: Pick<MatchSnapshot, "round" | "wins" | "fighters">): void;
   /** Releases this HUD's locale-change subscription. Call once when the match scene is torn down. */
   dispose(): void;
 }
@@ -109,8 +134,8 @@ function roundInfoEqual(a: HudRoundView, b: HudRoundView): boolean {
  * `element` wherever it belongs (see `rendering/match-renderer.ts`'s
  * `renderMatch`).
  */
-export function createHud(options: HudOptions = {}): Hud {
-  const maxHealth = options.maxHealth ?? DEFAULT_HEALTH;
+export function createHud(options: HudOptions): Hud {
+  const maxHealth = options.maxHealth ?? MAX_HEALTH;
   const maxPower = options.maxPower ?? MAX_POWER;
 
   const element = document.createElement("div");
@@ -142,15 +167,8 @@ export function createHud(options: HudOptions = {}): Hud {
   announcement.setAttribute("aria-live", "polite");
   element.appendChild(announcement);
 
-  const errorRegion = document.createElement("p");
-  errorRegion.className = "hud__error";
-  errorRegion.setAttribute("hidden", "");
-  element.appendChild(errorRegion);
-
-  let lastValid: HudViewModel | null = null;
-  let lastRawHealth: [number, number] | null = null;
+  let last: HudViewModel | null = null;
   let lastAnnouncedRoundInfo: HudRoundView | null = null;
-  let lastError: string | null = null;
 
   function setBarLabels(): void {
     players[0].health.setAttribute(
@@ -205,139 +223,86 @@ export function createHud(options: HudOptions = {}): Hud {
     });
   }
 
-  function renderValid(data: HudViewModel, rawHealth: [number, number]): void {
-    content.removeAttribute("hidden");
-    errorRegion.setAttribute("hidden", "");
+  function renderBars(view: HudViewModel): void {
+    for (const side of [0, 1] as const) {
+      const fighter = view.fighters[side];
+      renderBar(
+        players[side].health,
+        players[side].healthFill,
+        players[side].healthValueText,
+        fighter.health,
+        maxHealth,
+        fighter.healthPercent,
+      );
+      renderBar(
+        players[side].power,
+        players[side].powerFill,
+        players[side].powerValueText,
+        fighter.power,
+        maxPower,
+        fighter.powerPercent,
+      );
+    }
+  }
 
-    renderBar(
-      players[0].health,
-      players[0].healthFill,
-      players[0].healthValueText,
-      rawHealth[0],
-      maxHealth,
-      data.fighters[0].healthPercent,
-    );
-    renderBar(
-      players[1].health,
-      players[1].healthFill,
-      players[1].healthValueText,
-      rawHealth[1],
-      maxHealth,
-      data.fighters[1].healthPercent,
-    );
-    renderPowerBars(data);
-    renderRoundText(data.roundInfo);
+  function render(view: HudViewModel): void {
+    renderBars(view);
+    renderRoundText(view.roundInfo);
 
     if (
       !lastAnnouncedRoundInfo ||
-      !roundInfoEqual(lastAnnouncedRoundInfo, data.roundInfo)
+      !roundInfoEqual(lastAnnouncedRoundInfo, view.roundInfo)
     ) {
       announcement.textContent = t(
         "hud.roundAnnouncement",
         "Round {{round}} started. {{p1Wins}} - {{p2Wins}}.",
         {
-          round: String(data.roundInfo.round),
-          p1Wins: String(data.roundInfo.wins[0]),
-          p2Wins: String(data.roundInfo.wins[1]),
+          round: String(view.roundInfo.round),
+          p1Wins: String(view.roundInfo.wins[0]),
+          p2Wins: String(view.roundInfo.wins[1]),
         },
       );
-      lastAnnouncedRoundInfo = data.roundInfo;
+      lastAnnouncedRoundInfo = view.roundInfo;
     }
-
-    lastValid = data;
-    lastRawHealth = rawHealth;
-    lastError = null;
+    last = view;
   }
 
-  function renderPowerBars(data: HudViewModel): void {
-    // Power's own raw value isn't threaded separately (unlike health, which
-    // renderValid's caller carries alongside the view model for its
-    // aria-valuenow/value text) -- recomputed here from the percent since
-    // renderBar needs a displayable raw number; percent->value is exact for
-    // power because deriveHudViewModel's own clampPercent is a plain ratio
-    // below 100%, and power display above the cap is expected to read as
-    // the cap itself (a clamped display, not a fabricated overflow number).
-    const p1Power = Math.round(
-      (data.fighters[0].powerPercent / 100) * maxPower,
-    );
-    const p2Power = Math.round(
-      (data.fighters[1].powerPercent / 100) * maxPower,
-    );
-    renderBar(
-      players[0].power,
-      players[0].powerFill,
-      players[0].powerValueText,
-      p1Power,
-      maxPower,
-      data.fighters[0].powerPercent,
-    );
-    renderBar(
-      players[1].power,
-      players[1].powerFill,
-      players[1].powerValueText,
-      p2Power,
-      maxPower,
-      data.fighters[1].powerPercent,
-    );
-  }
-
-  function renderError(message: string): void {
-    content.setAttribute("hidden", "");
-    errorRegion.removeAttribute("hidden");
-    errorRegion.textContent = t(
-      "hud.error",
-      "The match display could not be updated: {{error}}",
-      { error: message },
-    );
-    lastError = message;
-  }
-
-  function update(state: unknown, progress: unknown): void {
-    const result = deriveHudViewModel(state, progress, maxHealth, maxPower);
-    if (!result.ok) {
-      renderError(result.error);
-      return;
-    }
-    // Threading the raw (unclamped-by-percent) health values through
-    // separately from the view model: HudFighterView only ever carries the
-    // *percentage*, but the bar's own aria-valuenow/value text want the
-    // real underlying number for an accurate "800 / 1000" readout.
-    const stateRecord = state as {
-      fighters: [{ health: number }, { health: number }];
+  function fighterView(fighter: {
+    health: number;
+    power: number;
+  }): HudFighterView {
+    return {
+      health: fighter.health,
+      power: fighter.power,
+      healthPercent: clampPercent(fighter.health, maxHealth),
+      powerPercent: clampPercent(fighter.power, maxPower),
     };
-    renderValid(result.data, [
-      stateRecord.fighters[0].health,
-      stateRecord.fighters[1].health,
-    ]);
+  }
+
+  function update(
+    snapshot: Pick<MatchSnapshot, "round" | "wins" | "fighters">,
+  ): void {
+    render({
+      fighters: [
+        fighterView(snapshot.fighters[0]),
+        fighterView(snapshot.fighters[1]),
+      ],
+      roundInfo: {
+        round: snapshot.round,
+        wins: [snapshot.wins[0], snapshot.wins[1]],
+        bestOf: options.bestOf,
+      },
+    });
   }
 
   const unsubscribe = onLocaleChange(() => {
     setBarLabels();
-    if (lastValid && lastRawHealth) {
-      // Value-text/aria-valuetext strings depend on t(), so they also need
-      // a fresh render on locale change -- re-running the same bar render
-      // calls with the last known values, not a re-derivation (no new
-      // engine data arrived).
-      renderBar(
-        players[0].health,
-        players[0].healthFill,
-        players[0].healthValueText,
-        lastRawHealth[0],
-        maxHealth,
-        lastValid.fighters[0].healthPercent,
-      );
-      renderBar(
-        players[1].health,
-        players[1].healthFill,
-        players[1].healthValueText,
-        lastRawHealth[1],
-        maxHealth,
-        lastValid.fighters[1].healthPercent,
-      );
-      renderPowerBars(lastValid);
-      renderRoundText(lastValid.roundInfo);
-    } else if (lastError !== null) {
-      renderError(lastError);
+    if (last) {
+      // The value-text strings depend on t(), so they need a fresh render on
+      // a locale change -- re-running the render with the last known values,
+      // since no new match data arrived.
+      renderBars(last);
+      renderRoundText(last.roundInfo);
     }
   });
 

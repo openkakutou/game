@@ -76,21 +76,21 @@ describe("spriteKey", () => {
 
 describe("resolveSpriteFlip", () => {
   it("mirrors horizontally when facing left, with no frame flip", () => {
-    expect(resolveSpriteFlip(1, "")).toEqual({ flipH: true, flipV: false });
+    expect(resolveSpriteFlip(-1, "")).toEqual({ flipH: true, flipV: false });
   });
 
   it("does not mirror horizontally when facing right, with no frame flip", () => {
-    expect(resolveSpriteFlip(0, "")).toEqual({ flipH: false, flipV: false });
+    expect(resolveSpriteFlip(1, "")).toEqual({ flipH: false, flipV: false });
   });
 
   it("combines facing and frame flip as an XOR on the horizontal axis", () => {
     // Facing left AND the frame's own H flip cancel out.
-    expect(resolveSpriteFlip(1, "H")).toEqual({ flipH: false, flipV: false });
+    expect(resolveSpriteFlip(-1, "H")).toEqual({ flipH: false, flipV: false });
   });
 
   it("applies vertical flip independently of facing", () => {
-    expect(resolveSpriteFlip(0, "V")).toEqual({ flipH: false, flipV: true });
-    expect(resolveSpriteFlip(1, "HV")).toEqual({ flipH: false, flipV: true });
+    expect(resolveSpriteFlip(1, "V")).toEqual({ flipH: false, flipV: true });
+    expect(resolveSpriteFlip(-1, "HV")).toEqual({ flipH: false, flipV: true });
   });
 });
 
@@ -133,12 +133,13 @@ describe("buildFighterDrawCommand", () => {
   it("returns null for a blank frame (MUGEN's no-sprite-shown sentinel)", () => {
     const cmd = buildFighterDrawCommand(
       { x: 0, y: 0 },
-      0,
+      1,
       frame({ group: -1, image: -1 }),
       spriteMetaByKey,
       pixelsByKey,
       200,
       400,
+      0,
     );
 
     expect(cmd).toBeNull();
@@ -147,12 +148,13 @@ describe("buildFighterDrawCommand", () => {
   it("places the sprite's axis point at the fighter's mapped canvas position", () => {
     const cmd = buildFighterDrawCommand(
       { x: 10, y: 0 },
-      0,
+      1,
       frame(),
       spriteMetaByKey,
       pixelsByKey,
       200, // zOffset
       400, // localCoordWidth
+      0, // cameraX
     );
 
     expect(cmd).not.toBeNull();
@@ -166,12 +168,13 @@ describe("buildFighterDrawCommand", () => {
   it("maps a fighter's vertical position (upward-positive) below the ground line correctly", () => {
     const cmd = buildFighterDrawCommand(
       { x: 0, y: 50 }, // 50 units airborne
-      0,
+      1,
       frame(),
       spriteMetaByKey,
       pixelsByKey,
       200,
       400,
+      0,
     );
 
     expect(cmd?.canvasY).toBe(150); // zOffset(200) - y(50)
@@ -180,12 +183,13 @@ describe("buildFighterDrawCommand", () => {
   it("degrades to a placeholder when the sprite reference has no metadata at all", () => {
     const cmd = buildFighterDrawCommand(
       { x: 0, y: 0 },
-      0,
+      1,
       frame({ group: 9, image: 9 }),
       spriteMetaByKey,
       pixelsByKey,
       200,
       400,
+      0,
     );
 
     expect(cmd?.kind).toBe("placeholder");
@@ -195,12 +199,13 @@ describe("buildFighterDrawCommand", () => {
   it("degrades to a metadata-sized placeholder when metadata exists but pixels failed to resolve", () => {
     const cmd = buildFighterDrawCommand(
       { x: 0, y: 0 },
-      0,
+      1,
       frame(),
       spriteMetaByKey,
       new Map(), // no resolved pixels at all
       200,
       400,
+      0,
     );
 
     expect(cmd?.kind).toBe("placeholder");
@@ -211,12 +216,13 @@ describe("buildFighterDrawCommand", () => {
   it("passes through facing/frame flip resolution", () => {
     const cmd = buildFighterDrawCommand(
       { x: 0, y: 0 },
-      1, // facing left
+      -1, // facing left
       frame(),
       spriteMetaByKey,
       pixelsByKey,
       200,
       400,
+      0,
     );
 
     expect(cmd?.flipH).toBe(true);
@@ -238,6 +244,7 @@ describe("buildStageElementDrawCommand", () => {
       null,
       pixelsByKey,
       400,
+      0,
     );
 
     expect(cmd).toEqual({
@@ -260,6 +267,7 @@ describe("buildStageElementDrawCommand", () => {
       null,
       pixelsByKey,
       400,
+      0,
     );
 
     expect(cmd).toBeNull();
@@ -271,6 +279,7 @@ describe("buildStageElementDrawCommand", () => {
       { group: -1, image: -1 },
       pixelsByKey,
       400,
+      0,
     );
 
     expect(cmd).toBeNull();
@@ -282,6 +291,7 @@ describe("buildStageElementDrawCommand", () => {
       { group: 0, image: 0 },
       pixelsByKey,
       400,
+      0,
     );
 
     expect(cmd?.kind).toBe("sprite");
@@ -293,9 +303,59 @@ describe("buildStageElementDrawCommand", () => {
       null,
       pixelsByKey,
       400,
+      0,
     );
 
     expect(cmd?.kind).toBe("placeholder");
+  });
+});
+
+describe("camera", () => {
+  const pixelsByKey = new Map([
+    [spriteKey(0, 0), { pixels: new Uint8Array(4), width: 1, height: 1 }],
+  ]);
+
+  it("moves a fighter on the canvas opposite to the camera, one pixel per camera pixel", () => {
+    const cmd = buildFighterDrawCommand(
+      { x: 100, y: 0 },
+      1,
+      frame(),
+      new Map([[spriteKey(0, 0), sprite()]]),
+      pixelsByKey,
+      200,
+      400,
+      30,
+    );
+
+    expect(cmd?.canvasX).toBe(270); // 200 centre + 100 - 30
+  });
+
+  it("moves a background element by its own deltaX share of the camera", () => {
+    const follows = buildStageElementDrawCommand(
+      element({ startX: 10, deltaX: 1 }),
+      null,
+      pixelsByKey,
+      400,
+      40,
+    );
+    const farAway = buildStageElementDrawCommand(
+      element({ startX: 10, deltaX: 0.5 }),
+      null,
+      pixelsByKey,
+      400,
+      40,
+    );
+    const fixed = buildStageElementDrawCommand(
+      element({ startX: 10, deltaX: 0 }),
+      null,
+      pixelsByKey,
+      400,
+      40,
+    );
+
+    expect(follows?.canvasX).toBe(170); // 200 + 10 - 40
+    expect(farAway?.canvasX).toBe(190); // 200 + 10 - 20
+    expect(fixed?.canvasX).toBe(210);
   });
 });
 
@@ -315,14 +375,15 @@ describe("buildMatchDrawPlan", () => {
       ],
       resolvedAnimSpriteByElementIndex: new Map(),
       fighters: [
-        { position: { x: -10, y: 0 }, facing: 0, frame: frame() },
-        { position: { x: 10, y: 0 }, facing: 1, frame: frame() },
+        { position: { x: -10, y: 0 }, facing: 1, frame: frame() },
+        { position: { x: 10, y: 0 }, facing: -1, frame: frame() },
       ],
       fighterSpriteMetaByKey: [spriteMetaByKey, spriteMetaByKey],
       fighterPixelsByKey: [pixelsByKey, pixelsByKey],
       stagePixelsByKey: pixelsByKey,
       zOffset: 100,
       localCoordWidth: 400,
+      cameraX: 0,
     });
 
     // sky, P1, P2, fence -- behind/fighters/front ordering.
@@ -340,12 +401,12 @@ describe("buildMatchDrawPlan", () => {
       fighters: [
         {
           position: { x: 0, y: 0 },
-          facing: 0,
+          facing: 1,
           frame: frame({ group: -1, image: -1 }),
         },
         {
           position: { x: 0, y: 0 },
-          facing: 1,
+          facing: -1,
           frame: frame({ group: -1, image: -1 }),
         },
       ],
@@ -354,6 +415,7 @@ describe("buildMatchDrawPlan", () => {
       stagePixelsByKey: new Map(),
       zOffset: 0,
       localCoordWidth: 400,
+      cameraX: 0,
     });
 
     expect(plan).toHaveLength(0);

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The web game now plays matches with the same engine as the desktop game, so a match plays the same on both: the CPU opponent, the camera that follows the fighters across the stage and the round and match results come from it.
+
 ## [0.26.0] - 2026-11-19
 
 ### Added

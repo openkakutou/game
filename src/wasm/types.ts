@@ -55,19 +55,13 @@ export interface SpriteGroup {
   sprites: Sprite[];
 }
 
-/**
- * An opaque, unevaluated `cns.StateDef` blob. Never interpreted client-side
- * — only forwarded to `engine`'s WASM boundary as-is (see
- * `rendering/match-config.ts`), the same "unevaluated data" precedent
- * `wasm/engine-types.ts`'s own `StateDefBlob` establishes for the engine
- * bridge's request shape.
- */
+/** An opaque, unevaluated `cns.StateDef` blob: never interpreted client-side (the game core runs the state machine). */
 export type StateDefBlob = Record<string, unknown>;
 
 /**
  * One decoded MUGEN/Ikemen GO sound effect (`character.Sound`), keyed by
  * `(group, sample)` the same way a `.cns` `PlaySnd` controller (and
- * `engine`'s own triggered `SoundEvent`, see `engine-types.ts`) references
+ * the game core's sound cues, see `core-types.ts`) references
  * it. `pcm` is interleaved by `channels`, normalized to signed 16-bit
  * regardless of the source file's own bit depth — never a `Uint8Array`
  * (unlike every other binary payload this app's bridges expose, e.g.
@@ -91,7 +85,7 @@ export interface SoundGroup {
   sounds: Sound[];
 }
 
-/** The subset of a loaded character's data this app consumes: its name, animations (for match rendering), sprite metadata (for placement/axis lookup), its combat state defs (opaque, forwarded to `engine` as-is to build a match), and its decoded sound effects (backlog item 013). A character with no sound file legitimately has an empty `sounds` array — not an error. */
+/** The subset of a loaded character's data this app consumes: its name, animations (for match rendering), sprite metadata (for placement/axis lookup), its combat state defs (opaque, unused by the web now that the game core plays the match), and its decoded sound effects (backlog item 013). A character with no sound file legitimately has an empty `sounds` array — not an error. */
 export interface CharacterSummary {
   name: string;
   animations: Animation[];
@@ -113,41 +107,4 @@ export type CharacterResult =
 /** One `resolveSprites` request result: exactly one of `pixels`/`error` is non-null. `pixels` is a flat, row-major RGBA buffer (`width * height * 4` bytes, straight/non-premultiplied alpha). */
 export type SpritePixelResult =
   | { ok: true; pixels: Uint8Array; width: number; height: number }
-  | { ok: false; error: string };
-
-/**
- * One parsed `.cmd` command definition (`cmd.Command`). `input` is the raw
- * command string (e.g. `"~D, DF, F, a"`) left unevaluated here — same
- * "unevaluated data" precedent as `StateDefBlob` — since only `engine`'s
- * own `input` package matches command strings against live per-tick input.
- */
-export interface CommandDefinition {
-  name: string;
-  input: string;
-  time: number;
-  bufferTime: number;
-}
-
-/**
- * A parsed `.cmd` file (`cmd.CommandFile`): button remapping, default
- * recognition-window timings, the command definitions themselves, and any
- * `Statedef -1`-style always-active states it declares (opaque, forwarded
- * to `engine` unevaluated — same precedent as `StateDefBlob`).
- */
-export interface CommandFile {
-  remap: Record<string, string>;
-  defaults: { time: number; bufferTime: number };
-  commands: CommandDefinition[];
-  states: StateDefBlob[];
-  // Index signature: `engine-types.ts`'s `CommandFileBlob` (the shape
-  // `engine`'s own WASM request actually wants) is a plain
-  // `Record<string, unknown>` -- structurally opaque on that side of the
-  // boundary -- so a real, typed `CommandFile` must stay assignable to it
-  // without a cast at the call site (`main.ts`'s `loadFighter`).
-  [key: string]: unknown;
-}
-
-/** Result of the typed `loadCmd` wrapper: exactly one of `commandFile`/`error` is ever meaningful. */
-export type CommandFileResult =
-  | { ok: true; commandFile: CommandFile }
   | { ok: false; error: string };

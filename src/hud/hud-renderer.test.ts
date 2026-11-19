@@ -1,38 +1,39 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { initAppI18n } from "../i18n/i18n.ts";
+import type { MatchSnapshot } from "../wasm/core-types.ts";
 import { createHud } from "./hud-renderer.ts";
 
-function state(
+function snapshot(
   round: number,
   fighters: [
     { health: number; power: number },
     { health: number; power: number },
   ],
+  wins: [number, number] = [0, 0],
 ) {
   return {
     round,
-    roundTimer: 6000,
-    fighters: [
-      { side: 0, ...fighters[0] },
-      { side: 1, ...fighters[1] },
+    wins,
+    fighters: [fighters[0], fighters[1]] as [
+      MatchSnapshot["fighters"][0],
+      MatchSnapshot["fighters"][1],
     ],
   };
 }
 
-function progress(bestOf: number, wins: [number, number]) {
-  return { bestOf, wins, roundsPlayed: 0 };
-}
-
 describe("createHud", () => {
   it("renders both players' health/power bars with the real placeholder ranges on the first update", () => {
-    const hud = createHud({ maxHealth: 1000, maxPower: 3000 });
+    const hud = createHud({ bestOf: 3, maxHealth: 1000, maxPower: 3000 });
 
     hud.update(
-      state(1, [
-        { health: 800, power: 450 },
-        { health: 300, power: 1500 },
-      ]),
-      progress(3, [0, 0]),
+      snapshot(
+        1,
+        [
+          { health: 800, power: 450 },
+          { health: 300, power: 1500 },
+        ],
+        [0, 0],
+      ),
     );
 
     const p1Health = hud.element.querySelector(
@@ -57,14 +58,17 @@ describe("createHud", () => {
   });
 
   it("uses a custom max health/power range when supplied, never a hardcoded 100", () => {
-    const hud = createHud({ maxHealth: 500, maxPower: 200 });
+    const hud = createHud({ bestOf: 1, maxHealth: 500, maxPower: 200 });
 
     hud.update(
-      state(1, [
-        { health: 250, power: 100 },
-        { health: 500, power: 200 },
-      ]),
-      progress(1, [0, 0]),
+      snapshot(
+        1,
+        [
+          { health: 250, power: 100 },
+          { health: 500, power: 200 },
+        ],
+        [0, 0],
+      ),
     );
 
     const p1Health = hud.element.querySelector(
@@ -78,14 +82,17 @@ describe("createHud", () => {
   });
 
   it("shows the current round number, each player's win count, and the best-of setting", () => {
-    const hud = createHud();
+    const hud = createHud({ bestOf: 3 });
 
     hud.update(
-      state(2, [
-        { health: 1000, power: 0 },
-        { health: 1000, power: 0 },
-      ]),
-      progress(3, [1, 0]),
+      snapshot(
+        2,
+        [
+          { health: 1000, power: 0 },
+          { health: 1000, power: 0 },
+        ],
+        [1, 0],
+      ),
     );
 
     const roundBlock = hud.element.querySelector(".hud__round");
@@ -97,7 +104,7 @@ describe("createHud", () => {
   });
 
   it("announces a round/win change once via aria-live, but never on an ordinary health/power-only update", () => {
-    const hud = createHud();
+    const hud = createHud({ bestOf: 3 });
     const announcement = hud.element.querySelector(
       "[aria-live]",
     ) as HTMLElement;
@@ -120,80 +127,76 @@ describe("createHud", () => {
     });
 
     hud.update(
-      state(1, [
-        { health: 1000, power: 0 },
-        { health: 1000, power: 0 },
-      ]),
-      progress(3, [0, 0]),
+      snapshot(
+        1,
+        [
+          { health: 1000, power: 0 },
+          { health: 1000, power: 0 },
+        ],
+        [0, 0],
+      ),
     );
     expect(setCount).toBe(1);
 
     // Health-only change, same round/wins: no new announcement.
     hud.update(
-      state(1, [
-        { health: 900, power: 0 },
-        { health: 1000, power: 0 },
-      ]),
-      progress(3, [0, 0]),
+      snapshot(
+        1,
+        [
+          { health: 900, power: 0 },
+          { health: 1000, power: 0 },
+        ],
+        [0, 0],
+      ),
     );
     expect(setCount).toBe(1);
 
     // Wins change: a new announcement fires.
     hud.update(
-      state(2, [
-        { health: 1000, power: 0 },
-        { health: 1000, power: 0 },
-      ]),
-      progress(3, [1, 0]),
+      snapshot(
+        2,
+        [
+          { health: 1000, power: 0 },
+          { health: 1000, power: 0 },
+        ],
+        [1, 0],
+      ),
     );
     expect(setCount).toBe(2);
   });
 
-  it("shows a clear error state instead of throwing when match state is malformed", () => {
-    const hud = createHud();
+  it("fills a bar to 100% at most and 0% at least, whatever value the snapshot carries", () => {
+    const hud = createHud({ bestOf: 3, maxHealth: 1000, maxPower: 3000 });
 
     hud.update(
-      { round: 1, fighters: [{ health: -5 }, { health: 10 }] },
-      progress(3, [0, 0]),
-    );
-
-    const error = hud.element.querySelector(".hud__error");
-    expect(error?.hasAttribute("hidden")).toBe(false);
-    expect(error?.textContent?.length ?? 0).toBeGreaterThan(0);
-    const content = hud.element.querySelector(".hud__content");
-    expect(content?.hasAttribute("hidden")).toBe(true);
-  });
-
-  it("never throws on completely unexpected input and still shows the error state", () => {
-    const hud = createHud();
-
-    expect(() => hud.update("garbage", 42)).not.toThrow();
-    const error = hud.element.querySelector(".hud__error");
-    expect(error?.hasAttribute("hidden")).toBe(false);
-  });
-
-  it("recovers from the error state once a later update is valid again", () => {
-    const hud = createHud();
-
-    hud.update("garbage", 42);
-    expect(
-      hud.element.querySelector(".hud__error")?.hasAttribute("hidden"),
-    ).toBe(false);
-
-    hud.update(
-      state(1, [
-        { health: 1000, power: 0 },
-        { health: 1000, power: 0 },
+      snapshot(1, [
+        { health: 1500, power: 9000 },
+        { health: 0, power: 0 },
       ]),
-      progress(3, [0, 0]),
     );
 
-    expect(
-      hud.element.querySelector(".hud__error")?.hasAttribute("hidden"),
-    ).toBe(true);
-    expect(
-      hud.element.querySelector(".hud__content")?.hasAttribute("hidden"),
-    ).toBe(false);
+    const fill = (selector: string) =>
+      (hud.element.querySelector(selector) as HTMLElement).style.width;
+    expect(fill(".hud__health-fill--1")).toBe("100%");
+    expect(fill(".hud__power-fill--1")).toBe("100%");
+    expect(fill(".hud__health-fill--2")).toBe("0%");
+  });
+
+  it("fills a bar in proportion to the value over the max", () => {
+    const hud = createHud({ bestOf: 3, maxHealth: 1000, maxPower: 3000 });
+
+    hud.update(
+      snapshot(1, [
+        { health: 250, power: 750 },
+        { health: 1000, power: 3000 },
+      ]),
+    );
+
+    const fill = (selector: string) =>
+      (hud.element.querySelector(selector) as HTMLElement).style.width;
+    expect(fill(".hud__health-fill--1")).toBe("25%");
+    expect(fill(".hud__power-fill--1")).toBe("25%");
+    expect(fill(".hud__health-fill--2")).toBe("100%");
   });
 
   describe("live locale switching (backlog item 009)", () => {
@@ -206,13 +209,16 @@ describe("createHud", () => {
     it("re-translates the round label in place without losing bar values", async () => {
       const instance = await initAppI18n();
       await instance.changeLanguage("en");
-      const hud = createHud();
+      const hud = createHud({ bestOf: 3 });
       hud.update(
-        state(2, [
-          { health: 700, power: 0 },
-          { health: 900, power: 0 },
-        ]),
-        progress(3, [1, 0]),
+        snapshot(
+          2,
+          [
+            { health: 700, power: 0 },
+            { health: 900, power: 0 },
+          ],
+          [1, 0],
+        ),
       );
       const englishLabel =
         hud.element.querySelector(".hud__round")?.textContent;
@@ -234,13 +240,16 @@ describe("createHud", () => {
     it("stops re-translating after dispose()", async () => {
       const instance = await initAppI18n();
       await instance.changeLanguage("en");
-      const hud = createHud();
+      const hud = createHud({ bestOf: 1 });
       hud.update(
-        state(1, [
-          { health: 1000, power: 0 },
-          { health: 1000, power: 0 },
-        ]),
-        progress(1, [0, 0]),
+        snapshot(
+          1,
+          [
+            { health: 1000, power: 0 },
+            { health: 1000, power: 0 },
+          ],
+          [0, 0],
+        ),
       );
       const before = hud.element.querySelector(".hud__round")?.textContent;
 

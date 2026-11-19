@@ -25,7 +25,7 @@ Defined in: `src/roster/discovery.ts`
 | name | string | The loaded character's name |
 | animations | `Animation[]` | Every `.air` action: its number, frames (sprite ref, position, time, flip, blend, Clsn boxes), and loop-start index |
 | sprites | `SpriteGroup[]` | Sprite metadata (dimensions, axis/pivot) per `(group, image)` — no pixel data; see `resolveSprites` |
-| stateDefs | `StateDefBlob[]` | Opaque combat state defs, forwarded to `engine` unmodified — never interpreted client-side |
+| stateDefs | `StateDefBlob[]` | Opaque combat state defs — never interpreted client-side (the game core runs the state machine) |
 | sounds | `SoundGroup[]` | The character's decoded sound effects (backlog item 013) — empty for a character with no sound file, never an error |
 | ok / character / error | `true` + `CharacterSummary`, or `false` + string | `CharacterResult` discriminated union — mirrors the WASM module's own `{character, error}` contract, never throws |
 Defined in: `src/wasm/types.ts`
@@ -33,7 +33,7 @@ Defined in: `src/wasm/types.ts`
 ## Sound / SoundGroup (character sound effects)
 | Field | Type | Notes |
 |---|---|---|
-| group, sample | number | Keys a `.cns` `PlaySnd` controller (and `engine`'s own triggered `SoundEvent`) references this sound by |
+| group, sample | number | Keys a `.cns` `PlaySnd` controller (and the game core's sound cues) references this sound by |
 | sampleRate, channels, bitsPerSample | number | The decoded sample's own audio format |
 | pcm | `number[]` | Interleaved by `channels`, normalized to signed 16-bit — a plain JSON number array, not a `Uint8Array` (unlike every other binary payload this app's bridges expose) |
 | index | number | `SoundGroup` only — the group index shared by every `Sound` in `sounds` |
@@ -90,61 +90,34 @@ Defined in: `src/setup/setup-screen.ts`
 | ok / stage / error | `true` + `StageSummary`, or `false` + string | `StageResult` discriminated union — mirrors the WASM module's own `{stage, error}` contract, never throws |
 Defined in: `src/wasm/stage-types.ts`
 
-## NewMatchRequest / TickRequest (engine bridge)
+## StartMatchRequest / MatchSnapshot (game core bridge)
 | Field | Type | Notes |
 |---|---|---|
-| programs | `[FighterProgram, FighterProgram]` | Each fighter's state defs (keyed by number), animations, and command file |
-| starting | `[FighterState, FighterState]` | Each fighter's starting position, facing, state number, health, power (always sent as 0 — `engine` itself always resets a caller-supplied power to 0 at match/round start) |
-| roundTimer, bestOf, bounds, gravity, comboWindow | number / `StageBoundaries` / number | Match-level simulation config |
-| matchId, inputs | number / `[TickInput, TickInput]` | `TickRequest` only — the session to advance and this tick's raw input |
-Defined in: `src/wasm/engine-types.ts`; assembled by `src/rendering/match-config.ts`'s `buildNewMatchRequest`. `FighterState.power` (`[0, 3000]`, `engine`'s own hardcoded power/meter cap, not itself part of this JSON contract — see `HudViewModel` below) is read live from every `tick`/`newMatch` response by the HUD.
-
-## RoundResult / Progress / ResetRoundRequest (engine bridge)
-| Field | Type | Notes |
-|---|---|---|
-| outcome | number | `0` = still in progress; `1` = KO; `2` = double KO (draw); `3` = timeout (unequal health); `4` = timeout at equal health (draw) — `engine`'s own `round.Outcome` enum, only meaningful once `!= 0` |
-| winner | `0 \| 1` | Only meaningful for outcome `1`/`3` — the deciding side |
-| progress.bestOf, .wins, .roundsPlayed | number / `[number, number]` / number | Match-level bookkeeping across rounds, carried in every `tick()`/`newMatch()` response; untouched by `resetRound()` |
-| matchOver, matchWinner | boolean / `0 \| 1` | `tick()`-only: whether the whole match (not just this round) is decided, and by whom |
-| sounds | `[SoundEvent[], SoundEvent[]]` | `tick()`-only (backlog item 013): each fighter's own `PlaySnd` events triggered exactly this tick, indexed `[P1, P2]` — a discrete per-tick event log, never `null`; a skipped `tick()` response loses that tick's events permanently |
-| resetRound: matchId, roundTimer, starting | number / number / `[FighterState, FighterState]` | `ResetRoundRequest` — the next round number is computed by the session itself, never supplied |
-Defined in: `src/wasm/engine-types.ts` (`RoundResult`, `Progress`, `ResetRoundRequest`, `ResetRoundResponseData`, `SoundEvent`); consumed by `src/result/outcome.ts`'s `deriveRoundOutcome`/`deriveMatchOutcome`, `src/rendering/match-renderer.ts`'s round-end handling, and (backlog item 013) `src/audio/sound-lookup.ts`'s `findSound`. See `.vibe/decisions/010`.
+| p1, p2, stage | string | `StartMatchRequest`: names of the `.def` files mounted into the core (`mountFiles`) |
+| setup, p2cpu, viewWidth | `{rounds, timeLimitSeconds}` / boolean / number | Rounds (odd), time limit in seconds (0 = none), whether the core plays player 2, and the width the camera frames (the canvas width) |
+| id, roundTimerTicks, roundsToWin | number | `StartMatchData` only: the match id, and the once-per-match HUD values |
+| tick, round, timer | number | Ticks played this round, the round number, ticks left on the round timer |
+| roundEnded, outcome | boolean / `"none" \| "ko" \| "doubleKo" \| "timeout" \| "draw"` | The round is over (no tick is accepted until `nextRound`) and how it ended |
+| over, winner, roundWinner | boolean / `-1 \| 0 \| 1` | The match is decided and by whom; who won the round that ended (-1 for a draw or while fighting) |
+| wins | `[number, number]` | Rounds won by each side |
+| camX | number | The camera's position (middle of the view), in stage pixels |
+| fighters | `[FighterSnapshot, FighterSnapshot]` | `{x, y, facing (1 right / -1 left), anim, animTime, stateNo, health, power}`; y is up, 0 the ground |
+| cues | `SoundCue[]` | `{side, group, sample}` sounds triggered this tick, drained once |
+Defined in: `src/wasm/core-types.ts`; produced by the Go side (`native/internal/core`) and validated, whole or not at all, by `src/wasm/core-bridge.ts`.
 
 ## RoundEndView / MatchEndView (result screen)
 | Field | Type | Notes |
 |---|---|---|
 | round | number | `RoundEndView` only — the round number that just ended |
-| winner | `"p1" \| "p2" \| "draw"` | A clean, defensive reading of `RoundResult`/`matchWinner` — an outcome/winner value `engine` isn't documented to produce also reads as `"draw"`, never left undefined |
+| winner | `"p1" \| "p2" \| "draw"` | The snapshot's `roundWinner`/`winner`; no winner (-1) reads as `"draw"` |
 Defined in: `src/result/outcome.ts`; built by `deriveRoundOutcome`/`deriveMatchOutcome`, rendered by `src/result/result-screen.ts`'s `createResultOverlay`.
-
-## CpuObservation
-| Field | Type | Notes |
-|---|---|---|
-| self.position, opponent.position | `Position` (`{x, y}`) | The only state the CPU opponent decides from — a live snapshot read via a closure supplied at construction time, not a change to `TickInputSource.read()`'s own signature |
-Defined in: `src/cpu/cpu-controller.ts`; consumed by `createCpuController().decide()` and supplied by `src/cpu/cpu-input-source.ts`'s `createCpuAwareInputSource`.
-
-## HudViewModel (in-match HUD)
-| Field | Type | Notes |
-|---|---|---|
-| fighters | `[HudFighterView, HudFighterView]` | Each `{ healthPercent, powerPercent }` — clamped to `[0, 100]` against the app's placeholder health/power maxima |
-| roundInfo | `{ round, wins: [number, number], bestOf }` | Sourced from `engine`'s `MatchState.round` and `Progress.wins`/`bestOf` |
-Defined in: `src/hud/hud-view-model.ts`; derived from `engine`'s raw, untrusted `MatchState`/`Progress` by `deriveHudViewModel`, which returns a typed error instead of a `HudViewModel` for any missing/invalid field (see `.vibe/decisions/009`).
-
-## CommandFile
-| Field | Type | Notes |
-|---|---|---|
-| remap | `Record<string, string>` | Button-name remapping declared by the `.cmd` file's own `[Remap]` section |
-| defaults | `{ time, bufferTime }` | Default command recognition-window timings |
-| commands | `CommandDefinition[]` | Each declared command's name and raw, unevaluated input string |
-| states | `StateDefBlob[]` | Any `Statedef -1`-style always-active states the `.cmd` file itself declares |
-Defined in: `src/wasm/types.ts`; parsed via `src/wasm/bridge.ts`'s `loadCmd`, threaded into a fighter's `NewMatchRequest.programs[n].commands` by `src/rendering/match-config.ts`'s `buildFighterProgram` (falling back to an empty command file when none is supplied or parsing fails)
 
 ## RawPlayerInput / TickInput
 | Field | Type | Notes |
 |---|---|---|
 | up, down, left, right | boolean | Raw physical directions currently held — not facing-relative |
 | buttons | `Record<ButtonName, boolean>` | Currently-held button names (`a b c x y z`), matching a `.cmd` file's own lowercase tokens |
-Defined in: `src/input/types.ts` (`RawPlayerInput`, every field always present); `src/wasm/engine-types.ts` (`TickInput`, the same shape with every field optional — `engine`'s own per-tick request contract). `src/input/tick-input-source.ts`'s `read()` produces one pair per rendered frame, reused for every simulation tick that frame's fixed-timestep loop runs.
+Defined in: `src/input/types.ts` (`RawPlayerInput`, every field always present); `src/wasm/core-types.ts` (`TickInput`, the same shape with every field optional — the core's per-tick input contract). `src/input/tick-input-source.ts`'s `read()` returns a `[RawPlayerInput, RawPlayerInput]` pair, sent to the core as `{p1, p2}`.
 
 ## KeyboardPlayerBindings
 | Field | Type | Notes |

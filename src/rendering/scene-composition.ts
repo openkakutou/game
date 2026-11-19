@@ -1,13 +1,19 @@
-import type { Facing, Position } from "../wasm/engine-types.ts";
+import type { Facing } from "../wasm/core-types.ts";
 // Pure composition logic for the match scene: coordinate mapping, draw
 // order, sprite placement, and placeholder fallback. No DOM, no canvas, no
 // WASM calls — each concern independently testable, mirroring
 // `stage-viewer-web`'s own `background-composition.ts` split. See
 // `.vibe/decisions/004-match-rendering-architecture.md` for the formulas
-// and scope cuts (no camera panning, no blend modes, stage element axis
-// untreated) this module implements.
+// and scope cuts (no blend modes, stage element axis untreated) this module
+// implements; the camera position comes from the game core's snapshot.
 import type { BGElement, SpriteRef } from "../wasm/stage-types.ts";
 import type { Flip, Frame, Sprite } from "../wasm/types.ts";
+
+/** A fighter's location in stage coordinates (y up, 0 is the ground). */
+export interface Position {
+  x: number;
+  y: number;
+}
 
 /** A resolved sprite's actual decoded pixels, at its own native resolution. */
 export interface ResolvedSpritePixels {
@@ -60,7 +66,7 @@ export function stageXToCanvasX(x: number, localCoordWidth: number): number {
 
 /**
  * Resolves the effective horizontal/vertical mirroring for a fighter
- * sprite: horizontal is `facing === left` XOR the frame's own `H`/`HV`
+ * sprite: horizontal is `facing === left (-1)` XOR the frame's own `H`/`HV`
  * flip (the two cancel out when both apply); vertical is only the frame's
  * own `V`/`HV` flip — facing never affects the vertical axis.
  */
@@ -71,7 +77,7 @@ export function resolveSpriteFlip(
   const frameFlipsH = frameFlip === "H" || frameFlip === "HV";
   const frameFlipsV = frameFlip === "V" || frameFlip === "HV";
   return {
-    flipH: (facing === 1) !== frameFlipsH,
+    flipH: (facing === -1) !== frameFlipsH,
     flipV: frameFlipsV,
   };
 }
@@ -118,10 +124,11 @@ export function buildFighterDrawCommand(
   pixelsByKey: ReadonlyMap<string, ResolvedSpritePixels>,
   zOffset: number,
   localCoordWidth: number,
+  cameraX: number,
 ): DrawCommand | null {
   if (frame.group < 0 || frame.image < 0) return null; // blank frame
 
-  const canvasX = stageXToCanvasX(position.x, localCoordWidth);
+  const canvasX = stageXToCanvasX(position.x - cameraX, localCoordWidth);
   const canvasY = zOffset - position.y;
   const { flipH, flipV } = resolveSpriteFlip(facing, frame.flip);
 
@@ -182,13 +189,16 @@ export function buildFighterDrawCommand(
  * `ResolveAnimationFrame` contract. A reference that fails to resolve
  * against the loaded sheet degrades to a fixed-size placeholder centered
  * on the element's configured position — axis untreated (`0, 0`), see the
- * ADR for why.
+ * ADR for why. `cameraX` shifts the element by its own `deltaX` share of
+ * the camera's movement (1 follows the fighters, 0 stays put), as the native
+ * game's `LayerOrigin` does for a view as wide as the stage's local coordinates.
  */
 export function buildStageElementDrawCommand(
   element: BGElement,
   resolvedSprite: SpriteRef | null,
   pixelsByKey: ReadonlyMap<string, ResolvedSpritePixels>,
   localCoordWidth: number,
+  cameraX: number,
 ): DrawCommand | null {
   let spriteRef: SpriteRef;
   if (element.type === "normal" || element.type === "parallax") {
@@ -201,7 +211,10 @@ export function buildStageElementDrawCommand(
     return null;
   }
 
-  const canvasX = stageXToCanvasX(element.startX, localCoordWidth);
+  const canvasX = stageXToCanvasX(
+    element.startX - cameraX * element.deltaX,
+    localCoordWidth,
+  );
   const canvasY = element.startY;
 
   const key = spriteKey(spriteRef.group, spriteRef.image);
@@ -269,6 +282,8 @@ export interface BuildMatchDrawPlanInput {
   stagePixelsByKey: ReadonlyMap<string, ResolvedSpritePixels>;
   zOffset: number;
   localCoordWidth: number;
+  /** Where the camera looks, from the core's snapshot (`camX`). */
+  cameraX: number;
 }
 
 /**
@@ -300,6 +315,7 @@ export function buildMatchDrawPlan(
       resolvedSprite,
       input.stagePixelsByKey,
       input.localCoordWidth,
+      input.cameraX,
     );
   };
 
@@ -314,6 +330,7 @@ export function buildMatchDrawPlan(
       input.fighterPixelsByKey[side],
       input.zOffset,
       input.localCoordWidth,
+      input.cameraX,
     ),
   );
 

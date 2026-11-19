@@ -59,8 +59,7 @@
     "valueOfMax": "{{value}} / {{max}}",
     "wins": "Victoires : {{count}}",
     "roundInfo": "Round {{round}} · Meilleur des {{bestOf}}",
-    "roundAnnouncement": "Round {{round}} commencé. {{p1Wins}} - {{p2Wins}}.",
-    "error": "L'affichage du match n'a pas pu être mis à jour : {{error}}"
+    "roundAnnouncement": "Round {{round}} commencé. {{p1Wins}} - {{p2Wins}}."
   },
   "result": {
     "roundWinner": "Round {{round}} : le joueur {{number}} gagne !",

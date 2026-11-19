@@ -53,6 +53,11 @@ func (s *session) snapshot(id int) string {
 	b = strconv.AppendBool(b, m.RoundEnded())
 	b = append(b, `,"outcome":"`...)
 	b = append(b, outcomeName(m.LastRound.Outcome)...)
+	// Who won the round just ended; -1 while fighting and for a draw.
+	roundWinner := -1
+	if m.LastRound.Outcome == round.OutcomeKO || m.LastRound.Outcome == round.OutcomeTimeout {
+		roundWinner = int(m.LastRound.Winner)
+	}
 	b = append(b, `","over":`...)
 	b = strconv.AppendBool(b, m.Over)
 	winner := -1
@@ -60,6 +65,7 @@ func (s *session) snapshot(id int) string {
 		winner = int(m.Winner)
 	}
 	b = appendInt(b, "winner", winner)
+	b = appendInt(b, "roundWinner", roundWinner)
 	b = append(b, `,"wins":[`...)
 	b = strconv.AppendInt(b, int64(m.Progress.Wins[0]), 10)
 	b = append(b, ',')

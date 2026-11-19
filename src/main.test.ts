@@ -49,14 +49,14 @@ function okLoadCharacter(name: string) {
   );
 }
 
-function okLoadStage(name: string, musicFile = "") {
+function okLoadStage(name: string, musicFile = "", spriteFile = "") {
   return vi.fn(
     async (): Promise<StageResult> => ({
       ok: true,
       stage: {
         name,
         bgDef: {
-          spriteFile: "",
+          spriteFile,
           localCoordWidth: 0,
           localCoordHeight: 0,
           zOffset: 0,
@@ -229,12 +229,18 @@ describe("renderApp", () => {
   ): Promise<{
     main: HTMLElement;
     renderMatch: ReturnType<typeof vi.fn>;
+    mountFiles: ReturnType<typeof vi.fn>;
   }> {
     const noopHandle: MatchRendererHandle = { stop() {} };
     const renderMatchSpy = vi.fn(async () => noopHandle);
+    const mountFilesSpy = vi.fn(async () => ({
+      ok: true as const,
+      data: {} as Record<string, never>,
+    }));
 
     const main = await renderAndPickCharacters(root, {
       renderMatch: renderMatchSpy,
+      mountFiles: mountFilesSpy,
       ...overrides,
     });
     main.querySelector<HTMLElement>(".stage-screen__select")?.click();
@@ -265,7 +271,7 @@ describe("renderApp", () => {
     await vi.waitFor(() => {
       expect(renderMatchSpy).toHaveBeenCalled();
     });
-    return { main, renderMatch: renderMatchSpy };
+    return { main, renderMatch: renderMatchSpy, mountFiles: mountFilesSpy };
   }
 
   it("starts match rendering with both players' loaded characters, the chosen stage, and the configured rounds/time limit once match setup's Continue is activated", async () => {
@@ -284,22 +290,10 @@ describe("renderApp", () => {
       timeLimit: "unlimited",
       player2Control: "human",
     });
-    // No loadCmd override supplied: the real bridge's own loadCmd rejects
-    // under jsdom (no WASM stub configured for this test), so both players
-    // degrade to the empty command file fallback rather than blocking the
-    // match or throwing.
-    expect(input.player1.commands).toEqual({
-      remap: {},
-      defaults: { time: 0, bufferTime: 0 },
-      commands: [],
-      states: [],
-    });
-    expect(input.player2.commands).toEqual({
-      remap: {},
-      defaults: { time: 0, bufferTime: 0 },
-      commands: [],
-      states: [],
-    });
+    // Names of the mounted `.def` files, which the core starts the match from.
+    expect(input.player1.defName).toBe("roster/ryu/character.def");
+    expect(input.player2.defName).toBe("roster/ryu/character.def");
+    expect(input.stage.defName).toBe("stages/training-room/stage.def");
   });
 
   it("threads the CPU opponent choice from the setup screen into match rendering (backlog item 007)", async () => {
@@ -332,46 +326,110 @@ describe("renderApp", () => {
     expect(main.textContent).toContain("Choose your character");
   });
 
-  it("threads each player's own parsed command file into match rendering when loadCmd succeeds", async () => {
+  it("mounts every file of both fighters and of the stage into the game core before starting the match", async () => {
     const root = document.createElement("div");
-    const p1Commands = {
-      remap: { a: "a" },
-      defaults: { time: 15, bufferTime: 1 },
-      commands: [{ name: "p1", input: "a", time: 1, bufferTime: 1 }],
-      states: [],
-    };
+    const fileBytes = (filePath: string) =>
+      new TextEncoder().encode(`bytes of ${filePath}`);
+    const fetchBytes = vi.fn(async (filePath: string) => fileBytes(filePath));
 
-    const { renderMatch } = await renderAndStartMatch(root, {
-      loadCmd: vi.fn(async () => ({
-        ok: true as const,
-        commandFile: p1Commands,
-      })),
+    const { renderMatch, mountFiles } = await renderAndStartMatch(root, {
+      fetchBytes,
+      loadStage: okLoadStage("Training Room", "bgm.ogg", "stage.sff"),
     });
 
-    const [, input] = renderMatch.mock.calls[0];
-    expect(input.player1.commands).toEqual(p1Commands);
-    expect(input.player2.commands).toEqual(p1Commands);
+    expect(mountFiles).toHaveBeenCalledTimes(1);
+    const mounted = (
+      mountFiles.mock.calls[0][0] as { name: string; bytes: Uint8Array }[]
+    ).map((file) => file.name);
+    for (const fighterFile of ["def", "air", "sff", "cns", "cmd"]) {
+      expect(mounted).toContain(`roster/ryu/character.${fighterFile}`);
+    }
+    expect(mounted).toContain("stages/training-room/stage.def");
+    expect(mounted).toContain("stages/training-room/stage.sff");
+    expect(mounted).toContain("stages/training-room/bgm.ogg");
+    const files = mountFiles.mock.calls[0][0] as {
+      name: string;
+      bytes: Uint8Array;
+    }[];
+    const cmdFile = files.find((f) => f.name === "roster/ryu/character.cmd");
+    expect(cmdFile?.bytes).toEqual(fileBytes("roster/ryu/character.cmd"));
+    expect(renderMatch).toHaveBeenCalledTimes(1);
   });
 
-  it("still starts the match, degrading to no recognized commands, when a fighter's .cmd file fails to load", async () => {
+  it("names a mounted file without the ./ or / a manifest path may start with", async () => {
     const root = document.createElement("div");
+    const dottedManifest = manifestSource.replaceAll('"roster/', '"./roster/');
 
-    const { main, renderMatch } = await renderAndStartMatch(root, {
-      loadCmd: vi.fn(async () => ({
-        ok: false as const,
-        error: "corrupt .cmd file",
-      })),
+    const { renderMatch, mountFiles } = await renderAndStartMatch(root, {
+      manifestOptions: { fetchManifestSource: async () => dottedManifest },
+    });
+
+    const mounted = (mountFiles.mock.calls[0][0] as { name: string }[]).map(
+      (file) => file.name,
+    );
+    expect(mounted).toContain("roster/ryu/character.def");
+    expect(mounted.some((name) => name.startsWith("."))).toBe(false);
+    const [, input] = renderMatch.mock.calls[0];
+    expect(input.player1.defName).toBe("roster/ryu/character.def");
+  });
+
+  it("still starts the match, without that file mounted, when a fighter's .cmd file fails to fetch", async () => {
+    const root = document.createElement("div");
+    const fetchBytes = vi.fn(async (filePath: string) => {
+      if (filePath === "roster/ryu/character.cmd") {
+        throw new Error("404 not found");
+      }
+      return new Uint8Array();
+    });
+
+    const { main, renderMatch, mountFiles } = await renderAndStartMatch(root, {
+      fetchBytes,
     });
 
     expect(renderMatch).toHaveBeenCalledTimes(1);
-    expect(main.textContent).not.toContain("corrupt .cmd file");
-    const [, input] = renderMatch.mock.calls[0];
-    expect(input.player1.commands).toEqual({
-      remap: {},
-      defaults: { time: 0, bufferTime: 0 },
-      commands: [],
-      states: [],
+    expect(main.textContent).not.toContain("404 not found");
+    const mounted = (mountFiles.mock.calls[0][0] as { name: string }[]).map(
+      (file) => file.name,
+    );
+    expect(mounted).not.toContain("roster/ryu/character.cmd");
+    expect(mounted).toContain("roster/ryu/character.def");
+  });
+
+  it("shows the core's refusal instead of starting the match when mounting the files fails", async () => {
+    const root = document.createElement("div");
+    const mountFiles = vi.fn(async () => ({
+      ok: false as const,
+      error: "game core WASM module failed to load: 404",
+    }));
+    const renderMatchSpy = vi.fn(async () => ({ stop() {} }));
+
+    const main = await renderAndPickCharacters(root, {
+      renderMatch: renderMatchSpy,
+      mountFiles,
     });
+    main.querySelector<HTMLElement>(".stage-screen__select")?.click();
+    (
+      Array.from(main.querySelectorAll("wuik-button")).find(
+        (el) => el.textContent === "Continue",
+      ) as HTMLElement
+    ).click();
+    await vi.waitFor(() => {
+      if (!main.textContent?.includes("Match Setup")) throw new Error("wait");
+    });
+    main.querySelector<HTMLElement>('[data-value="3"]')?.click();
+    main.querySelector<HTMLElement>('[data-label="Unlimited"]')?.click();
+    (
+      Array.from(main.querySelectorAll("wuik-button")).find(
+        (el) => el.textContent === "Continue",
+      ) as HTMLElement
+    ).click();
+
+    await vi.waitFor(() => {
+      expect(main.textContent).toContain(
+        "game core WASM module failed to load",
+      );
+    });
+    expect(renderMatchSpy).not.toHaveBeenCalled();
   });
 
   it("fetches and forwards a fighter's own .snd file to loadCharacter when the manifest declares one (backlog item 013)", async () => {

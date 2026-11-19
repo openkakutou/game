@@ -8,7 +8,7 @@ import (
 	"github.com/openkakutou/engine/v2/match"
 )
 
-// CPU opponent tuning, mirroring the web build's src/cpu/cpu-controller.ts.
+// CPU opponent tuning, from the first CPU opponent the web build had (the web now plays through this code).
 const (
 	// ApproachDistance: beyond this stage-unit distance the CPU walks toward its opponent.
 	ApproachDistance = 60

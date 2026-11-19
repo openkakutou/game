@@ -1,10 +1,10 @@
-import type { SoundEvent } from "../wasm/engine-types.ts";
-// Resolves a triggered `engine.SoundEvent` (`{group, sample}`) to the
+import type { SoundCue } from "../wasm/core-types.ts";
+// Resolves a triggered core sound cue (`{group, sample}`) to the
 // matching already-decoded `Sound` from a character's own `sounds`
 // (backlog item 013) — pure, no WASM/DOM dependency. Mirrors
 // `rendering/match-renderer.ts`'s own `buildSpriteMetaByKey` convention:
 // build a lookup once per fighter at match start, key by the same
-// `(group, sample)` pair `engine` reports triggers by, reuse it for every
+// `(group, sample)` pair the core reports cues by, reuse it for every
 // tick rather than scanning the character's sound list per trigger.
 import type { CharacterSummary, Sound } from "../wasm/types.ts";
 
@@ -25,10 +25,10 @@ export function buildSoundLookup(
   return lookup;
 }
 
-/** Looks up the decoded `Sound` matching a triggered `SoundEvent`, or `undefined` when the character has no matching sound — a legitimate, silent miss, never an error. */
+/** Looks up the decoded `Sound` matching a sound cue, or `undefined` when the character has no matching sound — a legitimate, silent miss, never an error. */
 export function findSound(
   lookup: ReadonlyMap<string, Sound>,
-  event: SoundEvent,
+  cue: Pick<SoundCue, "group" | "sample">,
 ): Sound | undefined {
-  return lookup.get(key(event.group, event.sample));
+  return lookup.get(key(cue.group, cue.sample));
 }

@@ -17,8 +17,9 @@ import (
 	"github.com/openkakutou/stage"
 )
 
-// Constants mirror the web build's match-config.ts placeholders so both
-// targets simulate identically.
+// Placeholder gameplay constants. The web build plays through the same
+// core, so both targets simulate identically; web/hud keeps DefaultHealth
+// and MaxPower as its bar maxima.
 const (
 	TickRateHz         = 60
 	DefaultHealth      = 1000

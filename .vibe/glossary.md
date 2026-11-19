@@ -42,12 +42,12 @@ Who won the match overall — one player, or (only in an unexpected/ambiguous un
 _Sources: `src/result/outcome.ts`, `src/result/result-screen.ts`, `src/rendering/match-renderer.ts`_
 
 ## CPU opponent
-A computer-controlled stand-in for player 2, chosen on the match setup screen's Player 2 Control option (Human or CPU, defaulting to Human) — a minimal first pass, not a full AI: it moves toward its opponent and occasionally attacks, driven through the exact same input path a real player's keyboard or gamepad would use.
-_Sources: `src/setup/setup-screen.ts`, `src/cpu/cpu-controller.ts`, `src/cpu/cpu-input-source.ts`_
+A computer-controlled stand-in for player 2, chosen on the match setup screen's Player 2 Control option (Human or CPU, defaulting to Human) — a minimal first pass, not a full AI: it moves toward its opponent and occasionally attacks. The web asks the game core to play player 2 (`p2cpu`), so web and native play the same opponent.
+_Sources: `src/setup/setup-screen.ts`, `src/rendering/match-renderer.ts`, `native/internal/game/cpu.go`_
 
 ## Power / meter
-A fighter's super gauge value, gained and spent during a match, shown as its own bar in the in-match HUD alongside the lifebar. Reported live by `engine` as a raw number; this app renders it as a percentage of a fixed placeholder cap, since `engine` does not itself publish that cap as part of its match-state contract.
-_Sources: `src/hud/hud-view-model.ts`, `src/rendering/match-config.ts`_
+A fighter's super gauge value, gained and spent during a match, shown as its own bar in the in-match HUD alongside the lifebar. Reported live by the game core as a raw number; this app renders it as a percentage of a fixed cap (`MAX_POWER`, mirroring the native game's), since the core does not publish that cap in its snapshot.
+_Sources: `src/hud/hud-renderer.ts`_
 
 ## Versus
 The first built-in game mode (a mode file, `versus.jsonc`): both players go through character select, stage select and match setup, fight, then see the results. Not quick versus.

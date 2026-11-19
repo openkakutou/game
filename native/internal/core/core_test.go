@@ -150,7 +150,7 @@ func TestStartMatch_ReturnsRoundZeroState(t *testing.T) {
 	// the stage is 6 units either side of the origin, so the fighters start
 	// there, full health, no power.
 	want := map[string]any{"roundsToWin": 2.0, "roundTimerTicks": 3600.0, "tick": 0.0, "round": 1.0, "timer": 3600.0,
-		"roundEnded": false, "over": false, "winner": -1.0, "outcome": "none"}
+		"roundEnded": false, "over": false, "winner": -1.0, "roundWinner": -1.0, "outcome": "none"}
 	for k, v := range want {
 		if out[k] != v {
 			t.Errorf("%s = %v, want %v", k, out[k], v)
@@ -256,6 +256,17 @@ func TestNextRound_RefusesARoundStillBeingPlayed(t *testing.T) {
 	}
 }
 
+func TestTick_NamesTheRoundWinnerOfATimeoutWithAHealthLead(t *testing.T) {
+	c := loaded(t)
+	id, _ := start(t, c, strings.Replace(startReq, `"timeLimitSeconds":60`, `"timeLimitSeconds":2`, 1))
+	out := playTo(t, c, id, 120)
+	// Pinned: P1's attack lands within the first seconds (health of P2 drops,
+	// see TestTick_SnapshotMatchesTheMatchItDrives), so P1 wins on time.
+	if out["outcome"] != "timeout" || out["roundWinner"] != 0.0 {
+		t.Fatalf("after the 2 s limit: outcome %v, roundWinner %v, fighters %v", out["outcome"], out["roundWinner"], out["fighters"])
+	}
+}
+
 func TestTick_RoundEndsAndNextRoundResets(t *testing.T) {
 	c := loaded(t)
 	id, _ := start(t, c, strings.Replace(startReq, `"timeLimitSeconds":60`, `"timeLimitSeconds":1`, 1))
@@ -263,7 +274,7 @@ func TestTick_RoundEndsAndNextRoundResets(t *testing.T) {
 	for i := 0; i < 60; i++ {
 		out = decode(t, c.Tick(id, idle))
 	}
-	if out["roundEnded"] != true || out["outcome"] != "draw" || out["timer"] != 0.0 {
+	if out["roundEnded"] != true || out["outcome"] != "draw" || out["timer"] != 0.0 || out["roundWinner"] != -1.0 {
 		t.Fatalf("after the 1 s limit: %v", out)
 	}
 	if got := reason(t, c.Tick(id, idle)); !strings.Contains(got, "nextRound") {

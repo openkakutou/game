@@ -4,8 +4,8 @@ import {
   createGamepadInputTracker,
 } from "./gamepad-input.ts";
 // Combines the keyboard and gamepad trackers into the single per-tick
-// `[TickInput, TickInput]` pair `match-renderer.ts`'s tick loop threads
-// into `engine`'s `tick()` call. Each player has exactly one active input
+// `[TickInput, TickInput]` pair `match-renderer.ts`'s tick loop sends
+// to the game core's `tick()` call. Each player has exactly one active input
 // source at a time -- their assigned gamepad if still connected, otherwise
 // their keyboard bindings -- never merged (see
 // `.vibe/decisions/005-input-routing-design.md`). `read()` is meant to be
@@ -36,7 +36,7 @@ export interface TickInputSourceOptions {
   onSourceChange?: (playerIndex: 0 | 1, source: InputSourceKind) => void;
 }
 
-/** The subset of `engine`'s `TickInput` this project ever sends: every field always present (see `RawPlayerInput`), which is exactly what `TickInput`'s own optional fields accept. */
+/** The subset of the core's `TickInput` this project ever sends: every field always present (see `RawPlayerInput`), which is exactly what `TickInput`'s own optional fields accept. */
 export type TickInputPair = [RawPlayerInput, RawPlayerInput];
 
 export interface TickInputSource {

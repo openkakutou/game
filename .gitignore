@@ -4,7 +4,7 @@ dist-visual/
 *.local
 .DS_Store
 
-# Downloaded/locally-built WASM artifacts from character, stage, sff, and engine
+# Downloaded/locally-built WASM artifacts from character, stage and the game core
 public/wasm/
 
 # Visual regression tests (backlog item 011): the fixture WASM copy is

@@ -10,9 +10,7 @@
 // `.vibe/decisions/008-visual-regression-fixture-serving-strategy.md`.
 //
 // Deliberately fails fast with a named, actionable error (not a silent
-// skip or a stale copy left in place) when a source asset is missing —
-// this app has no `engine` WASM asset published at all yet, so the same
-// silent-passthrough mistake there must not be repeated here.
+// skip or a stale copy left in place) when a source asset is missing.
 
 import { copyFile, mkdir, rm, stat } from "node:fs/promises";
 import path from "node:path";

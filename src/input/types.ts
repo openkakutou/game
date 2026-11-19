@@ -4,7 +4,7 @@ import type { ButtonName } from "./key-bindings.ts";
  * One player's raw directional/button input as of a single read — the
  * shared shape `keyboard-input.ts`, `gamepad-input.ts`, and
  * `tick-input-source.ts` all produce/consume. Structurally identical to
- * `engine`'s own `TickInput` (see `wasm/engine-types.ts`) but every field
+ * the game core's `TickInput` (see `wasm/core-types.ts`) but every field
  * is always present (never optional), since an internal reader always
  * knows the true current state — only the outermost boundary
  * (`tick-input-source.ts`'s `read()`) narrows it down to the WASM bridge's

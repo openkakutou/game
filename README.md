@@ -55,10 +55,10 @@ Download a specific version of the `stage` library's WebAssembly build (needed t
 npm run wasm:download:stage -- v0.13.0
 ```
 
-Download a specific version of the `engine` library's WebAssembly build (needed to run a match):
+Build the game core's WebAssembly module (needed to run a match; uses Go on the PATH, else the native toolchain container):
 
 ```sh
-npm run wasm:download:engine -- v2.10.0
+npm run wasm:core
 ```
 <!-- vibe:end:install -->
 

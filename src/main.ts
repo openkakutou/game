@@ -2,7 +2,6 @@ import "@openkakutou/web-ui-kit/tokens.css";
 import "@openkakutou/web-ui-kit";
 import type { WuikLocaleSwitcherElement } from "@openkakutou/web-ui-kit";
 import { getI18n, initAppI18n, onLocaleChange, t } from "./i18n/i18n.ts";
-import { emptyCommandFile } from "./rendering/match-config.ts";
 import { renderMatch as renderMatchDefault } from "./rendering/match-renderer.ts";
 import { discoverRoster } from "./roster/discovery.ts";
 import {
@@ -23,12 +22,12 @@ import {
   fetchStageManifest,
 } from "./stage/manifest.ts";
 import { appVersion } from "./version.ts";
+import { type WasmBridgeOptions, loadCharacter } from "./wasm/bridge.ts";
 import {
-  type WasmBridgeOptions,
-  loadCharacter,
-  loadCmd,
-} from "./wasm/bridge.ts";
-import type { CommandFileBlob } from "./wasm/engine-types.ts";
+  type CoreFile,
+  type CoreWasmBridgeOptions,
+  mountFiles as mountFilesDefault,
+} from "./wasm/core-bridge.ts";
 import { type StageWasmBridgeOptions, loadStage } from "./wasm/stage-bridge.ts";
 import type { StageSummary } from "./wasm/stage-types.ts";
 
@@ -47,13 +46,7 @@ export interface RenderAppOptions {
    * Defaults to the real bridge's `loadCharacter`, driven by `bridgeOptions`.
    */
   loadCharacter?: typeof loadCharacter;
-  /**
-   * Overrides the `.cmd` command-file loader used during match assembly,
-   * same rationale as `loadCharacter` above. Defaults to the real bridge's
-   * `loadCmd`, driven by `bridgeOptions` (the same character WASM module).
-   */
-  loadCmd?: typeof loadCmd;
-  /** Forwarded to the real bridge's `loadCharacter`/`loadCmd` when neither is overridden. */
+  /** Forwarded to the real bridge's `loadCharacter` when it is not overridden. */
   bridgeOptions?: WasmBridgeOptions;
   /** Forwarded to `fetchStageManifest`; injectable for testing. */
   stageManifestOptions?: FetchStageManifestOptions;
@@ -65,6 +58,14 @@ export interface RenderAppOptions {
   loadStage?: typeof loadStage;
   /** Forwarded to the real bridge's `loadStage` when `loadStage` is not overridden. */
   stageBridgeOptions?: StageWasmBridgeOptions;
+  /**
+   * Overrides how a match's files are mounted into the game core, same
+   * rationale as `loadCharacter` above. Defaults to the real bridge's
+   * `mountFiles`, driven by `coreBridgeOptions`.
+   */
+  mountFiles?: typeof mountFilesDefault;
+  /** Forwarded to the real bridge's `mountFiles` when it is not overridden. */
+  coreBridgeOptions?: CoreWasmBridgeOptions;
   /**
    * Overrides the match renderer used once match setup completes,
    * bypassing the real canvas/WASM tick loop entirely — the composition/
@@ -356,9 +357,10 @@ async function startMatch(
   const resolveStage =
     options.loadStage ??
     ((defBytes: Uint8Array) => loadStage(defBytes, options.stageBridgeOptions));
-  const resolveCmd =
-    options.loadCmd ??
-    ((cmdBytes: Uint8Array) => loadCmd(cmdBytes, options.bridgeOptions));
+  const mountFiles =
+    options.mountFiles ??
+    ((files: readonly CoreFile[]) =>
+      mountFilesDefault(files, options.coreBridgeOptions));
   const renderMatch = options.renderMatch ?? renderMatchDefault;
 
   const player1Entry = rosterEntries.find((e) => e.id === player1Id);
@@ -379,7 +381,8 @@ async function startMatch(
       fetchBytes(entry.files.sff),
       fetchBytes(entry.files.cns),
     ]);
-    const sndBytes = await loadFighterSound(entry);
+    const sndBytes = await fetchOptionalBytes(entry.files.snd);
+    const cmdBytes = await fetchOptionalBytes(entry.files.cmd);
     const result = await resolveCharacter(
       defBytes,
       airBytes,
@@ -387,48 +390,40 @@ async function startMatch(
       cnsBytes,
       sndBytes,
     );
-    const commands = await loadFighterCommands(entry);
-    return { result, sffBytes, commands };
+    // Shortcut: only the files the roster manifest lists are mounted, so a
+    // character whose `.def` points at other files (extra `stN` state files,
+    // a `stcommon`) loads without them; upgrade when content is mounted by
+    // folder (backlog item 067).
+    const files: CoreFile[] = [
+      { name: coreName(entry.files.def), bytes: defBytes },
+      { name: coreName(entry.files.air), bytes: airBytes },
+      { name: coreName(entry.files.sff), bytes: sffBytes },
+      { name: coreName(entry.files.cns), bytes: cnsBytes },
+    ];
+    if (sndBytes && entry.files.snd) {
+      files.push({ name: coreName(entry.files.snd), bytes: sndBytes });
+    }
+    if (cmdBytes) {
+      files.push({ name: coreName(entry.files.cmd), bytes: cmdBytes });
+    }
+    return { result, sffBytes, files };
   }
 
   /**
-   * Fetches this fighter's own `.snd` sound file, if the manifest lists one,
-   * so its decoded sound effects (backlog item 013) are available during
-   * the match. A character with no `files.snd` entry is valid (many
-   * characters legitimately have no sound file) and resolves to `null`
-   * (no sound data) without fetching anything; a fetch failure for a
-   * *declared* path degrades the same way — no sounds for this one
-   * fighter — rather than blocking the whole match, same "degrade, don't
-   * block" precedent as `loadFighterCommands` below.
+   * Fetches a file that is legitimately optional, so a missing one degrades
+   * rather than blocks the match: a fighter's `.snd` (many characters have no
+   * sound file, backlog item 013) or `.cmd` (the core plays the fighter with
+   * no commands). A path that is not listed, or whose fetch fails, resolves
+   * to `null`.
    */
-  async function loadFighterSound(
-    entry: RosterManifestEntry,
+  async function fetchOptionalBytes(
+    filePath: string | undefined,
   ): Promise<Uint8Array | null> {
-    if (!entry.files.snd) return null;
+    if (!filePath) return null;
     try {
-      return await fetchBytes(entry.files.snd);
+      return await fetchBytes(filePath);
     } catch {
       return null;
-    }
-  }
-
-  /**
-   * Fetches and parses this fighter's own `.cmd` file so routed player
-   * input (backlog item 006) can resolve to recognized commands. A
-   * fetch/parse failure degrades this one fighter to no recognized
-   * commands (`emptyCommandFile()`) instead of blocking the whole match —
-   * same "degrade, don't block" precedent already used for a sprite that
-   * fails to resolve.
-   */
-  async function loadFighterCommands(
-    entry: RosterManifestEntry,
-  ): Promise<CommandFileBlob> {
-    try {
-      const cmdBytes = await fetchBytes(entry.files.cmd);
-      const parsed = await resolveCmd(cmdBytes);
-      return parsed.ok ? parsed.commandFile : emptyCommandFile();
-    } catch {
-      return emptyCommandFile();
     }
   }
 
@@ -436,8 +431,8 @@ async function startMatch(
   let player2Loaded: Awaited<ReturnType<typeof loadFighter>>;
   let stageLoaded: Awaited<ReturnType<typeof resolveStage>>;
   let stageSffBytes: Uint8Array;
+  let stageDefBytes: Uint8Array;
   try {
-    let stageDefBytes: Uint8Array;
     [player1Loaded, player2Loaded, stageDefBytes] = await Promise.all([
       loadFighter(player1Entry),
       loadFighter(player2Entry),
@@ -496,18 +491,64 @@ async function startMatch(
 
   const musicBytes = await loadStageMusicBytes(stageEntry, stageLoaded.stage);
 
+  // The core plays the match from its own copy of the files, mounted once
+  // per page; a stage's sprite sheet and music sit beside its `.def` under
+  // their basename, where the core looks first.
+  const stageDefName = coreName(stageEntry.files.def);
+  const stageFiles: CoreFile[] = [
+    { name: stageDefName, bytes: stageDefBytes },
+    {
+      name: coreName(
+        resolveStageAssetPath(
+          stageEntry.files.def,
+          stageLoaded.stage.bgDef.spriteFile,
+        ),
+      ),
+      bytes: stageSffBytes,
+    },
+  ];
+  if (musicBytes) {
+    stageFiles.push({
+      name: coreName(
+        resolveStageAssetPath(
+          stageEntry.files.def,
+          stageLoaded.stage.musicFile,
+        ),
+      ),
+      bytes: musicBytes,
+    });
+  }
+  const mounted = await mountFiles([
+    ...player1Loaded.files,
+    ...player2Loaded.files,
+    ...stageFiles,
+  ]);
+  if (!mounted.ok) {
+    status.textContent = t(
+      "status.matchStartCharacterError",
+      "Could not start the match: {{error}}",
+      { error: mounted.error },
+    );
+    return;
+  }
+
   await renderMatch(main, {
     player1: {
       character: player1Loaded.result.character,
       sffBytes: player1Loaded.sffBytes,
-      commands: player1Loaded.commands,
+      defName: coreName(player1Entry.files.def),
     },
     player2: {
       character: player2Loaded.result.character,
       sffBytes: player2Loaded.sffBytes,
-      commands: player2Loaded.commands,
+      defName: coreName(player2Entry.files.def),
     },
-    stage: { stage: stageLoaded.stage, sffBytes: stageSffBytes, musicBytes },
+    stage: {
+      stage: stageLoaded.stage,
+      sffBytes: stageSffBytes,
+      defName: stageDefName,
+      musicBytes,
+    },
     config,
     player2Control: config.player2Control,
     onBackToSelect: () => {
@@ -537,6 +578,14 @@ async function startMatch(
       return null;
     }
   }
+}
+
+/**
+ * A manifest file path as a name in the core's file system: slash-separated
+ * from the game root, without the `./` or `/` a URL path may start with.
+ */
+function coreName(filePath: string): string {
+  return filePath.replace(/^(\.\/|\/)+/, "");
 }
 
 /**

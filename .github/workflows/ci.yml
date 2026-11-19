@@ -26,10 +26,8 @@ jobs:
     # failure mode, and web-ui-kit's `.vibe/decisions/015`.
     #
     # Scoped to lint + the visual regression suite only (backlog item 011),
-    # not the full `npm test` unit/smoke suite: several of those tests need
-    # the `engine` WASM module, which has no published release build asset
-    # yet (a separate, pre-existing gap — see
-    # .vibe/decisions/008-visual-regression-fixture-serving-strategy.md).
+    # not the full `npm test` unit/smoke suite (a separate, pre-existing gap
+    # — see .vibe/decisions/008-visual-regression-fixture-serving-strategy.md).
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e # v1.62.1-noble

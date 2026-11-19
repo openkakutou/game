@@ -8,8 +8,6 @@
 import type {
   Animation,
   CharacterResult,
-  CommandFile,
-  CommandFileResult,
   SoundGroup,
   SpriteGroup,
   SpritePixelResult,
@@ -31,12 +29,6 @@ interface RawLoadResult {
   error: string | null;
 }
 
-/** The `{commandFile, error}` shape returned synchronously by `OpenKakutouCharacter.loadCmd`. */
-interface RawLoadCmdResult {
-  commandFile: string | null;
-  error: string | null;
-}
-
 /** One `resolveSprites` request result as returned raw by the WASM module: exactly one of `pixels`/`error` is non-null. */
 interface RawSpritePixelResult {
   pixels: Uint8Array | null;
@@ -53,7 +45,6 @@ interface OpenKakutouCharacterGlobal {
     cnsBytes: Uint8Array,
     sndBytes?: Uint8Array | null,
   ): RawLoadResult;
-  loadCmd(cmdBytes: Uint8Array): RawLoadCmdResult;
   resolveSprites(
     sffBytes: Uint8Array,
     requests: [number, number][],
@@ -282,37 +273,4 @@ export async function resolveSprites(
       height: result.height,
     };
   });
-}
-
-/**
- * Parses a `.cmd` file's raw bytes via the `character` WASM module's
- * `loadCmd` global, returning a typed result instead of throwing on
- * malformed input — same discriminated-union contract as `loadCharacter`.
- * Unlike `loadCharacter`, `.cmd` parsing never touches `.def`/`.air`/`.sff`/
- * `.cns` at all: a `.cmd` file stands alone.
- */
-export async function loadCmd(
-  cmdBytes: Uint8Array,
-  options: WasmBridgeOptions = {},
-): Promise<CommandFileResult> {
-  const ready = await ensureGoRuntimeReadyOrError(options);
-  if (!ready.ok) return ready;
-
-  const raw = getOpenKakutouCharacter().loadCmd(cmdBytes);
-
-  if (raw.error !== null) {
-    return { ok: false, error: raw.error };
-  }
-  if (raw.commandFile === null) {
-    return {
-      ok: false,
-      error:
-        "OpenKakutouCharacter.loadCmd returned neither a command file nor an error",
-    };
-  }
-
-  return {
-    ok: true,
-    commandFile: JSON.parse(raw.commandFile) as CommandFile,
-  };
 }

@@ -59,8 +59,7 @@
     "valueOfMax": "{{value}} / {{max}}",
     "wins": "Wins: {{count}}",
     "roundInfo": "Round {{round}} · Best of {{bestOf}}",
-    "roundAnnouncement": "Round {{round}} started. {{p1Wins}} - {{p2Wins}}.",
-    "error": "The match display could not be updated: {{error}}"
+    "roundAnnouncement": "Round {{round}} started. {{p1Wins}} - {{p2Wins}}."
   },
   "result": {
     "roundWinner": "Round {{round}}: Player {{number}} wins!",

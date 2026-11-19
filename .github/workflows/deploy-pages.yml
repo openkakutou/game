@@ -42,7 +42,7 @@ jobs:
         run: npm ci
 
       # Pinned exact release tags, one download per WASM dependency this app
-      # actually loads client-side — see this repo's own CLAUDE.md. `sff` is
+      # actually loads client-side — see this repo's own CLAUDE.md (the game core is built below, not downloaded). `sff` is
       # deliberately not downloaded here: this app never loads a separate
       # `sff.wasm` module of its own, `.sff` sprite-sheet bytes are only ever
       # forwarded as plain data to the `character`/`stage` bridges' own
@@ -56,13 +56,6 @@ jobs:
 
       - name: Download stage WASM release
         run: npm run wasm:download:stage -- v0.13.0
-
-      # `engine` publishes release build assets as of v2.4.0 (it did not
-      # when `ci.yml` was first written — see that file's own comment) so
-      # the full test suite, including every `engine`-dependent test, can
-      # now run here before anything is published.
-      - name: Download engine WASM release
-        run: npm run wasm:download:engine -- v2.10.0
 
       # The game core, built from native/ so the web build uses the same
       # library versions as the native one (pinned by native/go.mod).

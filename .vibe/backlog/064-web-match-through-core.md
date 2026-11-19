@@ -10,6 +10,6 @@ Step 3 of item 060. The web match runs on core.wasm: it sends inputs each tick a
 🔒 MUST: the web match plays the same as native for the same inputs.
 
 ## Acceptance Criteria
-- [ ] `src/cpu`, the camera and pause logic and the HUD value model are gone from TypeScript
-- [ ] The web build no longer loads `engine.wasm` (drawing data and the `character`/`stage` WASM move to the core in item 067)
-- [ ] Existing web e2e and visual tests pass, updated only where the old web behavior diverged from native
+- [x] `src/cpu`, the camera and pause logic and the HUD value model are gone from TypeScript
+- [x] The web build no longer loads `engine.wasm` (drawing data and the `character`/`stage` WASM move to the core in item 067)
+- [x] Existing web e2e and visual tests pass, updated only where the old web behavior diverged from native
