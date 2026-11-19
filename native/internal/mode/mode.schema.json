@@ -9,34 +9,69 @@
   "properties": {
     "$schema": { "type": "string" },
     "formatVersion": { "const": 1 },
-    "id": { "type": "string", "minLength": 1, "description": "Stable identifier, e.g. quick-versus." },
-    "name": { "type": "string", "minLength": 1, "description": "Name shown in the main menu." },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier, e.g. quick-versus."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name shown in the main menu."
+    },
     "flow": {
       "type": "array",
       "minItems": 1,
       "description": "Built-in screens in the order they run; must include a match screen.",
-      "contains": { "type": "object", "properties": { "screen": { "const": "match" } }, "required": ["screen"] },
+      "contains": {
+        "type": "object",
+        "properties": { "screen": { "const": "match" } },
+        "required": ["screen"]
+      },
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["screen"],
         "properties": {
-          "screen": { "enum": ["characterSelect", "stageSelect", "matchSetup", "versus", "match", "results", "continue", "victory"] },
+          "screen": {
+            "enum": [
+              "characterSelect",
+              "stageSelect",
+              "matchSetup",
+              "versus",
+              "match",
+              "results",
+              "continue",
+              "victory"
+            ]
+          },
           "params": { "type": "object" }
         },
         "allOf": [
           {
-            "if": { "properties": { "screen": { "const": "characterSelect" } } },
+            "if": {
+              "properties": { "screen": { "const": "characterSelect" } }
+            },
             "then": {
               "properties": {
                 "params": {
                   "type": "object",
                   "additionalProperties": false,
-                  "properties": { "sides": { "type": "array", "minItems": 1, "items": { "enum": ["p1", "p2"] } } }
+                  "properties": {
+                    "sides": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": { "enum": ["p1", "p2"] }
+                    }
+                  }
                 }
               }
             },
-            "else": { "properties": { "params": { "type": "object", "maxProperties": 0 } } }
+            "else": {
+              "properties": {
+                "params": { "type": "object", "maxProperties": 0 }
+              }
+            }
           }
         ]
       }
@@ -44,7 +79,14 @@
     "rules": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sides", "rounds", "timeLimitSeconds", "opponents", "onWin", "onLose"],
+      "required": [
+        "sides",
+        "rounds",
+        "timeLimitSeconds",
+        "opponents",
+        "onWin",
+        "onLose"
+      ],
       "properties": {
         "sides": {
           "type": "array",
@@ -60,8 +102,17 @@
             }
           }
         },
-        "rounds": { "type": "integer", "minimum": 1, "not": { "multipleOf": 2 }, "description": "Best of N; odd." },
-        "timeLimitSeconds": { "type": "integer", "minimum": 0, "description": "0: no time limit." },
+        "rounds": {
+          "type": "integer",
+          "minimum": 1,
+          "not": { "multipleOf": 2 },
+          "description": "Best of N; odd."
+        },
+        "timeLimitSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "0: no time limit."
+        },
         "opponents": {
           "type": "object",
           "additionalProperties": false,
@@ -74,8 +125,12 @@
           "then": { "required": ["count"] },
           "else": { "not": { "required": ["count"] } }
         },
-        "onWin": { "enum": ["results", "nextOpponent", "continue", "gameOver"] },
-        "onLose": { "enum": ["results", "nextOpponent", "continue", "gameOver"] }
+        "onWin": {
+          "enum": ["results", "nextOpponent", "continue", "gameOver"]
+        },
+        "onLose": {
+          "enum": ["results", "nextOpponent", "continue", "gameOver"]
+        }
       }
     }
   }

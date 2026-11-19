@@ -12,17 +12,17 @@
     { "screen": "matchSetup" },
     { "screen": "versus" },
     { "screen": "match" },
-    { "screen": "results" }, // rematch or back to selection
+    { "screen": "results" } // rematch or back to selection
   ],
   "rules": {
     "sides": [
       { "control": "human", "characters": 1 },
-      { "control": "humanOrCpu", "characters": 1 },
+      { "control": "humanOrCpu", "characters": 1 }
     ],
     "rounds": 3,
     "timeLimitSeconds": 99,
     "opponents": { "kind": "chosen" },
     "onWin": "results",
-    "onLose": "results",
-  },
+    "onLose": "results"
+  }
 }

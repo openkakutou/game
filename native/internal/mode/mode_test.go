@@ -127,3 +127,11 @@ func TestLoad_ReadsAFileAndNamesItInErrors(t *testing.T) {
 		t.Fatal("missing file: want an error")
 	}
 }
+
+func TestParse_JSONCTrailingCommas_AreAccepted(t *testing.T) {
+	src := strings.Replace(valid, `{"screen": "match"}]`, `{"screen": "match"},]`, 1)
+	src = strings.Replace(src, `"onLose": "continue"}`, `"onLose": "continue",}`, 1)
+	if _, err := Parse("arcade.jsonc", []byte(src)); err != nil {
+		t.Fatal(err)
+	}
+}
