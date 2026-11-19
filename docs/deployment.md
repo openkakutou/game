@@ -10,6 +10,7 @@ This project ships two entirely separate release targets (roadmap `.vibe/decisio
 
 1. Checks out the repo and installs dependencies inside a pinned `mcr.microsoft.com/playwright` container image (the same image `ci.yml`'s visual regression job uses, so a screenshot baseline captured through one always matches what the other renders).
 2. Downloads the pinned `character`, `stage`, and `engine` WASM release assets into `public/wasm/` — the exact three modules this app loads client-side (see `docs/architecture.md`; `sff` is not a separate module here).
+   It also builds the game core (`native/cmd/core-wasm`) with Go (`actions/setup-go`, version from `native/go.mod`) through `npm run wasm:core`, producing `public/wasm/core.wasm` and its `core-wasm_exec.js`, so the web build uses the same library versions as the native one. Locally the same script runs inside the native toolchain container when no Go is installed. Nothing loads it yet (backlog item 064); the engine/character/stage downloads stay until then.
 3. Runs the full test suite (`npm test`), lint (`biome check`), the production build (`npm run build`), and the visual regression suite (`npm run test:visual`) — any failure stops the pipeline before anything is published.
 4. Uploads `dist/` as a Pages artifact and deploys it.
 

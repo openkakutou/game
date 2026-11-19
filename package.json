@@ -19,7 +19,8 @@
     "lint": "biome check --write .",
     "wasm:download": "node scripts/download-wasm.mjs",
     "wasm:download:stage": "node scripts/download-wasm.mjs stage",
-    "wasm:download:engine": "node scripts/download-wasm.mjs engine"
+    "wasm:download:engine": "node scripts/download-wasm.mjs engine",
+    "wasm:core": "bash scripts/build-core-wasm.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

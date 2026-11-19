@@ -61,6 +61,16 @@ jobs:
       - name: Download stage WASM release
         run: npm run wasm:download:stage -- v0.13.0
 
+      # The game core, built from native/ so the web build uses the same
+      # library versions as the native one (pinned by native/go.mod).
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: native/go.mod
+
+      - name: Build core WASM
+        run: npm run wasm:core
+
       - name: Prepare visual test fixtures
         run: npm run prepare-visual-fixtures
 

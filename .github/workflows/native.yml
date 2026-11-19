@@ -58,6 +58,26 @@ jobs:
           GOOS=js GOARCH=wasm go build -o "$RUNNER_TEMP/mode.wasm" ./cmd/mode-wasm
           node cmd/mode-wasm/smoke.mjs "$RUNNER_TEMP/mode.wasm" "$(go env GOROOT)"
 
+  # The game core's WebAssembly build (cmd/core-wasm): mounts the test content,
+  # plays a match and reads the state, under Node.
+  core-wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: native
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: native/go.mod
+      - name: Build and smoke-test the core WASM
+        run: |
+          GOOS=js GOARCH=wasm go build -o "$RUNNER_TEMP/core.wasm" ./cmd/core-wasm
+          node cmd/core-wasm/smoke.mjs "$RUNNER_TEMP/core.wasm" "$(go env GOROOT)"
+
   # UNVERIFIED LOCALLY: macOS cannot be built or run from Linux/Docker, so
   # this job has never been executed by the author -- its first real run on
   # GitHub is the first verification. It mirrors the Linux steps with
