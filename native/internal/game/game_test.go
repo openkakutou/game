@@ -125,7 +125,15 @@ func closeStage() *stage.Stage {
 	return &stage.Stage{StageBoundaries: stage.StageBoundaries{Left: -6, Right: 6}}
 }
 
-func holdA() input.TickInput { return input.TickInput{Buttons: map[string]bool{"a": true}} }
+// tapA presses "a" on even ticks and releases it on odd ones: engine reads a
+// held button as one press, as Ikemen GO does (input.go:2621-2625), so
+// repeated attacks need repeated presses.
+func tapA(tick int) input.TickInput {
+	if tick%2 == 1 {
+		return input.TickInput{}
+	}
+	return input.TickInput{Buttons: map[string]bool{"a": true}}
+}
 
 func TestLoadFighter_ReadsCharacterCommandsAndSpritePath(t *testing.T) {
 	a, _ := loadPair(t)
@@ -140,14 +148,14 @@ func TestLoadFighter_MissingDefIsError(t *testing.T) {
 	}
 }
 
-func TestMatch_HoldingAttackKOsOpponentAndEndsBestOfOne(t *testing.T) {
+func TestMatch_TappingAttackKOsOpponentAndEndsBestOfOne(t *testing.T) {
 	a, b := loadPair(t)
 	m, err := NewMatch(a, b, closeStage(), Setup{Rounds: 1, TimeLimitSeconds: 0})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 2000 && !m.RoundEnded(); i++ {
-		if err := m.Step([2]input.TickInput{holdA(), {}}); err != nil {
+		if err := m.Step([2]input.TickInput{tapA(i), {}}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -172,7 +180,7 @@ func TestMatch_NextRoundResetsHealthAndPositions(t *testing.T) {
 	a, b := loadPair(t)
 	m, _ := NewMatch(a, b, closeStage(), Setup{Rounds: 3, TimeLimitSeconds: 0})
 	for i := 0; i < 2000 && !m.RoundEnded(); i++ {
-		m.Step([2]input.TickInput{holdA(), {}})
+		m.Step([2]input.TickInput{tapA(i), {}})
 	}
 	if m.Over {
 		t.Fatal("best of 3 must not be over after one round")
@@ -246,7 +254,7 @@ func TestFlow_FullPathSelectionToResultAndRematch(t *testing.T) {
 	// Shrink the stage so the fixture fighters can reach each other.
 	f.Match, _ = NewMatch(f.Fighters[0], f.Fighters[1], closeStage(), f.Setup())
 	for i := 0; i < 5000 && f.Screen == ScreenMatch; i++ {
-		f.Tick([2]input.TickInput{holdA(), {}})
+		f.Tick([2]input.TickInput{tapA(i), {}})
 	}
 	if f.Screen != ScreenResult || f.ResultWinner != match.SideP1 {
 		t.Fatalf("screen=%v winner=%v", f.Screen, f.ResultWinner)
@@ -316,7 +324,7 @@ func TestFlow_UnloadableCharacterShowsErrorNamingIt(t *testing.T) {
 
 func TestFlow_TickOutsideMatchIsNoop(t *testing.T) {
 	f := newTestFlow(t)
-	f.Tick([2]input.TickInput{holdA(), {}})
+	f.Tick([2]input.TickInput{tapA(0), {}})
 	if f.Screen != ScreenSelect {
 		t.Errorf("screen changed to %v", f.Screen)
 	}
@@ -370,7 +378,7 @@ func TestFlow_CPUDrivesPlayer2IgnoringItsKeysAndSurvivesRematch(t *testing.T) {
 	f.Match, _ = NewMatch(f.Fighters[0], f.Fighters[1], closeStage(), f.Setup())
 	heldB := input.TickInput{Buttons: map[string]bool{"b": true}}
 	for i := 0; i < 5000 && f.Screen == ScreenMatch; i++ {
-		f.Tick([2]input.TickInput{holdA(), heldB})
+		f.Tick([2]input.TickInput{tapA(i), heldB})
 	}
 	if f.Screen != ScreenResult {
 		t.Fatalf("screen=%v, match against the CPU never finished", f.Screen)

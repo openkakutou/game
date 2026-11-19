@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The native game uses the latest engine. Fighters have control when a round starts, Kung Fu Man walks and jumps when the player holds forward or up, and a held button counts as one press, as in Ikemen GO.
+
 ## [0.19.0] - 2026-11-19
 
 ### Changed

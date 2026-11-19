@@ -259,7 +259,7 @@ func TestMatch_AttackStatePlaySndQueuesCueForTheAttackingSideOnly(t *testing.T) 
 	}
 	var got []Cue
 	for i := 0; i < 40; i++ {
-		if err := m.Step([2]input.TickInput{holdA(), {}}); err != nil {
+		if err := m.Step([2]input.TickInput{tapA(i), {}}); err != nil {
 			t.Fatal(err)
 		}
 		got = m.DrainCues(got)

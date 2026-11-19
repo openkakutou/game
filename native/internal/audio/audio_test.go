@@ -65,7 +65,16 @@ func matchFlow(t *testing.T) *game.Flow {
 	return f
 }
 
+// tapTicks counts hold calls so the attack button alternates pressed and
+// released: engine reads a held button as one press, as Ikemen GO does
+// (input.go:2621-2625), so repeated attacks need repeated presses.
+var tapTicks int
+
 func hold() [2]input.TickInput {
+	tapTicks++
+	if tapTicks%2 == 0 {
+		return [2]input.TickInput{}
+	}
 	return [2]input.TickInput{{Buttons: map[string]bool{"a": true}}, {}}
 }
 
