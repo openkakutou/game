@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Core: game logic without files or drawing
 
@@ -9,6 +9,6 @@ Step 1 of item 060 (roadmap decision `045`). Move the platform-independent game 
 🔒 MUST: no behavior change — every native test passes unchanged; the native build plays the same.
 
 ## Acceptance Criteria
-- [ ] The core package imports no `os`, `path/filepath` file access, SDL or GL
-- [ ] The native build loads content through a file-system implementation of the content interface
-- [ ] All native tests pass; a test runs a scripted match through the core with in-memory content
+- [x] The core package imports no `os`, `path/filepath` file access, SDL or GL
+- [x] The native build loads content through a file-system implementation of the content interface
+- [x] All native tests pass; a test runs a scripted match through the core with in-memory content
