@@ -15,6 +15,8 @@ Item 039 draws a lifebar's `[Lifebar]` and `[Powerbar]` bars (bg0-2, mid, front,
 
 🔒 MUST: a lifebar from a MUGEN or Ikemen GO screenpack's `data/` shows the same elements as in Ikemen GO.
 
+Reading and resolving these elements is built in the shared `lifebar` library (roadmap decision `046`, `lifebar` items 003-005, then item 061 here); this item keeps the drawing.
+
 ## Acceptance Criteria
 - [ ] A real Ikemen GO lifebar (e.g. V-HD Bars) shows faces, round and win icons, combo counts as in Ikemen GO
 - [ ] Per-value variants switch at the same life thresholds as Ikemen GO
