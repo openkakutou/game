@@ -52,13 +52,6 @@ func LayerSprite(st *stage.Stage, e stage.BGElement, ticks int) (ref stage.Sprit
 	return ref, !ref.IsBlank()
 }
 
-// LayerOffset is element e's top-left, relative to the horizontal centre of
-// the screen and the top of it, with the camera at camX. Layers shift against
-// the camera the way fighters do, scaled by the element's delta.
-func LayerOffset(e stage.BGElement, camX float64) (x, y float64) {
-	return stage.ResolveParallaxPosition(e, -camX, 0)
-}
-
 // StageSpritePath is the stage's sprite sheet: beside its .def first, then
 // from the content root (like Ikemen GO). It is "" when the stage names none
 // or the reference is rejected (symbolic link, absolute, escaping).

@@ -1,5 +1,5 @@
 ---
-status: todo
+status: in_progress
 ---
 # Stage Fills the Screen and Camera
 

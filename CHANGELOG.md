@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- In the native game, a stage fills the whole screen instead of only its right half (e.g. Training), and the camera follows the fighters within the stage's bounds, as in Ikemen GO.
+
 ## [0.20.0] - 2026-11-19
 
 ### Changed

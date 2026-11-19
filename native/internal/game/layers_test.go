@@ -88,30 +88,6 @@ func TestLayerSprite_UnknownTypeDrawsNothing(t *testing.T) {
 	}
 }
 
-func TestLayerOffset_StartPlusParallaxAgainstCameraScroll(t *testing.T) {
-	e := stage.BGElement{StartX: 10, StartY: 20, DeltaX: 0.5, DeltaY: 0.8}
-	x, y := LayerOffset(e, 0)
-	if x != 10 || y != 20 {
-		t.Fatalf("camera at origin: got (%v,%v), want (10,20)", x, y)
-	}
-	// Camera moves right 40: the world shifts left, scaled by delta.
-	x, y = LayerOffset(e, 40)
-	if x != -10 || y != 20 {
-		t.Fatalf("camera at 40: got (%v,%v), want (-10,20)", x, y)
-	}
-}
-
-func TestLayerOffset_ZeroDeltaStaysFixedAndUnitDeltaScrollsWithTheWorld(t *testing.T) {
-	fixed := stage.BGElement{StartX: 5, DeltaX: 0}
-	world := stage.BGElement{StartX: 5, DeltaX: 1}
-	if x, _ := LayerOffset(fixed, 100); x != 5 {
-		t.Fatalf("delta 0 moved to %v, want 5", x)
-	}
-	if x, _ := LayerOffset(world, 100); x != -95 {
-		t.Fatalf("delta 1 at %v, want -95 (same shift as a fighter)", x)
-	}
-}
-
 func TestStageSpritePath_ResolvesBesideTheStageDefOrEmptyWhenNone(t *testing.T) {
 	st := &stage.Stage{BGdef: stage.BGdef{SpriteFile: "stage0.sff"}}
 	if got, want := StageSpritePath("", filepath.Join("a", "b", "arena.def"), st), filepath.Join("a", "b", "stage0.sff"); got != want {

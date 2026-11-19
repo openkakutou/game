@@ -180,6 +180,11 @@ func (t *Texture) Delete() { gl.DeleteTextures(1, &t.id) }
 // Sprite draws tex with its top-left at (x, y), optionally mirrored horizontally.
 // Pending colored quads are flushed first so draw order is preserved.
 func (w *Window) Sprite(t *Texture, x, y float32, flip bool) {
+	w.SpriteSized(t, x, y, float32(t.W), float32(t.H), flip)
+}
+
+// SpriteSized draws t with its top-left at x,y stretched to wd x ht.
+func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 	w.Flush()
 	gl.Enable(gl.TEXTURE_2D)
 	gl.BindTexture(gl.TEXTURE_2D, t.id)
@@ -189,7 +194,7 @@ func (w *Window) Sprite(t *Texture, x, y float32, flip bool) {
 	if flip {
 		u0, u1 = 1, 0
 	}
-	x2, y2 := x+float32(t.W), y+float32(t.H)
+	x2, y2 := x+wd, y+ht
 	gl.Begin(gl.QUADS)
 	gl.TexCoord2f(u0, 0)
 	gl.Vertex2f(x, y)

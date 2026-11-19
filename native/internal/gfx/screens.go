@@ -46,11 +46,18 @@ type Renderer struct {
 	loadedFor *game.Match
 	// behind/front are the stage's layer indexes, split once per match.
 	behind, front []int
+	// stageAxis is each loaded stage sprite's axis, from the stage's sheet.
+	stageAxis map[spriteKey][2]int
+	// The stage camera and view mapping, set up once per match.
+	cam               game.StageCamera
+	camX              float64
+	camTick           int
+	stageScale, shift float64
 }
 
 // NewRenderer builds a renderer for win.
 func NewRenderer(win *Window) *Renderer {
-	return &Renderer{win: win, sprites: map[spriteKey]*Texture{}}
+	return &Renderer{win: win, sprites: map[spriteKey]*Texture{}, stageAxis: map[spriteKey][2]int{}}
 }
 
 // Draw renders the current screen of f.
@@ -171,6 +178,10 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 	clear(r.sprites)
 	r.loadedFor = f.Match
 	r.behind, r.front = game.SplitLayers(f.Stage.Elements)
+	r.stageScale = game.StageScale(f.Stage, VW)
+	r.shift = game.StageGroundShift(f.Stage, r.stageScale, VH)
+	r.cam = game.NewStageCamera(f.Stage, game.DefaultCameraTension, r.stageScale, VW)
+	r.camTick = -1
 	r.loadStageSprites(f)
 	for i, fighter := range f.Fighters {
 		file, err := os.Open(fighter.SffPath)
@@ -207,6 +218,16 @@ func (r *Renderer) loadStageSprites(f *game.Flow) {
 		return
 	}
 	defer file.Close()
+	clear(r.stageAxis)
+	groups, err := sff.Load(file)
+	if err != nil {
+		return
+	}
+	for _, g := range groups {
+		for _, sp := range g.Sprites {
+			r.stageAxis[spriteKey{stageSheet, sp.Group, sp.Image}] = [2]int{sp.AxisX, sp.AxisY}
+		}
+	}
 	load := func(ref stage.SpriteRef) {
 		k := spriteKey{stageSheet, ref.Group, ref.Image}
 		if ref.IsBlank() || r.sprites[k] != nil {
@@ -229,7 +250,8 @@ func (r *Renderer) loadStageSprites(f *game.Flow) {
 }
 
 // drawLayers draws the stage elements at idx (back-to-front) as they stand
-// ticks into the round with the camera at camX.
+// ticks into the round with the camera at camX view pixels, scaled from the
+// stage's localcoord to the view and tiled as the element asks.
 func (r *Renderer) drawLayers(f *game.Flow, idx []int, ticks int, camX float64) {
 	for _, i := range idx {
 		e := f.Stage.Elements[i]
@@ -237,12 +259,23 @@ func (r *Renderer) drawLayers(f *game.Flow, idx []int, ticks int, camX float64) 
 		if !ok {
 			continue
 		}
-		ox, oy := game.LayerOffset(e, camX)
-		x, y := VW/2+float32(ox), float32(oy)
-		if t := r.sprites[spriteKey{stageSheet, ref.Group, ref.Image}]; t != nil {
-			r.win.Sprite(t, x, y, false)
-		} else {
-			r.win.Rect(x, y, layerPlaceholderSize, layerPlaceholderSize, grey)
+		k := spriteKey{stageSheet, ref.Group, ref.Image}
+		axis := r.stageAxis[k]
+		ox, oy := game.LayerOrigin(e, axis[0], axis[1], camX, r.stageScale, VW, r.shift)
+		t := r.sprites[k]
+		if t == nil {
+			r.win.Rect(float32(ox), float32(oy), layerPlaceholderSize, layerPlaceholderSize, grey)
+			continue
+		}
+		wd, ht := float64(t.W)*r.stageScale, float64(t.H)*r.stageScale
+		x0, nx := game.TileRun(ox, wd+float64(e.TileSpacingX)*r.stageScale, VW, e.TileX)
+		y0, ny := game.TileRun(oy, ht+float64(e.TileSpacingY)*r.stageScale, VH, e.TileY)
+		for ty := range ny {
+			for tx := range nx {
+				x := x0 + float64(tx)*(wd+float64(e.TileSpacingX)*r.stageScale)
+				y := y0 + float64(ty)*(ht+float64(e.TileSpacingY)*r.stageScale)
+				r.win.SpriteSized(t, float32(x), float32(y), float32(wd), float32(ht), false)
+			}
 		}
 	}
 }
@@ -302,8 +335,9 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 
 	p1 := m.State.Fighters[match.SideP1]
 	p2 := m.State.Fighters[match.SideP2]
-	camX := float32(p1.Position.X+p2.Position.X) / 2
-	r.drawLayers(f, r.behind, m.Ticks(), float64(camX))
+	r.followFighters(m.Ticks(), p1.Position.X, p2.Position.X)
+	camX := float32(r.camX)
+	r.drawLayers(f, r.behind, m.Ticks(), r.camX)
 	for i, fs := range []match.FighterState{p1, p2} {
 		sx := VW/2 + float32(fs.Position.X) - camX
 		sy := groundY + float32(fs.Position.Y)
@@ -329,8 +363,22 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 			w.Rect(sx-8, sy-60, 16, 60, col)
 		}
 	}
-	r.drawLayers(f, r.front, m.Ticks(), float64(camX))
+	r.drawLayers(f, r.front, m.Ticks(), r.camX)
 	r.drawHUD(f)
+}
+
+// followFighters moves the camera once per simulated tick, snapping to the
+// fighters on a round's first tick (Ikemen GO camera.go:210).
+func (r *Renderer) followFighters(tick int, x1, x2 float64) {
+	if tick == r.camTick {
+		return
+	}
+	snap := tick < r.camTick || r.camTick < 0
+	if snap {
+		r.camX = r.cam.Start()
+	}
+	r.camX = r.cam.Follow(r.camX, min(x1, x2), max(x1, x2), snap)
+	r.camTick = tick
 }
 
 func spriteMeta(fighter *game.Fighter, fr air.Frame) (sff.Sprite, bool) {
