@@ -1,4 +1,4 @@
-// Package game holds the native Quick Versus game logic that needs no
+// Package game holds the native game logic that needs no
 // window, GL context or SDL: roster discovery, match assembly, the match
 // session wrapping the engine, and the screen-flow state machine. Keeping it
 // cgo-free means it is unit-testable anywhere; the gfx package only draws

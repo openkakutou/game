@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/openkakutou/engine/input"
 	"github.com/openkakutou/engine/match"
@@ -91,8 +92,11 @@ type Flow struct {
 	// ContentRoot is where a stage looks for files not found beside its .def.
 	ContentRoot string
 	Match       *Match
-	cpu         *CPU // drives player 2 during a match when Player2CPU is set
-	cpuIn       input.TickInput
+	cpus        [2]*CPU // drive the sides the match setup gives to the CPU
+	cpuIn       [2]input.TickInput
+	// quick is the setup of a quick versus match started from the command
+	// line: no menus before it, and the game quits when it ends.
+	quick *Setup
 	// musicFrom/musicPath memoize Music's resolved path (see Music).
 	musicFrom [2]string
 	musicPath string
@@ -125,7 +129,10 @@ func (f *Flow) fail(msg string) {
 
 // Setup returns the currently chosen match setup.
 func (f *Flow) Setup() Setup {
-	return Setup{Rounds: RoundOptions[f.RoundIdx], TimeLimitSeconds: TimeOptions[f.TimeIdx], Player2CPU: f.Player2CPU}
+	if f.quick != nil {
+		return *f.quick
+	}
+	return Setup{Rounds: RoundOptions[f.RoundIdx], TimeLimitSeconds: TimeOptions[f.TimeIdx], CPU: [2]bool{false, f.Player2CPU}}
 }
 
 func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
@@ -146,7 +153,9 @@ func (f *Flow) Navigate(n Nav) {
 			f.Quit = true
 		}
 	case ScreenMatch:
-		if n == NavCancel {
+		if n == NavCancel && f.quick != nil {
+			f.Quit = true
+		} else if n == NavCancel {
 			f.toSelect()
 		}
 	}
@@ -234,8 +243,12 @@ func (f *Flow) toSelect() {
 // startMatch loads both characters and the stage; any failure lands on the
 // error screen with a message naming what could not be loaded.
 func (f *Flow) startMatch() {
-	for i := range f.Fighters {
-		e := f.Chars[f.Picks[i]]
+	f.start([2]Entry{f.Chars[f.Picks[0]], f.Chars[f.Picks[1]]}, f.Stages[f.StageNo])
+}
+
+// start loads chars and the stage se, then starts the match.
+func (f *Flow) start(chars [2]Entry, se Entry) {
+	for i, e := range chars {
 		fighter, err := f.Loader.Fighter(e.DefPath)
 		if err != nil {
 			f.fail(fmt.Sprintf("Could not load character %q: %v", e.Name, err))
@@ -243,7 +256,6 @@ func (f *Flow) startMatch() {
 		}
 		f.Fighters[i] = fighter
 	}
-	se := f.Stages[f.StageNo]
 	st, err := f.Loader.Stage(se.DefPath)
 	if err != nil {
 		f.fail(fmt.Sprintf("Could not load stage %q: %v", se.Name, err))
@@ -256,10 +268,58 @@ func (f *Flow) startMatch() {
 		return
 	}
 	f.Match, f.Screen, f.RoundOverTicks = m, ScreenMatch, 0
-	f.cpu = nil
-	if f.Player2CPU {
-		f.cpu = NewCPU(nil)
+	for i, cpu := range f.Setup().CPU {
+		f.cpus[i] = nil
+		if cpu {
+			f.cpus[i] = NewCPU(nil)
+		}
 	}
+}
+
+// StartQuickVersus starts q's match straight away, as Ikemen GO's quick VS
+// does (main.lua:1023-1256): characters and stage are found under root
+// (ResolveCharDef, ResolveStageDef), and the game quits when the match ends
+// or the player leaves it. A character that cannot be found is an error
+// screen naming it; a stage that cannot be found falls back to the default
+// stage with a notice, as Ikemen GO does (main.lua:1150-1155). The default is
+// stages/stage0.def (Ikemen GO's Debug.StartStage) or else the first stage
+// found.
+func (f *Flow) StartQuickVersus(q QuickVersus, root string) (notices []string) {
+	setup := q.Setup()
+	if err := setup.Validate(); err != nil {
+		f.fail(fmt.Sprintf("Cannot start the match: %v", err))
+		return nil
+	}
+	f.quick = &setup
+	var chars [2]Entry
+	for i, decl := range []string{q.P1, q.P2} {
+		def, err := ResolveCharDef(root, decl)
+		if err != nil {
+			f.fail(fmt.Sprintf("Cannot start the match: %v", err))
+			return nil
+		}
+		chars[i] = Entry{Name: decl, DefPath: def}
+	}
+	stageDef := ""
+	if q.Stage != "" {
+		def, err := ResolveStageDef(root, q.Stage)
+		if err != nil {
+			notices = append(notices, fmt.Sprintf("stage %q not found, using the default stage", q.Stage))
+		}
+		stageDef = def
+	}
+	if stageDef == "" {
+		stageDef, _ = ResolveStageDef(root, "stage0")
+	}
+	if stageDef == "" && len(f.Stages) > 0 {
+		stageDef = f.Stages[0].DefPath
+	}
+	if stageDef == "" {
+		f.fail("Cannot start the match: no stage found in " + root)
+		return notices
+	}
+	f.start(chars, Entry{Name: filepath.Base(stageDef), DefPath: stageDef})
+	return notices
 }
 
 // Tick advances the match screen by one simulation tick (60 per second) with
@@ -273,6 +333,10 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 		if f.RoundOverTicks > 0 {
 			return
 		}
+		if f.Match.Over && f.quick != nil {
+			f.Quit = true
+			return
+		}
 		if f.Match.Over {
 			f.ResultWinner, f.Screen = f.Match.Winner, ScreenResult
 			return
@@ -282,9 +346,12 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 		}
 		return
 	}
-	if f.cpu != nil {
-		f.cpu.Decide(f.Match.State.Fighters[match.SideP2].Position, f.Match.State.Fighters[match.SideP1].Position, &f.cpuIn)
-		in[match.SideP2] = f.cpuIn
+	for i, cpu := range f.cpus {
+		if cpu == nil {
+			continue
+		}
+		cpu.Decide(f.Match.State.Fighters[i].Position, f.Match.State.Fighters[1-i].Position, &f.cpuIn[i])
+		in[i] = f.cpuIn[i]
 	}
 	if err := f.Match.Step(in); err != nil {
 		f.fail(fmt.Sprintf("The match stopped: %v", err))

@@ -344,7 +344,7 @@ func TestFlow_SetupHasPlayer2ControlRowDefaultingToHuman(t *testing.T) {
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
-	if f.Screen != ScreenSetup || f.Setup().Player2CPU {
+	if f.Screen != ScreenSetup || f.Setup().CPU[1] {
 		t.Fatalf("screen=%v setup=%+v, want setup with a human player 2", f.Screen, f.Setup())
 	}
 	if f.SetupRow != SetupRowStart {
@@ -352,11 +352,11 @@ func TestFlow_SetupHasPlayer2ControlRowDefaultingToHuman(t *testing.T) {
 	}
 	f.Navigate(NavUp) // player 2 control row
 	f.Navigate(NavRight)
-	if !f.Setup().Player2CPU {
+	if !f.Setup().CPU[1] {
 		t.Error("Right on the Player 2 row should switch to CPU")
 	}
 	f.Navigate(NavLeft)
-	if f.Setup().Player2CPU {
+	if f.Setup().CPU[1] {
 		t.Error("Left should switch back to Human")
 	}
 }
@@ -383,11 +383,11 @@ func TestFlow_CPUDrivesPlayer2IgnoringItsKeysAndSurvivesRematch(t *testing.T) {
 	if f.Screen != ScreenResult {
 		t.Fatalf("screen=%v, match against the CPU never finished", f.Screen)
 	}
-	if f.cpu == nil {
+	if f.cpus[1] == nil {
 		t.Fatal("CPU controller missing during a CPU match")
 	}
 	f.Navigate(NavConfirm) // rematch keeps the choice
-	if f.Screen != ScreenMatch || !f.Setup().Player2CPU || f.cpu == nil {
+	if f.Screen != ScreenMatch || !f.Setup().CPU[1] || f.cpus[1] == nil {
 		t.Error("rematch must keep the CPU opponent")
 	}
 }
@@ -398,8 +398,8 @@ func TestFlow_HumanMatchLeavesPlayer2InputUntouched(t *testing.T) {
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
-	if f.Screen != ScreenMatch || f.cpu != nil {
-		t.Fatalf("screen=%v cpu=%v, want a human-vs-human match", f.Screen, f.cpu)
+	if f.Screen != ScreenMatch || f.cpus[1] != nil {
+		t.Fatalf("screen=%v cpu=%v, want a human-vs-human match", f.Screen, f.cpus[1])
 	}
 }
 
@@ -411,9 +411,9 @@ func TestFlow_CPUDecisionReplacesPlayer2Keys(t *testing.T) {
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Match, _ = NewMatch(f.Fighters[0], f.Fighters[1], closeStage(), f.Setup())
-	f.cpu = NewCPU(func() float64 { return 0 }) // always attacks in range
+	f.cpus[1] = NewCPU(func() float64 { return 0 }) // always attacks in range
 	f.Tick([2]input.TickInput{{}, {Buttons: map[string]bool{"b": true}, Up: true}})
-	if !f.cpuIn.Buttons["a"] || f.cpuIn.Buttons["b"] || f.cpuIn.Up {
+	if !f.cpuIn[1].Buttons["a"] || f.cpuIn[1].Buttons["b"] || f.cpuIn[1].Up {
 		t.Errorf("CPU input = %+v, want attack only (human keys ignored)", f.cpuIn)
 	}
 }

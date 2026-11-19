@@ -35,6 +35,8 @@ type Player struct {
 	chunks  map[chunkKey]*mix.Chunk // a nil chunk records a failed load (warned once)
 	cues    []game.Cue
 	dropped int // cues refused for lack of a free channel
+	// NoMusic keeps the stage music off (-nomusic); effects still play.
+	NoMusic bool
 }
 
 // openAudio is mix.OpenAudio, replaceable so tests can exercise the failure path.
@@ -74,7 +76,7 @@ func (p *Player) Update(f *game.Flow) {
 	if changed {
 		p.stopAll()
 		p.owner = next
-		if path != "" {
+		if path != "" && !p.NoMusic {
 			p.startMusic(path)
 		}
 	}

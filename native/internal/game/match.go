@@ -91,8 +91,16 @@ func LoadStage(defPath string) (*stage.Stage, error) {
 type Setup struct {
 	Rounds           int
 	TimeLimitSeconds int
-	// Player2CPU makes the CPU opponent drive player 2 instead of the keyboard.
-	Player2CPU bool
+	// CPU makes the CPU opponent drive a side instead of its controls.
+	CPU [2]bool
+	// Start overrides each side's life and power at the start of the match.
+	Start [2]StartValues
+}
+
+// StartValues overrides a fighter's life and power when the match starts
+// (quick versus -p<n>.life, -p<n>.power); 0 keeps the default.
+type StartValues struct {
+	Life, Power int
 }
 
 // Validate rejects a setup the engine cannot play (rounds must be odd, >0).
@@ -187,6 +195,7 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 	if err := m.reset(1); err != nil {
 		return nil, err
 	}
+	m.applyStart()
 	return m, nil
 }
 
@@ -208,6 +217,21 @@ func (m *Match) reset(roundNo int) error {
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
 	return nil
+}
+
+// applyStart sets the life and power the setup overrides, in round 1 only,
+// as Ikemen GO does (system.go:4417-4430, commit 54d4148a).
+func (m *Match) applyStart() {
+	for i, start := range m.Setup.Start {
+		if start.Life > 0 {
+			m.State.Fighters[i].Health = start.Life
+			m.runtimes[i].Context.Health = start.Life
+		}
+		if start.Power > 0 {
+			m.State.Fighters[i].Power = start.Power
+			m.runtimes[i].Context.Power = start.Power
+		}
+	}
 }
 
 // missingNote names the state files side i's character could not find, to

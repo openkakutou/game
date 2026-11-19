@@ -48,3 +48,11 @@ _Sources: `src/setup/setup-screen.ts`, `src/cpu/cpu-controller.ts`, `src/cpu/cpu
 ## Power / meter
 A fighter's super gauge value, gained and spent during a match, shown as its own bar in the in-match HUD alongside the lifebar. Reported live by `engine` as a raw number; this app renders it as a percentage of a fixed placeholder cap, since `engine` does not itself publish that cap as part of its match-state contract.
 _Sources: `src/hud/hud-view-model.ts`, `src/rendering/match-config.ts`_
+
+## Versus
+The first built-in game mode (a mode file, `versus.jsonc`): both players go through character select, stage select and match setup, fight, then see the results. Not quick versus.
+_Sources: `native/internal/mode/versus.jsonc`, `docs/modes.md`_
+
+## Quick versus
+Starting one match straight from the command line, with no menu, then quitting when it ends, as MUGEN and Ikemen GO do (`openkakutou kfm kfm -s Training`). A capability of the program, not a mode.
+_Sources: `native/internal/game/cmdline.go`, `docs/command-line.md`_

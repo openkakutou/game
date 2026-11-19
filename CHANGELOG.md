@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-19
+
+### Added
+- Quick versus: the native game takes Ikemen GO's command line, so `openkakutou kfm kfm -s Training -rounds 2` starts that match straight away, with no menu, and quits when it ends, as MUGEN and Ikemen GO do. Characters and stages are found as Ikemen GO finds them; player 1 or 2 can be given to the CPU, and their life and power set for round 1. Options not supported yet are named in a notice and the match still starts. `-h` lists them; `docs/command-line.md` describes them.
+
+### Changed
+- The built-in mode is now called Versus (`versus.jsonc`); quick versus names the command-line launch only. The window title is OpenKakutou.
+
 ## [0.23.0] - 2026-11-19
 
 ### Added
@@ -149,7 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The character roster discovery/selection screen: characters configured in a deployable roster manifest are validated and displayed with their name and a portrait; a character that fails to load shows a clear error card instead of crashing or being silently dropped. Player 1 and Player 2 each pick a character independently, including picking the same character for a mirror match, and can't continue until both have picked.
 
-[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.21.0...v0.22.0

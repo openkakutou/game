@@ -50,6 +50,11 @@ cmp -s "$out/5-match.png" "$out/10-match-cpu.png" && { echo "CPU did not move"; 
 ./dist/openkakutou-linux-amd64 -content testdata/content -frames 5 -capture "$out/7-capture.png"
 ./dist/openkakutou-linux-amd64 -content /nonexistent -frames 5 -capture "$out/8-error.png"
 
+# 3. Quick versus: two characters on the command line start the match with
+# no menu (Ikemen GO's command line), so frame 30 already shows the fight.
+./dist/openkakutou-linux-amd64 fighter rival -content testdata/content -s arena -rounds 1 -p2.ai 1 -frames 30 -capture "$out/11-quick-versus.png"
+cmp -s "$out/7-capture.png" "$out/11-quick-versus.png" && { echo "quick versus showed the menu"; exit 1; }
+
 for f in "$out"/*.png; do
   colors=$(identify -format %k "$f")
   echo "$(basename "$f"): $colors colors"

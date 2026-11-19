@@ -141,7 +141,7 @@ func (r *Renderer) drawSetup(f *game.Flow) {
 		time = fmt.Sprintf("%d seconds", s.TimeLimitSeconds)
 	}
 	p2 := "Human"
-	if s.Player2CPU {
+	if s.CPU[1] {
 		p2 = "CPU"
 	}
 	rows := []string{fmt.Sprintf("Rounds   < best of %d >", s.Rounds), "Time     < " + time + " >", "Player 2 < " + p2 + " >", "Start match"}
