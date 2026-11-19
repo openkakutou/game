@@ -70,8 +70,9 @@ cp "$here/record.sh" "$here/compose.sh" "$work/"
 # 4. OpenKakutou native build on the requested engine/character commits.
 rm -rf "$work/native"; mkdir -p "$work/native"
 (cd "$game/native" && git ls-files -z | xargs -0 -I{} cp --parents {} "$work/native/")
-mkdir -p "$work/native/.cache"
-drun -e GOMODCACHE=/w/native/.cache/go-mod -e GOCACHE=/w/native/.cache/go-build -w /w/native "$image" bash -c \
+# The Go caches live outside native/, which is replaced every run, so later runs reuse them.
+mkdir -p "$work/gocache"
+drun -e GOMODCACHE=/w/gocache/go-mod -e GOCACHE=/w/gocache/go-build -w /w/native "$image" bash -c \
   "go get github.com/openkakutou/engine@$engine_ref github.com/openkakutou/character@$character_ref && go build -o /w/openkakutou ./cmd/openkakutou"
 
 # 5. Ikemen GO config: generated on first launch, then P1/P2 keys set to OpenKakutou's.
