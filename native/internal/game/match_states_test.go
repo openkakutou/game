@@ -71,11 +71,7 @@ func requireStartsInStateZero(t *testing.T, m *Match) {
 func requireTicksIdle(t *testing.T, m *Match) {
 	t.Helper()
 	for n := 0; n < 5; n++ {
-		err := m.Step([2]input.TickInput{})
-		if err != nil && strings.Contains(err.Error(), `unknown trigger function "const"`) {
-			t.Skipf("expected failure, engine backlog item 042 (Const trigger): %v", err)
-		}
-		if err != nil {
+		if err := m.Step([2]input.TickInput{}); err != nil {
 			t.Fatalf("tick %d: %v", n+1, err)
 		}
 	}

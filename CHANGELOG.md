@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The native game uses the latest engine: real characters such as Kung Fu Man now get through their first ticks (constants, animation and opponent triggers, the full expression grammar).
+
 ## [0.18.0] - 2026-11-18
 
 ### Added

@@ -148,7 +148,8 @@ type Match struct {
 	Bounds   stage.StageBoundaries
 	State    match.MatchState
 	Progress round.Progress
-	// AnimNo/AnimTime are each fighter's current animation, indexed by side.
+	// AnimNo/AnimTime are each fighter's current animation and the ticks
+	// elapsed in it (engine Context.AnimElapsed), indexed by side.
 	AnimNo   [2]int
 	AnimTime [2]int
 	// LastRound is the outcome of the round that just ended (OutcomeNone while fighting).
@@ -221,7 +222,7 @@ func (m *Match) missingNote(i int) string {
 func (m *Match) syncAnim() {
 	for i := range m.runtimes {
 		m.AnimNo[i] = m.runtimes[i].Context.Anim
-		m.AnimTime[i] = m.runtimes[i].Context.AnimTime
+		m.AnimTime[i] = m.runtimes[i].Context.AnimElapsed
 	}
 }
 
