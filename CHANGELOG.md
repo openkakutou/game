@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-19
+
 ### Added
 - The native game now follows each stage's own camera settings: the camera pushes at the stage's tension and starts at its start position, background layers are drawn at their declared scale, and the fighters stand on the stage's resolved ground line.
 
@@ -137,7 +139,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The character roster discovery/selection screen: characters configured in a deployable roster manifest are validated and displayed with their name and a portrait; a character that fails to load shows a clear error card instead of crashing or being silently dropped. Player 1 and Player 2 each pick a character independently, including picking the same character for a mirror match, and can't continue until both have picked.
 
-[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.18.0...v0.19.0
