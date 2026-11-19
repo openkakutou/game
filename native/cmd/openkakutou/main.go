@@ -18,6 +18,7 @@ import (
 	"github.com/openkakutou/game/native/internal/audio"
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/game/native/internal/gfx"
+	"github.com/openkakutou/game/native/internal/host"
 )
 
 func main() {
@@ -47,13 +48,6 @@ func run() error {
 		fmt.Println(game.HelpText)
 		return nil
 	}
-	quick, isQuick, notices, err := game.QuickVersusFrom(cl)
-	if err != nil {
-		return err
-	}
-	for _, n := range notices {
-		fmt.Fprintln(os.Stderr, "openkakutou:", n)
-	}
 	frames, err := intFlag(cl.Flags, "-frames", 0, 0)
 	if err != nil {
 		return err
@@ -77,28 +71,37 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("locating the program: %w", err)
 		}
-		root = game.ContentRoot(exe)
+		root = host.ContentRoot(exe)
 	}
+
+	host.MapPaths(cl, root)
+	quick, isQuick, notices, err := game.QuickVersusFrom(cl)
+	if err != nil {
+		return err
+	}
+	for _, n := range notices {
+		fmt.Fprintln(os.Stderr, "openkakutou:", n)
+	}
+	fsys := host.Open(root)
 
 	// A missing folder is reported on the error screen, naming it.
 	var chars, stages []game.Entry
-	charsDir, stagesDir, folderErr := game.ContentFolders(root)
+	charsDir, stagesDir, folderErr := game.ContentFolders(fsys, root)
 	if folderErr == nil {
 		var charErr, stageErr error
-		chars, charErr = game.DiscoverCharacters(charsDir)
-		stages, stageErr = game.DiscoverStages(stagesDir)
+		chars, charErr = game.DiscoverCharacters(fsys, charsDir)
+		stages, stageErr = game.DiscoverStages(fsys, stagesDir)
 		folderErr = errors.Join(charErr, stageErr)
 	}
-	flow := game.NewFlow(chars, stages, game.DefaultLoader(game.CommonFolder(root)))
-	flow.ContentRoot = root
-	hud, lifebarNotices := game.SelectLifebar(root)
+	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)))
+	hud, lifebarNotices := game.SelectLifebar(fsys)
 	flow.Lifebar = hud
 	for _, n := range lifebarNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
 	switch {
 	case isQuick:
-		for _, n := range flow.StartQuickVersus(quick, root) {
+		for _, n := range flow.StartQuickVersus(quick) {
 			fmt.Fprintln(os.Stderr, "openkakutou:", n)
 		}
 	case folderErr != nil:

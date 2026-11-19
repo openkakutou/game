@@ -34,7 +34,7 @@ The diagram shows what the game does with its arguments: two characters skip the
 | `-time <num>` | Round time in seconds; `-1` for no limit (default 99). |
 | `-s <stage>` | The stage. Not found: the default stage is used, with a notice. |
 
-**Finding a character.** `kfm` is `chars/kfm/kfm.def`; `kfm/kfm2.def` is `chars/kfm/kfm2.def`; a name without `.def` that holds a folder (`Ryu/Ryu Groove`) is tried as a file first. Each is looked for in the content folder, then in `chars/`, then in `common/` (Ikemen GO's `data/`). Names are matched without case. An absolute path is used as it is. A character not found is an error screen naming it.
+**Finding a character.** `kfm` is `chars/kfm/kfm.def`; `kfm/kfm2.def` is `chars/kfm/kfm2.def`; a name without `.def` that holds a folder (`Ryu/Ryu Groove`) is tried as a file first. Each is looked for in the content folder, then in `chars/`, then in `common/` (Ikemen GO's `data/`). Names are matched without case. An absolute path is used as it is, inside the content folder or not. A character not found is an error screen naming it.
 
 **Finding a stage.** The same, under `stages/`: `Training` is `stages/Training.def` or `stages/Training/Training.def`. Without `-s`, the default stage is `stages/stage0.def`, as in Ikemen GO, or else the first stage found.
 

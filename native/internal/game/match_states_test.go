@@ -1,6 +1,7 @@
 package game
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,11 +12,10 @@ import (
 
 const reference = "../../testdata/reference"
 
-var referenceCommon = filepath.Join(reference, "common")
-
 // copyChar copies a reference character folder (flat files) into a new
-// temporary folder and returns the .def path inside it.
-func copyChar(t *testing.T, name, def string, extra ...string) string {
+// temporary folder and returns that folder as a file system and the .def's
+// name inside it.
+func copyChar(t *testing.T, name, def string, extra ...string) (fs.FS, string) {
 	t.Helper()
 	dst := t.TempDir()
 	src := filepath.Join(reference, "chars", name)
@@ -33,7 +33,7 @@ func copyChar(t *testing.T, name, def string, extra ...string) string {
 		}
 	}
 	for _, f := range extra {
-		raw, err := os.ReadFile(filepath.Join(referenceCommon, f))
+		raw, err := os.ReadFile(filepath.Join(reference, "common", f))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -41,7 +41,7 @@ func copyChar(t *testing.T, name, def string, extra ...string) string {
 			t.Fatal(err)
 		}
 	}
-	return filepath.Join(dst, def)
+	return os.DirFS(dst), def
 }
 
 func startMatch(t *testing.T, p1, p2 *Fighter) *Match {
@@ -83,11 +83,11 @@ func requireTicksIdle(t *testing.T, m *Match) {
 }
 
 func TestNewMatch_CnsAndZssKungFuManStartWithCommonFolder(t *testing.T) {
-	cns, err := LoadFighter(filepath.Join(reference, "chars", "kfm", "kfm.def"), referenceCommon)
+	cns, err := LoadFighter(os.DirFS(reference), "chars/kfm/kfm.def", "common")
 	if err != nil {
 		t.Fatal(err)
 	}
-	zss, err := LoadFighter(filepath.Join(reference, "chars", "kfm_zss", "kfm_zss.def"), referenceCommon)
+	zss, err := LoadFighter(os.DirFS(reference), "chars/kfm_zss/kfm_zss.def", "common")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestCommonFolder_IsTheCommonFolderNextToTheContentWhateverItsCase(t *testin
 	if err := os.Mkdir(filepath.Join(root, "Common"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := CommonFolder(root), filepath.Join(root, "Common"); got != want {
+	if got, want := CommonFolder(os.DirFS(root)), "Common"; got != want {
 		t.Errorf("CommonFolder = %q, want %q", got, want)
 	}
 }

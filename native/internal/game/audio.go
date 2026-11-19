@@ -92,10 +92,10 @@ func (f *Flow) Music() (path string, owner *Match) {
 	if f.Stage == nil || f.Stage.MusicFile == "" {
 		return "", f.Match
 	}
-	// Memoized: Music runs every frame and filepath.Join allocates.
+	// Memoized: Music runs every frame and path.Join allocates.
 	if f.musicFrom != [2]string{f.StageDefPath, f.Stage.MusicFile} {
 		f.musicFrom = [2]string{f.StageDefPath, f.Stage.MusicFile}
-		f.musicPath = joinResolved(stageBases(f.ContentRoot, f.StageDefPath), f.Stage.MusicFile)
+		f.musicPath = joinResolved(f.FS, stageBases(f.StageDefPath), f.Stage.MusicFile)
 	}
 	return f.musicPath, f.Match
 }

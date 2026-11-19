@@ -1,8 +1,9 @@
 package gfx
 
 import (
+	"bytes"
 	"fmt"
-	"os"
+	"io/fs"
 
 	"github.com/openkakutou/character/air"
 	"github.com/openkakutou/engine/v2/match"
@@ -207,7 +208,7 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 	}
 	r.loadStageSprites(f)
 	for i, fighter := range f.Fighters {
-		file, err := os.Open(fighter.SffPath)
+		file, err := openSprites(f.FS, fighter.SffPath)
 		if err != nil {
 			continue
 		}
@@ -224,23 +225,30 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 				r.sprites[k] = NewTexture(px, wd, ht)
 			}
 		}
-		file.Close()
 	}
+}
+
+// openSprites reads the sprite file name of fsys, to hand to the sff reader.
+func openSprites(fsys fs.FS, name string) (*bytes.Reader, error) {
+	data, err := fs.ReadFile(fsys, name)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(data), nil
 }
 
 // loadStageSprites uploads every sprite the stage's layers can show, from the
 // stage's own sheet. A missing sheet or sprite just leaves its layers on the
 // placeholder tile.
 func (r *Renderer) loadStageSprites(f *game.Flow) {
-	path := game.StageSpritePath(f.ContentRoot, f.StageDefPath, f.Stage)
+	path := game.StageSpritePath(f.FS, f.StageDefPath, f.Stage)
 	if path == "" {
 		return
 	}
-	file, err := os.Open(path)
+	file, err := openSprites(f.FS, path)
 	if err != nil {
 		return
 	}
-	defer file.Close()
 	clear(r.stageAxis)
 	groups, err := sff.Load(file)
 	if err != nil {
@@ -422,7 +430,7 @@ func (r *Renderer) drawLifebar(f *game.Flow) {
 		if r.lifebar != nil {
 			r.lifebar.delete()
 		}
-		r.lifebar = newLifebarHUD(f.Lifebar)
+		r.lifebar = newLifebarHUD(f.Lifebar, f.FS)
 	}
 	r.lifebar.draw(r.win, f)
 }

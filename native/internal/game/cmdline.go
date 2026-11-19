@@ -3,9 +3,8 @@ package game
 import (
 	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"path"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -204,24 +203,24 @@ func QuickVersusFrom(cl CommandLine) (q QuickVersus, ok bool, notices []string, 
 	return q, true, notices, nil
 }
 
-// ResolveCharDef finds the character decl names under root, as Ikemen GO's
+// ResolveCharDef finds the character decl names in fsys, as Ikemen GO's
 // resolveCharDef (system.go:5370-5433) does: a name without ".def" is a
 // folder holding <name>.def or a .def without its extension (the file first
 // when decl has a folder in it), searched as given, then under chars/ and
-// common/ (Ikemen GO's data/, roadmap decision 031). An absolute path is
-// used as is.
-func ResolveCharDef(root, decl string) (string, error) {
-	return resolveDef(root, decl, "chars", "character")
+// common/ (Ikemen GO's data/, roadmap decision 031). An absolute path names
+// nothing in fsys: the host maps the ones inside the game folder first.
+func ResolveCharDef(fsys fs.FS, decl string) (string, error) {
+	return resolveDef(fsys, decl, "chars", "character")
 }
 
-// ResolveStageDef finds the stage decl names under root, as Ikemen GO's
+// ResolveStageDef finds the stage decl names in fsys, as Ikemen GO's
 // resolveStageDef (system.go:5436-5497): the .def, or a folder holding
 // <name>.def, searched as given, then under stages/ and common/.
-func ResolveStageDef(root, decl string) (string, error) {
-	return resolveDef(root, decl, "stages", "stage")
+func ResolveStageDef(fsys fs.FS, decl string) (string, error) {
+	return resolveDef(fsys, decl, "stages", "stage")
 }
 
-func resolveDef(root, decl, folder, what string) (string, error) {
+func resolveDef(fsys fs.FS, decl, folder, what string) (string, error) {
 	p := strings.TrimSuffix(strings.ReplaceAll(strings.TrimSpace(decl), `\`, "/"), "/")
 	if p == "" {
 		return "", fmt.Errorf("no %s given", what)
@@ -236,10 +235,7 @@ func resolveDef(root, decl, folder, what string) (string, error) {
 		}
 	}
 	for _, c := range candidates {
-		if filepath.IsAbs(filepath.FromSlash(c)) {
-			if isFile(filepath.FromSlash(c)) {
-				return filepath.FromSlash(c), nil
-			}
+		if strings.HasPrefix(c, "/") || hasDriveLetter(c) {
 			continue
 		}
 		for _, base := range []string{"", "common"} {
@@ -247,16 +243,16 @@ func resolveDef(root, decl, folder, what string) (string, error) {
 				if base != "" {
 					rel = base + "/" + rel
 				}
-				if found, err := ResolvePath(root, rel); err == nil && isFile(found) {
+				if found, err := ResolvePath(fsys, ".", rel); err == nil && isFile(fsys, found) {
 					return found, nil
 				}
 			}
 		}
 	}
-	return "", fmt.Errorf("%s %q not found in %s", what, decl, filepath.Join(root, folder))
+	return "", fmt.Errorf("%s %q not found in %s", what, decl, folder)
 }
 
-func isFile(p string) bool {
-	st, err := os.Stat(p)
+func isFile(fsys fs.FS, p string) bool {
+	st, err := fs.Stat(fsys, p)
 	return err == nil && st.Mode().IsRegular()
 }

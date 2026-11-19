@@ -1,10 +1,11 @@
 package game
 
 import (
+	"bytes"
 	"fmt"
+	"io/fs"
 	"log"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/openkakutou/character"
@@ -29,10 +30,11 @@ const (
 	UnlimitedTimer     = 999_999
 )
 
-// Fighter is a loaded character plus the on-disk data the renderer needs.
+// Fighter is a loaded character plus the file names the renderer needs.
 type Fighter struct {
-	Char    *character.Character
-	Cmd     cmd.CommandFile
+	Char *character.Character
+	Cmd  cmd.CommandFile
+	// SffPath is the name of its sprite file in the content file system.
 	SffPath string
 	// Program is the character's state table, loaded like Ikemen GO does.
 	Program engine.FighterProgram
@@ -43,46 +45,45 @@ type Fighter struct {
 	sounds map[soundKey]character.Sound // built lazily by FindSound
 }
 
-// LoadFighter loads a character from its .def, including its parsed .cmd
+// LoadFighter loads a character from its .def, a name in fsys, including its parsed .cmd
 // (a missing or broken .cmd falls back to an empty command file so the match
 // still starts, as on web) and its state table: every .cns/.zss state file
 // named by the .def, searched in the character folder then in searchDirs
-// (the game's common/ folder). Files found nowhere are listed in Missing and
+// (folders of fsys, the game's common/ folder). Files found nowhere are listed in Missing and
 // logged on stderr, they do not fail the load.
-func LoadFighter(defPath string, searchDirs ...string) (*Fighter, error) {
-	c, err := character.Load(defPath)
+func LoadFighter(fsys fs.FS, defName string, searchDirs ...string) (*Fighter, error) {
+	c, err := character.LoadFS(fsys, defName)
 	if err != nil {
 		return nil, err
 	}
-	program, missing, err := engine.LoadFighterProgram(c, defPath, searchDirs...)
+	program, missing, err := engine.LoadFighterProgramFS(fsys, c, defName, searchDirs...)
 	if err != nil {
-		return nil, fmt.Errorf("loading the states of %q: %w", defPath, err)
+		return nil, fmt.Errorf("loading the states of %q: %w", defName, err)
 	}
 	if len(missing) > 0 {
-		log.Printf("%s: state files not found: %s", defPath, strings.Join(missing, ", "))
+		log.Printf("%s: state files not found: %s", defName, strings.Join(missing, ", "))
 	}
-	dir := filepath.Dir(defPath)
+	dir := path.Dir(defName)
 	commands := cmd.CommandFile{Remap: map[string]string{}}
 	if c.CommandFile != "" {
-		if raw, err := os.ReadFile(joinResolved([]string{dir}, c.CommandFile)); err == nil {
+		if raw, err := fs.ReadFile(fsys, joinResolved(fsys, []string{dir}, c.CommandFile)); err == nil {
 			if parsed, err := character.ParseCmd(raw); err == nil {
 				commands = parsed
 			}
 		}
 	}
-	return &Fighter{Char: c, Cmd: commands, SffPath: joinResolved([]string{dir}, c.SpriteFile), Program: program, Missing: missing}, nil
+	return &Fighter{Char: c, Cmd: commands, SffPath: joinResolved(fsys, []string{dir}, c.SpriteFile), Program: program, Missing: missing}, nil
 }
 
-// LoadStage parses a stage .def.
-func LoadStage(defPath string) (*stage.Stage, error) {
-	f, err := os.Open(defPath)
+// LoadStage parses a stage .def, a name in fsys.
+func LoadStage(fsys fs.FS, defName string) (*stage.Stage, error) {
+	src, err := fs.ReadFile(fsys, defName)
 	if err != nil {
 		return nil, fmt.Errorf("opening stage: %w", err)
 	}
-	defer f.Close()
-	s, err := stage.Parse(f)
+	s, err := stage.Parse(bytes.NewReader(src))
 	if err != nil {
-		return nil, fmt.Errorf("parsing stage %q: %w", defPath, err)
+		return nil, fmt.Errorf("parsing stage %q: %w", defName, err)
 	}
 	return &s, nil
 }

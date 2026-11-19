@@ -2,7 +2,8 @@ package game
 
 import (
 	"fmt"
-	"path/filepath"
+	"io/fs"
+	"path"
 
 	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/engine/v2/match"
@@ -57,18 +58,20 @@ const (
 	setupRowCount
 )
 
-// Loader loads content from disk; replaceable so flow logic is testable.
+// Loader loads content, by the name of its .def in the content file system;
+// replaceable so flow logic is testable.
 type Loader struct {
-	Fighter func(defPath string) (*Fighter, error)
-	Stage   func(defPath string) (*stage.Stage, error)
+	Fighter func(defName string) (*Fighter, error)
+	Stage   func(defName string) (*stage.Stage, error)
 }
 
-// DefaultLoader reads real content with the character and stage libraries.
-// stateDirs are searched for state files (stcommon) a character folder lacks.
-func DefaultLoader(stateDirs ...string) Loader {
+// DefaultLoader reads the content of fsys with the character and stage
+// libraries. stateDirs are folders of fsys searched for state files
+// (stcommon) a character folder lacks.
+func DefaultLoader(fsys fs.FS, stateDirs ...string) Loader {
 	return Loader{
-		Fighter: func(defPath string) (*Fighter, error) { return LoadFighter(defPath, stateDirs...) },
-		Stage:   LoadStage,
+		Fighter: func(defName string) (*Fighter, error) { return LoadFighter(fsys, defName, stateDirs...) },
+		Stage:   func(defName string) (*stage.Stage, error) { return LoadStage(fsys, defName) },
 	}
 }
 
@@ -90,10 +93,11 @@ type Flow struct {
 
 	Fighters [2]*Fighter
 	Stage    *stage.Stage
-	// StageDefPath is the chosen stage's .def, to find its sprite sheet.
+	// StageDefPath is the name of the chosen stage's .def, to find its sprite sheet.
 	StageDefPath string
-	// ContentRoot is where a stage looks for files not found beside its .def.
-	ContentRoot string
+	// FS is the content: the game folder, where a stage looks for files not
+	// found beside its .def.
+	FS fs.FS
 	// Lifebar is the HUD's lifebar; nil keeps the built-in bars.
 	Lifebar *HUDLifebar
 	Match   *Match
@@ -124,10 +128,11 @@ type Flow struct {
 	Quit bool
 }
 
-// NewFlow starts at character selection. An empty roster or stage list goes
-// straight to an error screen instead of an unusable menu.
-func NewFlow(chars, stages []Entry, l Loader) *Flow {
-	f := &Flow{Chars: chars, Stages: stages, Loader: l, RoundIdx: 1, TimeIdx: 2}
+// NewFlow starts at character selection over the content fsys. An empty
+// roster or stage list goes straight to an error screen instead of an
+// unusable menu.
+func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader) *Flow {
+	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, RoundIdx: 1, TimeIdx: 2}
 	switch {
 	case len(chars) == 0:
 		f.fail("No characters found. Put character folders in the characters folder.")
@@ -300,14 +305,14 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 }
 
 // StartQuickVersus starts q's match straight away, as Ikemen GO's quick VS
-// does (main.lua:1023-1256): characters and stage are found under root
+// does (main.lua:1023-1256): characters and stage are found in f.FS
 // (ResolveCharDef, ResolveStageDef), and the game quits when the match ends
 // or the player leaves it. A character that cannot be found is an error
 // screen naming it; a stage that cannot be found falls back to the default
 // stage with a notice, as Ikemen GO does (main.lua:1150-1155). The default is
 // stages/stage0.def (Ikemen GO's Debug.StartStage) or else the first stage
 // found.
-func (f *Flow) StartQuickVersus(q QuickVersus, root string) (notices []string) {
+func (f *Flow) StartQuickVersus(q QuickVersus) (notices []string) {
 	setup := q.Setup()
 	if err := setup.Validate(); err != nil {
 		f.fail(fmt.Sprintf("Cannot start the match: %v", err))
@@ -316,7 +321,7 @@ func (f *Flow) StartQuickVersus(q QuickVersus, root string) (notices []string) {
 	f.quick = &setup
 	var chars [2]Entry
 	for i, decl := range []string{q.P1, q.P2} {
-		def, err := ResolveCharDef(root, decl)
+		def, err := ResolveCharDef(f.FS, decl)
 		if err != nil {
 			f.fail(fmt.Sprintf("Cannot start the match: %v", err))
 			return nil
@@ -325,23 +330,23 @@ func (f *Flow) StartQuickVersus(q QuickVersus, root string) (notices []string) {
 	}
 	stageDef := ""
 	if q.Stage != "" {
-		def, err := ResolveStageDef(root, q.Stage)
+		def, err := ResolveStageDef(f.FS, q.Stage)
 		if err != nil {
 			notices = append(notices, fmt.Sprintf("stage %q not found, using the default stage", q.Stage))
 		}
 		stageDef = def
 	}
 	if stageDef == "" {
-		stageDef, _ = ResolveStageDef(root, "stage0")
+		stageDef, _ = ResolveStageDef(f.FS, "stage0")
 	}
 	if stageDef == "" && len(f.Stages) > 0 {
 		stageDef = f.Stages[0].DefPath
 	}
 	if stageDef == "" {
-		f.fail("Cannot start the match: no stage found in " + root)
+		f.fail("Cannot start the match: no stage found in the content")
 		return notices
 	}
-	f.start(chars, Entry{Name: filepath.Base(stageDef), DefPath: stageDef})
+	f.start(chars, Entry{Name: path.Base(stageDef), DefPath: stageDef})
 	return notices
 }
 

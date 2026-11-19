@@ -1,7 +1,8 @@
 package game
 
 import (
-	"path/filepath"
+	"io/fs"
+	"path"
 	"sort"
 
 	"github.com/openkakutou/stage"
@@ -52,21 +53,17 @@ func LayerSprite(st *stage.Stage, e stage.BGElement, ticks int) (ref stage.Sprit
 	return ref, !ref.IsBlank()
 }
 
-// StageSpritePath is the stage's sprite sheet: beside its .def first, then
-// from the content root (like Ikemen GO). It is "" when the stage names none
+// StageSpritePath is the name in fsys of the stage's sprite sheet: beside its
+// .def first, then from the content root (like Ikemen GO). It is "" when the stage names none
 // or the reference is rejected (symbolic link, absolute, escaping).
-func StageSpritePath(root, defPath string, st *stage.Stage) string {
+func StageSpritePath(fsys fs.FS, defPath string, st *stage.Stage) string {
 	if st.BGdef.SpriteFile == "" {
 		return ""
 	}
-	return joinResolved(stageBases(root, defPath), st.BGdef.SpriteFile)
+	return joinResolved(fsys, stageBases(defPath), st.BGdef.SpriteFile)
 }
 
 // stageBases are the folders a stage's files are looked up in, in order.
-func stageBases(root, defPath string) []string {
-	bases := []string{filepath.Dir(defPath)}
-	if root != "" {
-		bases = append(bases, root)
-	}
-	return bases
+func stageBases(defPath string) []string {
+	return []string{path.Dir(defPath), "."}
 }

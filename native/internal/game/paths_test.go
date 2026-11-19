@@ -20,11 +20,11 @@ func touch(t *testing.T, path string) {
 func TestResolvePath_FindsFileWhateverTheCaseOfEachComponent(t *testing.T) {
 	base := t.TempDir()
 	touch(t, filepath.Join(base, "Sub", "File.AIR"))
-	got, err := ResolvePath(base, "sub/file.air")
+	got, err := ResolvePath(os.DirFS(base), ".", "sub/file.air")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(base, "Sub", "File.AIR"); got != want {
+	if want := "Sub/File.AIR"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -32,11 +32,11 @@ func TestResolvePath_FindsFileWhateverTheCaseOfEachComponent(t *testing.T) {
 func TestResolvePath_AcceptsBackslashSeparator(t *testing.T) {
 	base := t.TempDir()
 	touch(t, filepath.Join(base, "sub", "File.air"))
-	got, err := ResolvePath(base, `sub\file.air`)
+	got, err := ResolvePath(os.DirFS(base), ".", `sub\file.air`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(base, "sub", "File.air"); got != want {
+	if want := "sub/File.air"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -54,10 +54,10 @@ func TestResolvePath_RejectsSymlinkedFileAndFolder(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(base, "dir")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ResolvePath(base, "link.txt"); err == nil {
+	if _, err := ResolvePath(os.DirFS(base), ".", "link.txt"); err == nil {
 		t.Error("symlinked file was resolved")
 	}
-	if _, err := ResolvePath(base, "DIR/secret.txt"); err == nil {
+	if _, err := ResolvePath(os.DirFS(base), ".", "DIR/secret.txt"); err == nil {
 		t.Error("file under a symlinked folder was resolved")
 	}
 }
@@ -65,7 +65,7 @@ func TestResolvePath_RejectsSymlinkedFileAndFolder(t *testing.T) {
 func TestResolvePath_ErrorsOnMissingFile(t *testing.T) {
 	base := t.TempDir()
 	touch(t, filepath.Join(base, "a.txt"))
-	if _, err := ResolvePath(base, "b.txt"); err == nil {
+	if _, err := ResolvePath(os.DirFS(base), ".", "b.txt"); err == nil {
 		t.Fatal("missing file resolved")
 	}
 }
@@ -79,7 +79,7 @@ func TestResolvePath_RejectsPathsEscapingTheBase(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, rel := range []string{"../out.txt", `..\out.txt`, "sub/../../out.txt", filepath.Join(parent, "out.txt"), "/out.txt"} {
-		if got, err := ResolvePath(base, rel); err == nil {
+		if got, err := ResolvePath(os.DirFS(base), ".", rel); err == nil {
 			t.Errorf("%q resolved to %q", rel, got)
 		}
 	}
@@ -91,32 +91,11 @@ func TestResolvePath_AllowsDotDotThatStaysInsideTheBase(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(base, "b"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	got, err := ResolvePath(base, "b/../A/X.TXT")
+	got, err := ResolvePath(os.DirFS(base), ".", "b/../A/X.TXT")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(base, "a", "x.txt"); got != want {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-func TestContentRoot_IsTheProgramFolder(t *testing.T) {
-	exe := filepath.Join("games", "kakutou", "openkakutou")
-	if got, want := ContentRoot(exe), filepath.Join("games", "kakutou"); got != want {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-func TestContentRoot_IsTheFolderHoldingTheAppBundleOnMac(t *testing.T) {
-	exe := filepath.Join("Applications", "Fight", "Kakutou.APP", "Contents", "MacOS", "openkakutou")
-	if got, want := ContentRoot(exe), filepath.Join("Applications", "Fight"); got != want {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-func TestContentRoot_IgnoresMacOSFolderOutsideAnAppBundle(t *testing.T) {
-	exe := filepath.Join("x", "Contents", "MacOS", "openkakutou")
-	if got, want := ContentRoot(exe), filepath.Join("x", "Contents", "MacOS"); got != want {
+	if want := "a/x.txt"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -126,7 +105,7 @@ func TestContentFolders_NamesTheMissingFolder(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "chars"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err := ContentFolders(root)
+	_, _, err := ContentFolders(os.DirFS(root), root)
 	if err == nil {
 		t.Fatal("missing stages folder not reported")
 	}
@@ -140,7 +119,7 @@ func TestContentFolders_NamesTheMissingFolder(t *testing.T) {
 
 func TestContentFolders_NamesBothWhenBothAreMissing(t *testing.T) {
 	root := t.TempDir()
-	_, _, err := ContentFolders(root)
+	_, _, err := ContentFolders(os.DirFS(root), root)
 	if err == nil {
 		t.Fatal("missing folders not reported")
 	}
@@ -157,7 +136,7 @@ func TestContentFolders_ReportsAFileStandingWhereAFolderShouldBe(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "stages"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err := ContentFolders(root)
+	_, _, err := ContentFolders(os.DirFS(root), root)
 	if err == nil || !contains(err.Error(), filepath.Join(root, "chars")) {
 		t.Fatalf("file named chars not reported: %v", err)
 	}
@@ -166,18 +145,18 @@ func TestContentFolders_ReportsAFileStandingWhereAFolderShouldBe(t *testing.T) {
 	}
 }
 
-func TestContentFolders_ReturnsTheOnDiskFolders(t *testing.T) {
+func TestContentFolders_ReturnsTheStoredFolderNames(t *testing.T) {
 	root := t.TempDir()
 	for _, d := range []string{"Chars", "STAGES"} {
 		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	chars, stages, err := ContentFolders(root)
+	chars, stages, err := ContentFolders(os.DirFS(root), root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if chars != filepath.Join(root, "Chars") || stages != filepath.Join(root, "STAGES") {
+	if chars != "Chars" || stages != "STAGES" {
 		t.Fatalf("got %q, %q", chars, stages)
 	}
 }
@@ -193,11 +172,11 @@ func TestResolvePath_PrefersTheExactSpellingOverACaseVariant(t *testing.T) {
 		t.Skip("case-insensitive file system")
 	}
 	for _, name := range []string{"a.txt", "A.TXT"} {
-		got, err := ResolvePath(base, name)
+		got, err := ResolvePath(os.DirFS(base), ".", name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if want := filepath.Join(base, name); got != want {
+		if want := name; got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	}
@@ -206,11 +185,11 @@ func TestResolvePath_PrefersTheExactSpellingOverACaseVariant(t *testing.T) {
 func TestResolvePath_ReturnsTheOnDiskSpellingNotTheCallers(t *testing.T) {
 	base := t.TempDir()
 	touch(t, filepath.Join(base, "Dir", "File.Txt"))
-	got, err := ResolvePath(base, "dir/FILE.TXT")
+	got, err := ResolvePath(os.DirFS(base), ".", "dir/FILE.TXT")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(base, "Dir", "File.Txt"); got != want {
+	if want := "Dir/File.Txt"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -230,7 +209,7 @@ func TestJoinResolved_NeverReturnsAnEscapingOrSymlinkedPathBehindAMissingFolder(
 		t.Fatal(err)
 	}
 	for _, rel := range []string{"missing/../../out.txt", `missing\..\..\out.txt`, "missing/../link.txt"} {
-		if got := joinResolved([]string{base}, rel); got != "" {
+		if got := joinResolved(os.DirFS(base), []string{"."}, rel); got != "" {
 			t.Errorf("%q gave openable path %q", rel, got)
 		}
 	}
@@ -238,8 +217,8 @@ func TestJoinResolved_NeverReturnsAnEscapingOrSymlinkedPathBehindAMissingFolder(
 
 func TestJoinResolved_MissingFileStillNamesThePathInsideTheBase(t *testing.T) {
 	base := t.TempDir()
-	want := filepath.Join(base, "sub", "gone.sff")
-	if got := joinResolved([]string{base}, `missing\..\sub\gone.sff`); got != want {
+	want := "sub/gone.sff"
+	if got := joinResolved(os.DirFS(base), []string{"."}, `missing\..\sub\gone.sff`); got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }

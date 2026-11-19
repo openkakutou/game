@@ -12,11 +12,11 @@ import (
 func TestDiscoverCharacters_FindsDefWhateverTheCaseOfFolderAndFile(t *testing.T) {
 	root := t.TempDir()
 	touch(t, filepath.Join(root, "KFM", "kfm.DEF"))
-	got, err := DiscoverCharacters(root)
+	got, err := DiscoverCharacters(os.DirFS(root), ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].Name != "KFM" || got[0].DefPath != filepath.Join(root, "KFM", "kfm.DEF") {
+	if len(got) != 1 || got[0].Name != "KFM" || got[0].DefPath != "KFM/kfm.DEF" {
 		t.Fatalf("got %+v", got)
 	}
 }
@@ -31,7 +31,7 @@ func TestDiscoverCharacters_SkipsSymlinkedFolders(t *testing.T) {
 	if err := os.Symlink(filepath.Join(other, "ghost"), filepath.Join(root, "ghost")); err != nil {
 		t.Fatal(err)
 	}
-	got, err := DiscoverCharacters(root)
+	got, err := DiscoverCharacters(os.DirFS(root), ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestDiscoverCharacters_SkipsSymlinkedDef(t *testing.T) {
 	if err := os.Symlink(filepath.Join(other, "real.def"), filepath.Join(root, "ghost", "ghost.def")); err != nil {
 		t.Fatal(err)
 	}
-	got, _ := DiscoverCharacters(root)
+	got, _ := DiscoverCharacters(os.DirFS(root), ".")
 	if len(got) != 0 {
 		t.Fatalf("symlinked def listed: %+v", got)
 	}
@@ -73,7 +73,7 @@ func TestDiscoverStages_SkipsSymlinkedDefAndFindsUpperCaseExtension(t *testing.T
 			t.Fatal(err)
 		}
 	}
-	got, err := DiscoverStages(root)
+	got, err := DiscoverStages(os.DirFS(root), ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,14 +100,14 @@ func TestLoadFighter_ResolvesSpriteAndCommandFilesWhateverTheirCase(t *testing.T
 	if err := os.WriteFile(filepath.Join(dir, "kfm.DEF"), []byte(def), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	f, err := LoadFighter(filepath.Join(dir, "kfm.DEF"))
+	f, err := LoadFighter(os.DirFS(root), "KFM/kfm.DEF")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(dir, "kfm.sff"); f.SffPath != want {
+	if want := "KFM/kfm.sff"; f.SffPath != want {
 		t.Fatalf("SffPath %q, want %q", f.SffPath, want)
 	}
-	ref, err := LoadFighter(filepath.Join(content, "chars", "fighter", "fighter.def"))
+	ref, err := LoadFighter(os.DirFS(content), "chars/fighter/fighter.def")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestStageSpritePath_FindsSpriteWhateverItsCase(t *testing.T) {
 	dir := t.TempDir()
 	touch(t, filepath.Join(dir, "Stage0.SFF"))
 	st := &stage.Stage{BGdef: stage.BGdef{SpriteFile: "stage0.sff"}}
-	if got, want := StageSpritePath("", filepath.Join(dir, "a.def"), st), filepath.Join(dir, "Stage0.SFF"); got != want {
+	if got, want := StageSpritePath(os.DirFS(dir), "a.def", st), "Stage0.SFF"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -129,9 +129,10 @@ func TestMusic_FindsMusicFileWhateverItsCase(t *testing.T) {
 	dir := t.TempDir()
 	touch(t, filepath.Join(dir, "Theme.OGG"))
 	f := toMatch(t)
-	f.StageDefPath = filepath.Join(dir, "a.def")
+	f.FS = os.DirFS(dir)
+	f.StageDefPath = "a.def"
 	f.Stage.MusicFile = "theme.ogg"
-	if p, _ := f.Music(); p != filepath.Join(dir, "Theme.OGG") {
+	if p, _ := f.Music(); p != "Theme.OGG" {
 		t.Fatalf("got %q", p)
 	}
 }
@@ -160,7 +161,7 @@ func TestLoadFighter_DoesNotLoadAnEscapingCommandFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "kfm.def"), []byte(def), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	f, err := LoadFighter(filepath.Join(dir, "kfm.def"))
+	f, err := LoadFighter(os.DirFS(root), "kfm/kfm.def")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +185,7 @@ func TestStageSpritePath_RejectsSymlinkedEscapingAndAbsoluteRefs(t *testing.T) {
 	}
 	for _, ref := range []string{"link.sff", `..\outside.sff`, filepath.Join(root, "outside.sff")} {
 		st := &stage.Stage{BGdef: stage.BGdef{SpriteFile: ref}}
-		if got := StageSpritePath(root, filepath.Join(stages, "a.def"), st); got != "" {
+		if got := StageSpritePath(os.DirFS(root), "stages/a.def", st); got != "" {
 			t.Errorf("%q offered as %q", ref, got)
 		}
 	}
@@ -194,8 +195,8 @@ func TestStageSpritePath_FallsBackToTheContentRoot(t *testing.T) {
 	root := t.TempDir()
 	touch(t, filepath.Join(root, "stages", "Stage0.SFF"))
 	st := &stage.Stage{BGdef: stage.BGdef{SpriteFile: "stages/stage0.sff"}}
-	got := StageSpritePath(root, filepath.Join(root, "stages", "a.def"), st)
-	if want := filepath.Join(root, "stages", "Stage0.SFF"); got != want {
+	got := StageSpritePath(os.DirFS(root), "stages/a.def", st)
+	if want := "stages/Stage0.SFF"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -205,8 +206,8 @@ func TestStageSpritePath_PrefersTheFileBesideTheDef(t *testing.T) {
 	touch(t, filepath.Join(root, "stages", "x.sff"))
 	touch(t, filepath.Join(root, "x.sff"))
 	st := &stage.Stage{BGdef: stage.BGdef{SpriteFile: "x.sff"}}
-	got := StageSpritePath(root, filepath.Join(root, "stages", "a.def"), st)
-	if want := filepath.Join(root, "stages", "x.sff"); got != want {
+	got := StageSpritePath(os.DirFS(root), "stages/a.def", st)
+	if want := "stages/x.sff"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -215,15 +216,15 @@ func TestMusic_FallsBackToTheContentRootAndPrefersBesideTheDef(t *testing.T) {
 	root := t.TempDir()
 	touch(t, filepath.Join(root, "sound", "Theme.OGG"))
 	f := toMatch(t)
-	f.ContentRoot = root
-	f.StageDefPath = filepath.Join(root, "stages", "a.def")
+	f.FS = os.DirFS(root)
+	f.StageDefPath = "stages/a.def"
 	f.Stage.MusicFile = "sound/theme.ogg"
-	if p, _ := f.Music(); p != filepath.Join(root, "sound", "Theme.OGG") {
+	if p, _ := f.Music(); p != "sound/Theme.OGG" {
 		t.Fatalf("root fallback: got %q", p)
 	}
 	touch(t, filepath.Join(root, "stages", "sound", "theme.ogg"))
 	f.Stage.MusicFile = "sound/Theme.ogg"
-	if p, _ := f.Music(); p != filepath.Join(root, "stages", "sound", "theme.ogg") {
+	if p, _ := f.Music(); p != "stages/sound/theme.ogg" {
 		t.Fatalf("beside def should win: got %q", p)
 	}
 }
@@ -242,8 +243,8 @@ func TestMusic_RejectsAbsoluteSymlinkedAndEscapingRefs(t *testing.T) {
 	}
 	for _, ref := range []string{"l.ogg", `..\outside.ogg`, filepath.Join(root, "outside.ogg")} {
 		f := toMatch(t)
-		f.ContentRoot = root
-		f.StageDefPath = filepath.Join(root, "stages", "a.def")
+		f.FS = os.DirFS(root)
+		f.StageDefPath = "stages/a.def"
 		f.Stage.MusicFile = ref
 		if p, _ := f.Music(); p != "" {
 			t.Errorf("%q offered as %q", ref, p)
@@ -277,7 +278,7 @@ func TestLoadFighter_DoesNotLoadASymlinkedCommandFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "kfm.def"), []byte(def), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	f, err := LoadFighter(filepath.Join(dir, "kfm.def"))
+	f, err := LoadFighter(os.DirFS(root), "kfm/kfm.def")
 	if err != nil {
 		t.Fatal(err)
 	}

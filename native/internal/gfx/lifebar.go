@@ -2,6 +2,7 @@ package gfx
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/openkakutou/game/native/internal/game"
@@ -22,22 +23,21 @@ type lifebarHUD struct {
 	tick   int
 }
 
-func newLifebarHUD(hud *game.HUDLifebar) *lifebarHUD {
+func newLifebarHUD(hud *game.HUDLifebar, fsys fs.FS) *lifebarHUD {
 	l := &lifebarHUD{hud: hud, sheet: map[spriteKey]*Texture{}, axis: map[spriteKey][2]int{}, tick: -1}
-	l.load()
+	l.load(fsys)
 	return l
 }
 
 // load uploads every sprite the lifebar's elements can show, once.
-func (l *lifebarHUD) load() {
+func (l *lifebarHUD) load(fsys fs.FS) {
 	if l.hud.Sprites == "" {
 		return
 	}
-	file, err := os.Open(l.hud.Sprites)
+	file, err := openSprites(fsys, l.hud.Sprites)
 	if err != nil {
 		return
 	}
-	defer file.Close()
 	groups, err := sff.Load(file)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "openkakutou: lifebar sprites:", err)

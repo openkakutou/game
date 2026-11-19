@@ -166,14 +166,14 @@ func TestDiscoverListsValidFoldersAndReportsBrokenOnes(t *testing.T) {
 	write(t, filepath.Join(dir, "empty", "readme.txt"), "x")
 	write(t, filepath.Join(dir, "loose.def"), "[Lifebar]\n")
 
-	entries, problems := Discover(dir)
+	entries, problems := Discover(os.DirFS(dir), ".")
 	if len(entries) != 2 || entries[0].Name != "default" || entries[1].Name != "zeta" {
 		t.Fatalf("entries = %+v", entries)
 	}
 	if len(problems) != 2 {
 		t.Fatalf("problems = %v", problems)
 	}
-	if entries, problems := Discover(filepath.Join(dir, "nope")); entries != nil || problems != nil {
+	if entries, problems := Discover(os.DirFS(dir), "nope"); entries != nil || problems != nil {
 		t.Error("a missing lifebars/ folder is simply empty")
 	}
 }
@@ -181,15 +181,16 @@ func TestDiscoverListsValidFoldersAndReportsBrokenOnes(t *testing.T) {
 func TestSelectedAndPick(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "appearance.json")
-	if name, err := Selected(path); name != DefaultName || err != nil {
+	fsys := os.DirFS(dir)
+	if name, err := Selected(fsys, "appearance.json"); name != DefaultName || err != nil {
 		t.Errorf("missing file = %q %v", name, err)
 	}
 	write(t, path, `{"lifebar":"VHD","screenpack":"x"}`)
-	if name, err := Selected(path); name != "VHD" || err != nil {
+	if name, err := Selected(fsys, "appearance.json"); name != "VHD" || err != nil {
 		t.Errorf("selected = %q %v", name, err)
 	}
 	write(t, path, `{not json`)
-	if name, err := Selected(path); name != DefaultName || err == nil {
+	if name, err := Selected(fsys, "appearance.json"); name != DefaultName || err == nil {
 		t.Errorf("corrupt = %q %v", name, err)
 	}
 

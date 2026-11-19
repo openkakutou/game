@@ -5,6 +5,7 @@ package audio
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"runtime"
 
@@ -28,13 +29,15 @@ type chunkKey struct {
 // Player owns the mixer. The zero value and a nil *Player are silent no-ops,
 // as is a Player whose mixer could not be opened.
 type Player struct {
-	open    bool
-	warnf   func(format string, a ...any)
-	owner   *game.Match
-	music   *mix.Music
-	chunks  map[chunkKey]*mix.Chunk // a nil chunk records a failed load (warned once)
-	cues    []game.Cue
-	dropped int // cues refused for lack of a free channel
+	open  bool
+	warnf func(format string, a ...any)
+	owner *game.Match
+	music *mix.Music
+	// musicData is the music file's bytes, which the mixer streams from.
+	musicData []byte
+	chunks    map[chunkKey]*mix.Chunk // a nil chunk records a failed load (warned once)
+	cues      []game.Cue
+	dropped   int // cues refused for lack of a free channel
 	// paused is set while the music and effects are held for the pause menu.
 	paused bool
 	// NoMusic keeps the stage music off (-nomusic); effects still play.
@@ -79,7 +82,7 @@ func (p *Player) Update(f *game.Flow) {
 		p.stopAll()
 		p.owner = next
 		if path != "" && !p.NoMusic {
-			p.startMusic(path)
+			p.startMusic(f.FS, path)
 		}
 	}
 	if p.owner == nil {
@@ -115,6 +118,7 @@ func (p *Player) stopAll() {
 	if p.music != nil {
 		p.music.Free()
 		p.music = nil
+		p.musicData = nil
 	}
 	p.freeChunks()
 }
@@ -128,8 +132,18 @@ func (p *Player) freeChunks() {
 	}
 }
 
-func (p *Player) startMusic(path string) {
-	m, err := mix.LoadMUS(path)
+func (p *Player) startMusic(fsys fs.FS, path string) {
+	data, err := fs.ReadFile(fsys, path)
+	if err != nil {
+		p.warnf("audio: cannot load music %q: %v", path, err)
+		return
+	}
+	rw, err := sdl.RWFromMem(data)
+	if err != nil {
+		p.warnf("audio: cannot load music %q: %v", path, err)
+		return
+	}
+	m, err := mix.LoadMUSRW(rw, 1) // the mixer frees rw with the music
 	if err != nil {
 		p.warnf("audio: cannot load music %q: %v", path, err)
 		return
@@ -140,6 +154,7 @@ func (p *Player) startMusic(path string) {
 		return
 	}
 	p.music = m
+	p.musicData = data
 }
 
 func (p *Player) playCue(f *game.Flow, c game.Cue) {

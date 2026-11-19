@@ -45,9 +45,10 @@ func sine() character.Sound {
 // swapped for a close-quarters stage so holding "a" KOs quickly.
 func matchFlow(t *testing.T) *game.Flow {
 	t.Helper()
-	chars, _ := game.DiscoverCharacters(filepath.Join(content, "chars"))
-	stages, _ := game.DiscoverStages(filepath.Join(content, "stages"))
-	f := game.NewFlow(chars, stages, game.DefaultLoader())
+	fsys := os.DirFS(content)
+	chars, _ := game.DiscoverCharacters(fsys, "chars")
+	stages, _ := game.DiscoverStages(fsys, "stages")
+	f := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys))
 	f.Navigate(game.NavConfirm)
 	f.Navigate(game.NavRight)
 	f.Navigate(game.NavConfirm)
@@ -225,7 +226,8 @@ func TestUpdate_GarbageMusicFileLeavesSilence(t *testing.T) {
 	f := matchFlow(t)
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "bad.mp3"), []byte("this is not audio at all"))
-	f.StageDefPath = filepath.Join(dir, "stage.def")
+	f.FS = os.DirFS(dir)
+	f.StageDefPath = "stage.def"
 	f.Stage.MusicFile = "bad.mp3"
 	p.Update(f)
 	if mix.PlayingMusic() || len(*warns) != 1 {

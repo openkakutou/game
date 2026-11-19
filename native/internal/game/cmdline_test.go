@@ -154,22 +154,18 @@ func TestResolveCharDef_FollowsIkemenGOsSearch(t *testing.T) {
 		filepath.Join(root, "chars"): "",
 	}
 	for decl, want := range cases {
-		got, err := ResolveCharDef(root, decl)
+		got, err := ResolveCharDef(os.DirFS(root), decl)
 		if want == "" {
 			if err == nil {
 				t.Errorf("%q: got %q, want an error", decl, got)
 			}
 			continue
 		}
-		if err != nil || got != filepath.Join(root, filepath.FromSlash(want)) {
+		if err != nil || got != want {
 			t.Errorf("%q: got %q, %v, want %s", decl, got, err, want)
 		}
 	}
-	abs := filepath.Join(root, "chars", "kfm", "kfm.def")
-	if got, err := ResolveCharDef(root, abs); err != nil || got != abs {
-		t.Errorf("absolute path: got %q, %v", got, err)
-	}
-	if _, err := ResolveCharDef(root, "nobody"); err == nil || !strings.Contains(err.Error(), "nobody") {
+	if _, err := ResolveCharDef(os.DirFS(root), "nobody"); err == nil || !strings.Contains(err.Error(), "nobody") {
 		t.Errorf("missing: err = %v, want one naming it", err)
 	}
 }
@@ -182,12 +178,12 @@ func TestResolveStageDef_FollowsIkemenGOsSearch(t *testing.T) {
 		"Dojo":                "stages/Dojo/Dojo.def",
 		"stages/Training.def": "stages/Training.def",
 	} {
-		got, err := ResolveStageDef(root, decl)
-		if err != nil || got != filepath.Join(root, filepath.FromSlash(want)) {
+		got, err := ResolveStageDef(os.DirFS(root), decl)
+		if err != nil || got != want {
 			t.Errorf("%q: got %q, %v, want %s", decl, got, err, want)
 		}
 	}
-	if _, err := ResolveStageDef(root, "nowhere"); err == nil {
+	if _, err := ResolveStageDef(os.DirFS(root), "nowhere"); err == nil {
 		t.Error("missing stage: want an error")
 	}
 }
@@ -206,14 +202,16 @@ func mapsEqual(a, b map[string]string) bool {
 
 func quickFlow(t *testing.T) *Flow {
 	t.Helper()
-	stages, _ := DiscoverStages(filepath.Join(content, "stages"))
-	return NewFlow(nil, stages, DefaultLoader())
+	fsys := os.DirFS(content)
+	stages, _ := DiscoverStages(fsys, "stages")
+	f := NewFlow(fsys, nil, stages, DefaultLoader(fsys))
+	return f
 }
 
 func TestStartQuickVersus_StartsTheMatchWithoutMenus(t *testing.T) {
 	f := quickFlow(t)
 	q, _, _, _ := QuickVersusFrom(ParseArgs([]string{"fighter", "rival", "-rounds", "1", "-time", "-1", "-p2.ai", "1", "-p1.life", "300"}))
-	notices := f.StartQuickVersus(q, content)
+	notices := f.StartQuickVersus(q)
 	if f.Screen != ScreenMatch || f.Match == nil {
 		t.Fatalf("screen = %v (%s), want the match", f.Screen, f.Message)
 	}
@@ -231,7 +229,7 @@ func TestStartQuickVersus_StartsTheMatchWithoutMenus(t *testing.T) {
 func TestStartQuickVersus_QuitsWhenTheMatchEndsOrThePlayerLeaves(t *testing.T) {
 	f := quickFlow(t)
 	q, _, _, _ := QuickVersusFrom(ParseArgs([]string{"fighter", "rival", "-rounds", "1"}))
-	f.StartQuickVersus(q, content)
+	f.StartQuickVersus(q)
 	f.Match.Over = true
 	f.Match.LastRound.Outcome = 1
 	f.RoundOverTicks = 1
@@ -241,7 +239,7 @@ func TestStartQuickVersus_QuitsWhenTheMatchEndsOrThePlayerLeaves(t *testing.T) {
 	}
 
 	f = quickFlow(t)
-	f.StartQuickVersus(q, content)
+	f.StartQuickVersus(q)
 	f.Navigate(NavCancel) // pause menu: Continue, Restart, Exit
 	f.Navigate(NavUp)     // wraps to Exit
 	f.Navigate(NavConfirm)
@@ -253,14 +251,14 @@ func TestStartQuickVersus_QuitsWhenTheMatchEndsOrThePlayerLeaves(t *testing.T) {
 func TestStartQuickVersus_UnknownStageFallsBackWithANoticeAndUnknownCharacterIsAnError(t *testing.T) {
 	f := quickFlow(t)
 	q, _, _, _ := QuickVersusFrom(ParseArgs([]string{"fighter", "rival", "-s", "nowhere"}))
-	notices := f.StartQuickVersus(q, content)
+	notices := f.StartQuickVersus(q)
 	if f.Screen != ScreenMatch || len(notices) != 1 || !strings.Contains(notices[0], "nowhere") {
 		t.Errorf("screen, notices = %v, %v, want the match on the default stage and a notice naming nowhere", f.Screen, notices)
 	}
 
 	f = quickFlow(t)
 	q, _, _, _ = QuickVersusFrom(ParseArgs([]string{"fighter", "nobody"}))
-	f.StartQuickVersus(q, content)
+	f.StartQuickVersus(q)
 	if f.Screen != ScreenError || !strings.Contains(f.Message, "nobody") {
 		t.Errorf("screen, message = %v, %q, want an error naming nobody", f.Screen, f.Message)
 	}

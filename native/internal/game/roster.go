@@ -7,24 +7,25 @@ package game
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/fs"
+	"path"
 	"sort"
 	"strings"
 )
 
-// Entry is one selectable character or stage found on disk.
+// Entry is one selectable character or stage found in the content.
 type Entry struct {
-	Name    string
+	Name string
+	// DefPath is the name of its .def in the content file system.
 	DefPath string
 }
 
-// DiscoverCharacters lists the characters under root: every sub-directory
+// DiscoverCharacters lists the characters under root, a folder of fsys: every sub-directory
 // "<name>" that contains "<name>/<name>.def" (the MUGEN folder convention).
 // A missing root is an error; a root with no characters returns an empty
 // list. Entries are sorted by name so the roster order is stable.
-func DiscoverCharacters(root string) ([]Entry, error) {
-	dirs, err := os.ReadDir(root)
+func DiscoverCharacters(fsys fs.FS, root string) ([]Entry, error) {
+	dirs, err := fs.ReadDir(fsys, root)
 	if err != nil {
 		return nil, fmt.Errorf("reading characters folder: %w", err)
 	}
@@ -33,11 +34,11 @@ func DiscoverCharacters(root string) ([]Entry, error) {
 		if !d.IsDir() {
 			continue
 		}
-		def, err := ResolvePath(root, filepath.Join(d.Name(), d.Name()+".def"))
+		def, err := ResolvePath(fsys, root, d.Name()+"/"+d.Name()+".def")
 		if err != nil {
 			continue
 		}
-		if st, err := os.Stat(def); err == nil && !st.IsDir() {
+		if st, err := fs.Stat(fsys, def); err == nil && !st.IsDir() {
 			out = append(out, Entry{Name: d.Name(), DefPath: def})
 		}
 	}
@@ -45,25 +46,25 @@ func DiscoverCharacters(root string) ([]Entry, error) {
 	return out, nil
 }
 
-// DiscoverStages lists the stages under root: every "*.def" file directly in
+// DiscoverStages lists the stages under root, a folder of fsys: every "*.def" file directly in
 // root that declares a [BGdef] section (this tells a stage apart from any
 // other .def). Sorted by name.
-func DiscoverStages(root string) ([]Entry, error) {
-	files, err := os.ReadDir(root)
+func DiscoverStages(fsys fs.FS, root string) ([]Entry, error) {
+	files, err := fs.ReadDir(fsys, root)
 	if err != nil {
 		return nil, fmt.Errorf("reading stages folder: %w", err)
 	}
 	var out []Entry
 	for _, f := range files {
-		if !f.Type().IsRegular() || !strings.EqualFold(filepath.Ext(f.Name()), ".def") {
+		if !f.Type().IsRegular() || !strings.EqualFold(path.Ext(f.Name()), ".def") {
 			continue
 		}
-		path := filepath.Join(root, f.Name())
-		data, err := os.ReadFile(path)
+		defPath := path.Join(root, f.Name())
+		data, err := fs.ReadFile(fsys, defPath)
 		if err != nil || !strings.Contains(strings.ToLower(string(data)), "[bgdef]") {
 			continue
 		}
-		out = append(out, Entry{Name: strings.TrimSuffix(f.Name(), filepath.Ext(f.Name())), DefPath: path})
+		out = append(out, Entry{Name: strings.TrimSuffix(f.Name(), path.Ext(f.Name())), DefPath: defPath})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil

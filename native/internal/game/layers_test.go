@@ -1,6 +1,7 @@
 package game
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -90,10 +91,10 @@ func TestLayerSprite_UnknownTypeDrawsNothing(t *testing.T) {
 
 func TestStageSpritePath_ResolvesBesideTheStageDefOrEmptyWhenNone(t *testing.T) {
 	st := &stage.Stage{BGdef: stage.BGdef{SpriteFile: "stage0.sff"}}
-	if got, want := StageSpritePath("", filepath.Join("a", "b", "arena.def"), st), filepath.Join("a", "b", "stage0.sff"); got != want {
+	if got, want := StageSpritePath(os.DirFS("."), "a/b/arena.def", st), "a/b/stage0.sff"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
-	if got := StageSpritePath("", "a/arena.def", &stage.Stage{}); got != "" {
+	if got := StageSpritePath(os.DirFS("."), "a/arena.def", &stage.Stage{}); got != "" {
 		t.Fatalf("stage without sprite file: got %q, want empty", got)
 	}
 }

@@ -22,7 +22,7 @@ func names(es []Entry) []string {
 }
 
 func TestDiscoverCharacters_FindsFolderConventionSorted(t *testing.T) {
-	got, err := DiscoverCharacters(filepath.Join(content, "chars"))
+	got, err := DiscoverCharacters(os.DirFS(content), "chars")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,14 +37,14 @@ func TestDiscoverCharacters_IgnoresFoldersWithoutMatchingDefAndFiles(t *testing.
 	os.MkdirAll(filepath.Join(root, "wrong"), 0o755)
 	os.WriteFile(filepath.Join(root, "wrong", "other.def"), []byte("[Info]"), 0o644)
 	os.WriteFile(filepath.Join(root, "loose.def"), []byte("[Info]"), 0o644)
-	got, err := DiscoverCharacters(root)
+	got, err := DiscoverCharacters(os.DirFS(root), ".")
 	if err != nil || len(got) != 0 {
 		t.Fatalf("got %v, %v; want empty list and no error", got, err)
 	}
 }
 
 func TestDiscoverCharacters_MissingRootIsError(t *testing.T) {
-	if _, err := DiscoverCharacters(filepath.Join(t.TempDir(), "nope")); err == nil {
+	if _, err := DiscoverCharacters(os.DirFS(t.TempDir()), "nope"); err == nil {
 		t.Fatal("want an error for a missing folder")
 	}
 }
@@ -54,7 +54,7 @@ func TestDiscoverStages_KeepsOnlyDefsWithBGdef(t *testing.T) {
 	os.WriteFile(filepath.Join(root, "a.def"), []byte("[BGDef]\nspr=a.sff\n"), 0o644)
 	os.WriteFile(filepath.Join(root, "b.def"), []byte("[Info]\nname=x\n"), 0o644)
 	os.WriteFile(filepath.Join(root, "c.txt"), []byte("[BGdef]"), 0o644)
-	got, err := DiscoverStages(root)
+	got, err := DiscoverStages(os.DirFS(root), ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,11 +110,11 @@ func TestStartingFighters_SymmetricFacingAndClampedOnNarrowStage(t *testing.T) {
 
 func loadPair(t *testing.T) (*Fighter, *Fighter) {
 	t.Helper()
-	a, err := LoadFighter(filepath.Join(content, "chars", "fighter", "fighter.def"))
+	a, err := LoadFighter(os.DirFS(content), "chars/fighter/fighter.def")
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := LoadFighter(filepath.Join(content, "chars", "rival", "rival.def"))
+	b, err := LoadFighter(os.DirFS(content), "chars/rival/rival.def")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestLoadFighter_ReadsCharacterCommandsAndSpritePath(t *testing.T) {
 }
 
 func TestLoadFighter_MissingDefIsError(t *testing.T) {
-	if _, err := LoadFighter(filepath.Join(t.TempDir(), "x.def")); err == nil {
+	if _, err := LoadFighter(os.DirFS(t.TempDir()), "x.def"); err == nil {
 		t.Fatal("want an error")
 	}
 }
@@ -219,9 +219,11 @@ func TestNewMatch_RejectsBadInput(t *testing.T) {
 
 func newTestFlow(t *testing.T) *Flow {
 	t.Helper()
-	chars, _ := DiscoverCharacters(filepath.Join(content, "chars"))
-	stages, _ := DiscoverStages(filepath.Join(content, "stages"))
-	return NewFlow(chars, stages, DefaultLoader())
+	fsys := os.DirFS(content)
+	chars, _ := DiscoverCharacters(fsys, "chars")
+	stages, _ := DiscoverStages(fsys, "stages")
+	f := NewFlow(fsys, chars, stages, DefaultLoader(fsys))
+	return f
 }
 
 func TestFlow_FullPathSelectionToResultAndRematch(t *testing.T) {
@@ -299,11 +301,11 @@ func TestFlow_MirrorMatchAllowed(t *testing.T) {
 }
 
 func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
-	f := NewFlow(nil, []Entry{{"s", "s.def"}}, DefaultLoader())
+	f := NewFlow(os.DirFS("."), nil, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")))
 	if f.Screen != ScreenError || f.Message == "" {
 		t.Errorf("no characters: screen=%v", f.Screen)
 	}
-	f = NewFlow([]Entry{{"c", "c.def"}}, nil, DefaultLoader())
+	f = NewFlow(os.DirFS("."), []Entry{{"c", "c.def"}}, nil, DefaultLoader(os.DirFS(".")))
 	if f.Screen != ScreenError {
 		t.Errorf("no stages: screen=%v", f.Screen)
 	}
@@ -314,7 +316,7 @@ func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
 }
 
 func TestFlow_UnloadableCharacterShowsErrorNamingIt(t *testing.T) {
-	f := NewFlow([]Entry{{"ghost", filepath.Join(t.TempDir(), "ghost.def")}}, []Entry{{"s", "s.def"}}, DefaultLoader())
+	f := NewFlow(os.DirFS("."), []Entry{{"ghost", "ghost/ghost.def"}}, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")))
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)

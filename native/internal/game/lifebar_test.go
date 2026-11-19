@@ -24,11 +24,11 @@ func TestSelectLifebarUsesTheAppearanceChoice(t *testing.T) {
 	put(t, filepath.Join(root, "lifebars", "VHD", "fighthd.sff"), "x")
 	put(t, filepath.Join(root, "config", "appearance.json"), `{"lifebar":"vhd"}`)
 
-	hud, notices := SelectLifebar(root)
+	hud, notices := SelectLifebar(os.DirFS(root))
 	if hud == nil || filepath.Base(filepath.Dir(hud.Def)) != "VHD" {
 		t.Fatalf("hud = %+v, notices %v", hud, notices)
 	}
-	if filepath.Base(hud.Sprites) != "fighthd.sff" {
+	if hud.Sprites != "lifebars/VHD/fighthd.sff" {
 		t.Errorf("sprites found case-insensitively: %q", hud.Sprites)
 	}
 	if len(notices) != 0 {
@@ -42,7 +42,7 @@ func TestSelectLifebarFallsBackToDefault(t *testing.T) {
 	put(t, filepath.Join(root, "lifebars", "broken", "fight.def"), "nothing")
 	put(t, filepath.Join(root, "config", "appearance.json"), `{"lifebar":"missing"}`)
 
-	hud, notices := SelectLifebar(root)
+	hud, notices := SelectLifebar(os.DirFS(root))
 	if hud == nil || filepath.Base(filepath.Dir(hud.Def)) != "default" {
 		t.Fatalf("hud = %+v", hud)
 	}
@@ -59,13 +59,13 @@ func TestSelectLifebarFallsBackToDefault(t *testing.T) {
 
 func TestSelectLifebarWithoutLifebarsKeepsBuiltInBars(t *testing.T) {
 	root := t.TempDir()
-	hud, notices := SelectLifebar(root)
+	hud, notices := SelectLifebar(os.DirFS(root))
 	if hud != nil || len(notices) != 0 {
 		t.Fatalf("hud %v notices %v", hud, notices)
 	}
 	put(t, filepath.Join(root, "config", "appearance.json"), `{"lifebar":`)
 	put(t, filepath.Join(root, "lifebars", "x", "fight.def"), "[Lifebar]\n")
-	hud, notices = SelectLifebar(root)
+	hud, notices = SelectLifebar(os.DirFS(root))
 	if hud != nil || len(notices) != 1 || !strings.Contains(notices[0], "appearance settings ignored") {
 		t.Fatalf("corrupt settings: hud %v notices %v", hud, notices)
 	}

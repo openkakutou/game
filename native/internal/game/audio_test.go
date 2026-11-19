@@ -3,7 +3,7 @@ package game
 import (
 	"errors"
 	"github.com/openkakutou/stage"
-	"path/filepath"
+	"os"
 	"reflect"
 	"testing"
 
@@ -149,7 +149,7 @@ func TestWAVBytes_RejectsUnplayableSounds(t *testing.T) {
 }
 
 // toMatch drives a flow from the select screen to a started match.
-func toMatch(t *testing.T) *Flow { return toMatchWith(t, DefaultLoader()) }
+func toMatch(t *testing.T) *Flow { return toMatchWith(t, DefaultLoader(os.DirFS(content))) }
 
 func toMatchWith(t *testing.T, l Loader) *Flow {
 	t.Helper()
@@ -180,7 +180,7 @@ func TestMusic_FollowsTheFlowAcrossMatchResultSelectRematchAndError(t *testing.T
 	f.Stage.MusicFile = "bgm/theme.ogg"
 	m1 := f.Match
 	prev, path, changed := MusicChange(nil, f)
-	want := filepath.Join(content, "stages", "bgm", "theme.ogg")
+	want := "stages/bgm/theme.ogg"
 	if prev != m1 || path != want || !changed {
 		t.Fatalf("match start: next=%p path=%q changed=%v; want %p %q true", prev, path, changed, m1, want)
 	}
