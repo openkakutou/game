@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-11-19
+
+### Fixed
+- A `.cns` character no longer loses control once it walks: Kung Fu Man can walk, stop and still punch and kick in the native game (engine v2.22.2, character v0.17.0).
+
 ## [0.22.0] - 2026-11-19
 
 ### Added
@@ -139,7 +144,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The character roster discovery/selection screen: characters configured in a deployable roster manifest are validated and displayed with their name and a portrait; a character that fails to load shows a clear error card instead of crashing or being silently dropped. Player 1 and Player 2 each pick a character independently, including picking the same character for a mirror match, and can't continue until both have picked.
 
-[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.19.0...v0.20.0
