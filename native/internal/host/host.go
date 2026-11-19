@@ -135,6 +135,27 @@ func (d dirInfo) ModTime() time.Time { return time.Time{} }
 func (d dirInfo) IsDir() bool        { return true }
 func (d dirInfo) Sys() any           { return nil }
 
+// resolveExistingPrefix resolves the symlinks of the longest existing prefix
+// of p and appends the rest as typed: a declaration may name a file only
+// through the core's case-insensitive or no-.def lookup (macOS: /var ->
+// /private/var), so EvalSymlinks on the whole path fails.
+func resolveExistingPrefix(p string) string {
+	rest := ""
+	current := p
+	for {
+		resolved, err := filepath.EvalSymlinks(current)
+		if err == nil {
+			return filepath.Join(resolved, rest)
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return p
+		}
+		rest = filepath.Join(filepath.Base(current), rest)
+		current = parent
+	}
+}
+
 // pathFlags take a character or stage declaration, which may be a path.
 var pathFlags = []string{"-p1", "-p2", "-s"}
 
@@ -156,9 +177,7 @@ func MapPaths(cl game.CommandLine, root string) {
 		}
 		// Symlinks are resolved here because the core refuses to walk
 		// through one, and the path was used as it is before.
-		if resolved, err := filepath.EvalSymlinks(value); err == nil {
-			value = resolved
-		}
+		value = resolveExistingPrefix(value)
 		rel, err := filepath.Rel(absRoot, value)
 		if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			cl.Flags[flag] = filepath.ToSlash(rel)

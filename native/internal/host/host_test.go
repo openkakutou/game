@@ -101,7 +101,13 @@ func TestOpenAndMapPaths_AnAbsolutePathMatchesWithoutCaseAndWithoutDefExtension(
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, _ := absName(def)
+	// The temp dir may sit behind a symlink (macOS: /var -> /private/var),
+	// which MapPaths resolves.
+	realDef, err := filepath.EvalSymlinks(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, _ := absName(realDef)
 	if !strings.EqualFold(got, want) || got != want {
 		t.Errorf("got %q, want the stored spelling %q", got, want)
 	}
@@ -123,5 +129,24 @@ func TestOpen_ReadsFilesOfTheGameFolder(t *testing.T) {
 	data, err := fs.ReadFile(Open(root), "a.txt")
 	if err != nil || string(data) != "hello" {
 		t.Fatalf("got %q, %v", data, err)
+	}
+}
+
+func TestMapPaths_KeepsAPathInsideASymlinkedGameFolderWhenOnlyTheCoreLookupFindsIt(t *testing.T) {
+	base := t.TempDir()
+	real := filepath.Join(base, "real")
+	if err := os.MkdirAll(filepath.Join(real, "chars", "kfm"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(real, link); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	// "KFM" exists only through the core's case-insensitive lookup, so the
+	// whole path cannot be resolved; its symlinked prefix still must be.
+	cl := game.ParseArgs([]string{"-p1", filepath.Join(link, "chars", "KFM"), "-p2", "kfm"})
+	MapPaths(cl, link)
+	if got := cl.Flags["-p1"]; got != "chars/KFM" {
+		t.Errorf("-p1 = %q, want the game-folder name %q", got, "chars/KFM")
 	}
 }
