@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Use Stage Camera Tension and BG Scale
 
@@ -12,10 +12,11 @@ stage v0.17.0 exposes `[Camera]` `tension`/`startx`/`starty`, each BG element's 
 - [x] The camera uses the stage's tension and start position
 - [x] BG layers are drawn at their scalestart, with scaledelta and xscale applied where Ikemen GO applies them
 - [x] The fighters' ground line uses the resolved zoffset
-- [ ] Checked in the real game with the fidelity video
+- [x] Checked in the real game with the fidelity video
 
 ## Notes
 Follows item 056 and stage#021 (2026-11-19).
 
 ## Progress
 2026-11-19: tension, startx, scalestart and the resolved zoffset are used (stage v0.17.0). scaledelta (zoom only) and xscale (parallax only) are not applied: the game has neither yet. Left: the fidelity-video check in the real game, which needs the SDL2 build tools (pkg-config) and ffmpeg, absent on this machine.
+2026-11-19: fidelity video, kfm vs kfm on Training (tension 400, scalestart 2.4, zoffsetlink 3), Ikemen GO nightly fbc481fa vs engine a5cfe958: tile size, floor line and camera start match Ikemen GO; the camera follows the fighters. Seen in the same video, already there with engine 04d5f7d: OpenKakutou's fighters end up overlapped at the centre and P1's attacks do not come out.
