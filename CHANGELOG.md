@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-19
+
 ### Added
 - The native match HUD draws a MUGEN / Ikemen GO lifebar: drop one in `lifebars/<name>/` and select it with `{"lifebar": "<name>"}` in `config/appearance.json`, or it uses `lifebars/default`. The life and power bars, their trailing fill, the names and the timer are placed as Ikemen GO places them; a broken lifebar folder is skipped with a notice, and with no lifebar at all the built-in bars stay. Faces, round and win icons, combo counts and the lifebar's own fonts are not drawn yet.
 
@@ -160,7 +162,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The character roster discovery/selection screen: characters configured in a deployable roster manifest are validated and displayed with their name and a portrait; a character that fails to load shows a clear error card instead of crashing or being silently dropped. Player 1 and Player 2 each pick a character independently, including picking the same character for a mirror match, and can't continue until both have picked.
 
-[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/openkakutou/mode-quick-versus/compare/v0.22.0...v0.22.1
