@@ -1,0 +1,28 @@
+// Quick versus: the first built-in mode (roadmap decision 030).
+// Two players pick one character each, a stage and the match settings,
+// fight a best-of-N match, then see the results and may rematch.
+{
+  "$schema": "mode.schema.json",
+  "formatVersion": 1,
+  "id": "quick-versus",
+  "name": "Quick Versus",
+  "flow": [
+    { "screen": "characterSelect", "params": { "sides": ["p1", "p2"] } },
+    { "screen": "stageSelect" },
+    { "screen": "matchSetup" },
+    { "screen": "versus" },
+    { "screen": "match" },
+    { "screen": "results" }, // rematch or back to selection
+  ],
+  "rules": {
+    "sides": [
+      { "control": "human", "characters": 1 },
+      { "control": "humanOrCpu", "characters": 1 },
+    ],
+    "rounds": 3,
+    "timeLimitSeconds": 99,
+    "opponents": { "kind": "chosen" },
+    "onWin": "results",
+    "onLose": "results",
+  },
+}

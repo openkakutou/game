@@ -38,6 +38,26 @@ jobs:
             native/dist/SDL2_mixer.dll
             native/dist/smoke/*.png
 
+  # The mode loader's WebAssembly build (cmd/mode-wasm), run under Node with
+  # the same quick-versus example the Go tests load.
+  mode-wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: native
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: native/go.mod
+      - name: Build and smoke-test the mode loader WASM
+        run: |
+          GOOS=js GOARCH=wasm go build -o "$RUNNER_TEMP/mode.wasm" ./cmd/mode-wasm
+          node cmd/mode-wasm/smoke.mjs "$RUNNER_TEMP/mode.wasm" "$(go env GOROOT)"
+
   # UNVERIFIED LOCALLY: macOS cannot be built or run from Linux/Docker, so
   # this job has never been executed by the author -- its first real run on
   # GitHub is the first verification. It mirrors the Linux steps with
