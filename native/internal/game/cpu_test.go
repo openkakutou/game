@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/openkakutou/engine/input"
-	"github.com/openkakutou/engine/match"
+	"github.com/openkakutou/engine/v2/input"
+	"github.com/openkakutou/engine/v2/match"
 )
 
 func decide(c *CPU, selfX, oppX float64) input.TickInput {

@@ -9,10 +9,10 @@ import (
 
 	"github.com/openkakutou/character"
 	"github.com/openkakutou/character/cmd"
-	"github.com/openkakutou/engine"
-	"github.com/openkakutou/engine/input"
-	"github.com/openkakutou/engine/match"
-	"github.com/openkakutou/engine/round"
+	"github.com/openkakutou/engine/v2"
+	"github.com/openkakutou/engine/v2/input"
+	"github.com/openkakutou/engine/v2/match"
+	"github.com/openkakutou/engine/v2/round"
 	"github.com/openkakutou/stage"
 )
 

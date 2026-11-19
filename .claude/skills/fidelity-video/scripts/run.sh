@@ -73,7 +73,7 @@ rm -rf "$work/native"; mkdir -p "$work/native"
 # The Go caches live outside native/, which is replaced every run, so later runs reuse them.
 mkdir -p "$work/gocache"
 drun -e GOMODCACHE=/w/gocache/go-mod -e GOCACHE=/w/gocache/go-build -w /w/native "$image" bash -c \
-  "go get github.com/openkakutou/engine@$engine_ref github.com/openkakutou/character@$character_ref && go build -o /w/openkakutou ./cmd/openkakutou"
+  "go get github.com/openkakutou/engine/v2@$engine_ref github.com/openkakutou/character@$character_ref && go build -o /w/openkakutou ./cmd/openkakutou"
 
 # 5. Ikemen GO config: generated on first launch, then P1/P2 keys set to OpenKakutou's.
 if [ ! -f "$work/ikemen/save/config.ini" ]; then

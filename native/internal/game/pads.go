@@ -1,6 +1,6 @@
 package game
 
-import "github.com/openkakutou/engine/input"
+import "github.com/openkakutou/engine/v2/input"
 
 // PadButtons is how many face/shoulder buttons are read, in the web build's
 // standard order: A, B, X, Y, left shoulder, right shoulder.

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/openkakutou/engine/input"
+	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/stage"
 )
 

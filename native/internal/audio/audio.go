@@ -8,7 +8,7 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/openkakutou/engine/match"
+	"github.com/openkakutou/engine/v2/match"
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/veandco/go-sdl2/mix"
 	"github.com/veandco/go-sdl2/sdl"

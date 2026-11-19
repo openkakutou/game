@@ -4,8 +4,8 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/openkakutou/engine/input"
-	"github.com/openkakutou/engine/match"
+	"github.com/openkakutou/engine/v2/input"
+	"github.com/openkakutou/engine/v2/match"
 )
 
 // CPU opponent tuning, mirroring the web build's src/cpu/cpu-controller.ts.

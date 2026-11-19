@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/openkakutou/character"
-	"github.com/openkakutou/engine/input"
+	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/stage"
 	"github.com/veandco/go-sdl2/mix"

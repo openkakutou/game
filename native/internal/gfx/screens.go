@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/openkakutou/character/air"
-	"github.com/openkakutou/engine/match"
-	"github.com/openkakutou/engine/round"
+	"github.com/openkakutou/engine/v2/match"
+	"github.com/openkakutou/engine/v2/round"
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/sff"
 	"github.com/openkakutou/stage"

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/openkakutou/engine/input"
-	"github.com/openkakutou/engine/match"
-	"github.com/openkakutou/engine/round"
+	"github.com/openkakutou/engine/v2/input"
+	"github.com/openkakutou/engine/v2/match"
+	"github.com/openkakutou/engine/v2/round"
 	"github.com/openkakutou/stage"
 )
 

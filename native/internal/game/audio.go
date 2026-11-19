@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 
 	"github.com/openkakutou/character"
-	"github.com/openkakutou/engine/evaluator"
-	"github.com/openkakutou/engine/match"
+	"github.com/openkakutou/engine/v2/evaluator"
+	"github.com/openkakutou/engine/v2/match"
 )
 
 // Cue is one sound effect the engine asked a fighter to play (PlaySnd).

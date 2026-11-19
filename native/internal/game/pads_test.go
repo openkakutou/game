@@ -3,7 +3,7 @@ package game
 import (
 	"testing"
 
-	"github.com/openkakutou/engine/input"
+	"github.com/openkakutou/engine/v2/input"
 )
 
 func navsOf(p *Pads, player int, s PadState) []Nav {

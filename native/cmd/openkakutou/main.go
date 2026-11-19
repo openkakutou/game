@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/openkakutou/engine/input"
+	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/game/native/internal/audio"
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/game/native/internal/gfx"

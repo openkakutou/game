@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/openkakutou/engine/input"
+	"github.com/openkakutou/engine/v2/input"
 )
 
 // Quick versus follows Ikemen GO's command line (commit 54d4148a):

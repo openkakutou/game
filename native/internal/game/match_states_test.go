@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/openkakutou/engine/input"
+	"github.com/openkakutou/engine/v2/input"
 )
 
 const reference = "../../testdata/reference"
