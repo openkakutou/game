@@ -1,6 +1,6 @@
 ---
 status: todo
-depends_on: [064]
+depends_on: [064, 067]
 ---
 # Web screens through the core flow
 

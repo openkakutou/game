@@ -1,6 +1,6 @@
 ---
 status: todo
-depends_on: [062, 063, 064, 065, 066]
+depends_on: [062, 063, 064, 065, 066, 067]
 ---
 # One Go core shared by the web and native builds
 
@@ -11,7 +11,7 @@ Prioritized by roadmap decision `048`: no complete-game item (031+) starts befor
 
 🔒 MUST: no behavior change — the native and web builds play the same match frame for frame before and after (differential tests, engine 036 / game 051, where available).
 
-Split into steps 062 (core without files or drawing), 063 (core WebAssembly build), 064 (web match through the core), 065 (web screens through the core flow), 066 (equivalence test and docs). This item is done when they are.
+Split into steps 062 (core without files or drawing), 063 (core WebAssembly build), 064 (web match through the core), 067 (web drawing data through the core), 065 (web screens through the core flow), 066 (equivalence test and docs). This item is done when they are.
 
 ## Acceptance Criteria
 - [ ] One Go implementation of match flow, CPU, camera, pause, roster rules, lifebar layout (via the `lifebar` library once released, roadmap `026`) and audio logic; the TypeScript copies are removed
