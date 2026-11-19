@@ -7,7 +7,7 @@ require (
 	github.com/openkakutou/character v0.16.0
 	github.com/openkakutou/engine v1.0.1-0.20261119022122-04d5f7daf492
 	github.com/openkakutou/sff v0.8.0
-	github.com/openkakutou/stage v0.13.0
+	github.com/openkakutou/stage v0.17.0
 	github.com/veandco/go-sdl2 v0.4.40
 )
 

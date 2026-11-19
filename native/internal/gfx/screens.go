@@ -180,7 +180,7 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 	r.behind, r.front = game.SplitLayers(f.Stage.Elements)
 	r.stageScale = game.StageScale(f.Stage, VW)
 	r.shift = game.StageGroundShift(f.Stage, r.stageScale, VH)
-	r.cam = game.NewStageCamera(f.Stage, game.DefaultCameraTension, r.stageScale, VW)
+	r.cam = game.NewStageCamera(f.Stage, game.CameraTension(f.Stage), r.stageScale, VW)
 	r.camTick = -1
 	r.loadStageSprites(f)
 	for i, fighter := range f.Fighters {
@@ -267,7 +267,8 @@ func (r *Renderer) drawLayers(f *game.Flow, idx []int, ticks int, camX float64) 
 			r.win.Rect(float32(ox), float32(oy), layerPlaceholderSize, layerPlaceholderSize, grey)
 			continue
 		}
-		wd, ht := float64(t.W)*r.stageScale, float64(t.H)*r.stageScale
+		sclX, sclY := game.ElementScale(e)
+		wd, ht := float64(t.W)*r.stageScale*sclX, float64(t.H)*r.stageScale*sclY
 		x0, nx := game.TileRun(ox, wd+float64(e.TileSpacingX)*r.stageScale, VW, e.TileX)
 		y0, ny := game.TileRun(oy, ht+float64(e.TileSpacingY)*r.stageScale, VH, e.TileY)
 		for ty := range ny {
@@ -324,10 +325,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	if r.loadedFor != m {
 		r.loadSprites(f)
 	}
-	groundY := float32(defaultGroundY)
-	if z := f.Stage.BGdef.ZOffset; z > 0 {
-		groundY = float32(z)
-	}
+	groundY := float32(game.GroundLine(f.Stage, r.stageScale, r.shift, defaultGroundY))
 	if len(f.Stage.Elements) == 0 { // a stage with no art keeps the flat backdrop
 		w.Rect(0, 0, VW, groundY, skyBg)
 		w.Rect(0, groundY, VW, VH-groundY, floor)

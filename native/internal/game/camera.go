@@ -7,8 +7,42 @@ import (
 )
 
 // DefaultCameraTension is Ikemen GO's [Camera] tension default (camera.go:85).
-// shortcut: stage v0.13.0 does not parse "tension", so every stage uses it.
 const DefaultCameraTension = 50
+
+// CameraTension is the stage's [Camera] tension in stage units. A stage
+// without a [Camera] section reads 0 and gets Ikemen GO's default.
+func CameraTension(st *stage.Stage) int {
+	if st.BGdef.Tension <= 0 {
+		return DefaultCameraTension
+	}
+	return st.BGdef.Tension
+}
+
+// ElementScale is the scale element e is drawn at (BG scalestart); an unset
+// one (0) draws at normal size, as stage.Parse's default of 1 does.
+// shortcut: scaledelta only matters when the camera zooms, which this game
+// does not do yet, and xscale only for parallax elements, which are not drawn
+// as parallax yet (stage.go, commit 54d4148a).
+func ElementScale(e stage.BGElement) (x, y float64) {
+	x, y = e.ScaleStartX, e.ScaleStartY
+	if x == 0 {
+		x = 1
+	}
+	if y == 0 {
+		y = 1
+	}
+	return x, y
+}
+
+// GroundLine is the view row of the fighters' ground: the stage's resolved
+// zoffset scaled to the view under the stage's bottom alignment, or fallback
+// for a stage that declares none.
+func GroundLine(st *stage.Stage, scale, shift, fallback float64) float64 {
+	if st.BGdef.ResolvedZOffset <= 0 {
+		return fallback
+	}
+	return shift + scale*float64(st.BGdef.ResolvedZOffset)
+}
 
 // mugenLocalWidth is the localcoord width of a stage that declares none.
 const mugenLocalWidth = 320
@@ -38,11 +72,13 @@ func StageGroundShift(st *stage.Stage, scale, viewH float64) float64 {
 // axisX,axisY, with the camera at camX view pixels. The axis sits on the
 // element's start point, scrolled against the camera by delta, around the
 // view's horizontal centre (Ikemen GO stage.go:665 and 810, anim.go:1095).
-// shortcut: scalestart/xscale are not parsed by stage v0.13.0, scale is 1.
+// The sprite is drawn at the element's scalestart, so its axis offset grows
+// with it.
 func LayerOrigin(e stage.BGElement, axisX, axisY int, camX, scale, viewW, shift float64) (x, y float64) {
+	sclX, sclY := ElementScale(e)
 	sx := float64(e.StartX) - camX/scale*e.DeltaX
-	x = viewW/2 + scale*(sx-float64(axisX))
-	y = shift + scale*(float64(e.StartY)-float64(axisY))
+	x = viewW/2 + scale*(sx-float64(axisX)*sclX)
+	y = shift + scale*(float64(e.StartY)-float64(axisY)*sclY)
 	return x, y
 }
 
@@ -65,7 +101,7 @@ func TileRun(pos, step, view float64, tile int) (first float64, n int) {
 // with zoom off (camera.go:340-590): it moves only once a fighter comes
 // within tension of a view edge, eases there, and stays within the bounds.
 type StageCamera struct {
-	halfWidth, tension, minX, maxX float64
+	halfWidth, tension, minX, maxX, startX float64
 }
 
 // NewStageCamera is st's camera for a viewW-wide view, tension in stage units.
@@ -78,12 +114,11 @@ func NewStageCamera(st *stage.Stage, tension int, scale, viewW float64) StageCam
 	// minLeft/maxRight (camera.go:193-194), then XBound (camera.go:314).
 	minLeft := float64(st.CameraBounds.Left)*scale - half/zoomOut
 	maxRight := float64(st.CameraBounds.Right)*scale + half/zoomOut
-	return StageCamera{halfWidth: half, tension: math.Max(0, float64(tension)*scale), minX: minLeft + half, maxX: maxRight - half}
+	return StageCamera{halfWidth: half, tension: math.Max(0, float64(tension)*scale), minX: minLeft + half, maxX: maxRight - half, startX: float64(st.BGdef.CameraStartX) * scale}
 }
 
-// Start is the camera position at round start: startx, which stage v0.13.0
-// does not parse (shortcut: 0, the MUGEN default).
-func (c StageCamera) Start() float64 { return 0 }
+// Start is the camera position at round start: the stage's [Camera] startx.
+func (c StageCamera) Start() float64 { return c.startX }
 
 // Follow is the camera's next position from x, given the leftmost and
 // rightmost fighter positions; snap jumps straight to the target, as on a

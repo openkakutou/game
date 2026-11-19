@@ -109,3 +109,55 @@ func TestStageCamera_StopsAtTheStageBound(t *testing.T) {
 		t.Fatalf("x = %v, want -515", x)
 	}
 }
+
+func TestCameraTension_UsesTheStagesAndFallsBackToIkemenGOsDefault(t *testing.T) {
+	if got := CameraTension(trainingStage()); got != DefaultCameraTension {
+		t.Fatalf("tension without [Camera] = %d, want %d", got, DefaultCameraTension)
+	}
+	st := trainingStage()
+	st.BGdef.Tension = trainingTension
+	if got := CameraTension(st); got != trainingTension {
+		t.Fatalf("tension = %d, want %d", got, trainingTension)
+	}
+}
+
+func TestStageCamera_StartsAtTheStagesStartX(t *testing.T) {
+	st := trainingStage()
+	st.BGdef.CameraStartX = 200 // stage units, 50 game px
+	c := NewStageCamera(st, trainingTension, 0.25, 320)
+	if c.Start() != 50 {
+		t.Fatalf("start = %v, want 50", c.Start())
+	}
+}
+
+func TestLayerOrigin_ScaleStartScalesTheSpriteAxis(t *testing.T) {
+	// Training's scalestart 2.4: the axis offset grows with the drawn size.
+	bg := stage.BGElement{StartX: 0, StartY: 0, ScaleStartX: 2.4, ScaleStartY: 2.4}
+	x, y := LayerOrigin(bg, 100, 50, 0, 0.25, 320, 60)
+	if !near(x, 160-0.25*100*2.4) || !near(y, 60-0.25*50*2.4) {
+		t.Fatalf("origin = %v,%v, want 100,30", x, y)
+	}
+}
+
+func TestElementScale_AnUnsetScaleDrawsAtNormalSize(t *testing.T) {
+	sx, sy := ElementScale(stage.BGElement{})
+	if sx != 1 || sy != 1 {
+		t.Fatalf("scale = %v,%v, want 1,1", sx, sy)
+	}
+	sx, sy = ElementScale(stage.BGElement{ScaleStartX: 2.4, ScaleStartY: 3})
+	if sx != 2.4 || sy != 3 {
+		t.Fatalf("scale = %v,%v, want 2.4,3", sx, sy)
+	}
+}
+
+func TestGroundLine_FollowsTheResolvedZOffsetScaledAndShifted(t *testing.T) {
+	st := trainingStage()
+	st.BGdef.ResolvedZOffset = 600
+	if got := GroundLine(st, 0.25, 60, 220); !near(got, 60+150) {
+		t.Fatalf("ground = %v, want 210", got)
+	}
+	st.BGdef.ResolvedZOffset = 0
+	if got := GroundLine(st, 0.25, 60, 220); got != 220 {
+		t.Fatalf("ground without zoffset = %v, want the default 220", got)
+	}
+}

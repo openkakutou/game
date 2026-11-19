@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The native game now follows each stage's own camera settings: the camera pushes at the stage's tension and starts at its start position, background layers are drawn at their declared scale, and the fighters stand on the stage's resolved ground line.
+
 ## [0.21.0] - 2026-11-19
 
 ### Fixed
