@@ -49,6 +49,35 @@ func TestDiscoverCharacters_MissingRootIsError(t *testing.T) {
 	}
 }
 
+func TestDiscoverCharacters_SortsByFolderNameIgnoringCase(t *testing.T) {
+	root := t.TempDir()
+	for _, n := range []string{"bob", "Zed", "alice", "Carl"} {
+		os.MkdirAll(filepath.Join(root, n), 0o755)
+		os.WriteFile(filepath.Join(root, n, n+".def"), []byte("[Info]"), 0o644)
+	}
+	got, err := DiscoverCharacters(os.DirFS(root), ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := names(got); len(n) != 4 || n[0] != "alice" || n[1] != "bob" || n[2] != "Carl" || n[3] != "Zed" {
+		t.Fatalf("got %v, want [alice bob Carl Zed]", n)
+	}
+}
+
+func TestDiscoverStages_SortsByFileNameIgnoringCase(t *testing.T) {
+	root := t.TempDir()
+	for _, n := range []string{"beach", "Temple", "Arena"} {
+		os.WriteFile(filepath.Join(root, n+".def"), []byte("[BGdef]\n"), 0o644)
+	}
+	got, err := DiscoverStages(os.DirFS(root), ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := names(got); len(n) != 3 || n[0] != "Arena" || n[1] != "beach" || n[2] != "Temple" {
+		t.Fatalf("got %v, want [Arena beach Temple]", n)
+	}
+}
+
 func TestDiscoverStages_KeepsOnlyDefsWithBGdef(t *testing.T) {
 	root := t.TempDir()
 	os.WriteFile(filepath.Join(root, "a.def"), []byte("[BGDef]\nspr=a.sff\n"), 0o644)

@@ -23,7 +23,7 @@ type Entry struct {
 // DiscoverCharacters lists the characters under root, a folder of fsys: every sub-directory
 // "<name>" that contains "<name>/<name>.def" (the MUGEN folder convention).
 // A missing root is an error; a root with no characters returns an empty
-// list. Entries are sorted by name so the roster order is stable.
+// list. Entries are sorted by name (see sortByName).
 func DiscoverCharacters(fsys fs.FS, root string) ([]Entry, error) {
 	dirs, err := fs.ReadDir(fsys, root)
 	if err != nil {
@@ -42,13 +42,13 @@ func DiscoverCharacters(fsys fs.FS, root string) ([]Entry, error) {
 			out = append(out, Entry{Name: d.Name(), DefPath: def})
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	sortByName(out)
 	return out, nil
 }
 
 // DiscoverStages lists the stages under root, a folder of fsys: every "*.def" file directly in
 // root that declares a [BGdef] section (this tells a stage apart from any
-// other .def). Sorted by name.
+// other .def). Sorted by name (see sortByName).
 func DiscoverStages(fsys fs.FS, root string) ([]Entry, error) {
 	files, err := fs.ReadDir(fsys, root)
 	if err != nil {
@@ -66,6 +66,19 @@ func DiscoverStages(fsys fs.FS, root string) ([]Entry, error) {
 		}
 		out = append(out, Entry{Name: strings.TrimSuffix(f.Name(), path.Ext(f.Name())), DefPath: defPath})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	sortByName(out)
 	return out, nil
+}
+
+// sortByName orders entries by folder or file name ignoring case (the
+// default select-screen order, roadmap decision 029), exact name as tie-break
+// so the order stays stable on case-sensitive file systems.
+func sortByName(es []Entry) {
+	sort.Slice(es, func(i, j int) bool {
+		a, b := strings.ToLower(es[i].Name), strings.ToLower(es[j].Name)
+		if a != b {
+			return a < b
+		}
+		return es[i].Name < es[j].Name
+	})
 }
