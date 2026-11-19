@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-19
+
 ### Changed
 - The native game uses the latest engine. Fighters have control when a round starts, Kung Fu Man walks and jumps when the player holds forward or up, and a held button counts as one press, as in Ikemen GO.
 
@@ -127,7 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The character roster discovery/selection screen: characters configured in a deployable roster manifest are validated and displayed with their name and a portrait; a character that fails to load shows a clear error card instead of crashing or being silently dropped. Player 1 and Player 2 each pick a character independently, including picking the same character for a mirror match, and can't continue until both have picked.
 
-[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/openkakutou/mode-quick-versus/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/openkakutou/mode-quick-versus/compare/v0.16.0...v0.17.0
