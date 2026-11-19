@@ -1,7 +1,7 @@
 {
   "name": "openkakutou-game",
   "private": true,
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "Standalone two-player versus fighting game — the first complete OpenKakutou game mode.",
   "type": "module",
   "engines": {
