@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done
 ---
 # Stage Fills the Screen and Camera
 
@@ -9,9 +9,10 @@ In the native game, the Training stage covers only the right half of the screen.
 🔒 MUST: stages render as in Ikemen GO (roadmap decision `038`).
 
 ## Acceptance Criteria
-- [ ] The Training stage fills the view at round start, as in Ikemen GO
-- [ ] The camera follows the fighters and stops at the stage's bounds, as Ikemen GO computes it, with the source cited
-- [ ] Checked in the real game with the fidelity video
+- [x] The Training stage fills the view at round start, as in Ikemen GO
+- [x] The camera follows the fighters and stops at the stage's bounds, as Ikemen GO computes it, with the source cited
+- [x] Checked in the real game with the fidelity video
 
 ## Notes
 Found by the fidelity video after engine#062 (2026-11-19).
+Done on 2026-11-19, checked with the fidelity video: the stage fills the view and the camera follows the fighters. Training's tension and BG scale wait for stage#021: until then Ikemen GO's default tension is used, and the layers are drawn without their scalestart.
