@@ -53,6 +53,8 @@ type Renderer struct {
 	camX              float64
 	camTick           int
 	stageScale, shift float64
+	// lifebar draws the flow's lifebar, when it has one.
+	lifebar *lifebarHUD
 }
 
 // NewRenderer builds a renderer for win.
@@ -182,6 +184,9 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 	r.shift = game.StageGroundShift(f.Stage, r.stageScale, VH)
 	r.cam = game.NewStageCamera(f.Stage, game.CameraTension(f.Stage), r.stageScale, VW)
 	r.camTick = -1
+	if r.lifebar != nil {
+		r.lifebar.tick = -1
+	}
 	r.loadStageSprites(f)
 	for i, fighter := range f.Fighters {
 		file, err := os.Open(fighter.SffPath)
@@ -385,6 +390,27 @@ func spriteMeta(fighter *game.Fighter, fr air.Frame) (sff.Sprite, bool) {
 }
 
 func (r *Renderer) drawHUD(f *game.Flow) {
+	if f.Lifebar == nil {
+		r.drawBuiltInBars(f)
+	} else {
+		r.drawLifebar(f)
+	}
+	r.drawBanner(f.Match)
+}
+
+// drawLifebar draws the flow's lifebar, its sprites uploaded on first use.
+func (r *Renderer) drawLifebar(f *game.Flow) {
+	if r.lifebar == nil || r.lifebar.hud != f.Lifebar {
+		if r.lifebar != nil {
+			r.lifebar.delete()
+		}
+		r.lifebar = newLifebarHUD(f.Lifebar)
+	}
+	r.lifebar.draw(r.win, f)
+}
+
+// drawBuiltInBars is the HUD used when no lifebar is installed.
+func (r *Renderer) drawBuiltInBars(f *game.Flow) {
 	w := r.win
 	m := f.Match
 	for i := 0; i < 2; i++ {
@@ -425,12 +451,13 @@ func (r *Renderer) drawHUD(f *game.Flow) {
 			w.Rect(px, 40, 8, 8, c)
 		}
 	}
-	timer := "--"
-	if f.Setup().TimeLimitSeconds > 0 {
-		timer = fmt.Sprintf("%02d", (m.State.RoundTimer+game.TickRateHz-1)/game.TickRateHz)
-	}
-	w.Text(VW/2-12, 10, 2, white, timer)
+	w.Text(VW/2-12, 10, 2, white, timerText(f))
+}
 
+// drawBanner shows the round number as a round starts and its outcome as
+// it ends.
+func (r *Renderer) drawBanner(m *game.Match) {
+	w := r.win
 	switch {
 	case m.RoundEnded():
 		w.TextCentered(90, 3, gold, roundBanner(m))

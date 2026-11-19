@@ -40,9 +40,11 @@ type Texture struct {
 
 // Window owns the SDL window and its OpenGL context.
 type Window struct {
-	win    *sdl.Window
-	ctx    sdl.GLContext
-	W, H   int32
+	win  *sdl.Window
+	ctx  sdl.GLContext
+	W, H int32
+	// view is the letterboxed VWxVH viewport in window pixels (x, y, w, h).
+	view   [4]int32
 	verts  []float32
 	nverts int
 }
@@ -101,6 +103,7 @@ func (w *Window) BeginFrame() {
 	gl.ClearColor(0, 0, 0, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 	gl.Viewport((dw-vw)/2, (dh-vh)/2, vw, vh)
+	w.view = [4]int32{(dw - vw) / 2, (dh - vh) / 2, vw, vh}
 	gl.MatrixMode(gl.PROJECTION)
 	gl.LoadIdentity()
 	gl.Ortho(0, VW, VH, 0, -1, 1)
@@ -207,6 +210,23 @@ func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 	gl.End()
 	gl.EnableClientState(gl.COLOR_ARRAY)
 	gl.Disable(gl.TEXTURE_2D)
+}
+
+// Clip limits drawing to the virtual rectangle x, y, wd, ht until NoClip.
+func (w *Window) Clip(x, y, wd, ht float32) {
+	w.Flush()
+	sx := float32(w.view[2]) / VW
+	sy := float32(w.view[3]) / VH
+	px := w.view[0] + int32(x*sx)
+	py := w.view[1] + w.view[3] - int32((y+ht)*sy)
+	gl.Enable(gl.SCISSOR_TEST)
+	gl.Scissor(px, py, int32(max(wd, 0)*sx), int32(max(ht, 0)*sy))
+}
+
+// NoClip lifts Clip.
+func (w *Window) NoClip() {
+	w.Flush()
+	gl.Disable(gl.SCISSOR_TEST)
 }
 
 // SavePNG writes the current framebuffer to path (used for verification).

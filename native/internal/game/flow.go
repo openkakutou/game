@@ -91,9 +91,11 @@ type Flow struct {
 	StageDefPath string
 	// ContentRoot is where a stage looks for files not found beside its .def.
 	ContentRoot string
-	Match       *Match
-	cpus        [2]*CPU // drive the sides the match setup gives to the CPU
-	cpuIn       [2]input.TickInput
+	// Lifebar is the HUD's lifebar; nil keeps the built-in bars.
+	Lifebar *HUDLifebar
+	Match   *Match
+	cpus    [2]*CPU // drive the sides the match setup gives to the CPU
+	cpuIn   [2]input.TickInput
 	// quick is the setup of a quick versus match started from the command
 	// line: no menus before it, and the game quits when it ends.
 	quick *Setup

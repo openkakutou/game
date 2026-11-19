@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The native match HUD draws a MUGEN / Ikemen GO lifebar: drop one in `lifebars/<name>/` and select it with `{"lifebar": "<name>"}` in `config/appearance.json`, or it uses `lifebars/default`. The life and power bars, their trailing fill, the names and the timer are placed as Ikemen GO places them; a broken lifebar folder is skipped with a notice, and with no lifebar at all the built-in bars stay. Faces, round and win icons, combo counts and the lifebar's own fonts are not drawn yet.
+
 ## [0.24.0] - 2026-11-19
 
 ### Added

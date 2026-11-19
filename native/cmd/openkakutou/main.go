@@ -91,6 +91,11 @@ func run() error {
 	}
 	flow := game.NewFlow(chars, stages, game.DefaultLoader(game.CommonFolder(root)))
 	flow.ContentRoot = root
+	hud, lifebarNotices := game.SelectLifebar(root)
+	flow.Lifebar = hud
+	for _, n := range lifebarNotices {
+		fmt.Fprintln(os.Stderr, "openkakutou:", n)
+	}
 	switch {
 	case isQuick:
 		for _, n := range flow.StartQuickVersus(quick, root) {
