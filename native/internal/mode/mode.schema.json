@@ -12,7 +12,7 @@
     "id": {
       "type": "string",
       "minLength": 1,
-      "description": "Stable identifier, e.g. quick-versus."
+      "description": "Stable identifier, e.g. versus."
     },
     "name": {
       "type": "string",

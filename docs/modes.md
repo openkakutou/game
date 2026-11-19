@@ -1,8 +1,10 @@
 # Game modes
 
-A **mode** is a data file, not code: the sequence of built-in screens a player goes through, and the rules of the matches (roadmap decision `030`). The game ships Quick Versus built in; further modes (arcade, survival, training, watch) are new files in the same format. A mode cannot script anything: it only combines what the game offers.
+A **mode** is a data file, not code: the sequence of built-in screens a player goes through, and the rules of the matches (roadmap decision `030`). The game ships Versus built in; further modes (arcade, survival, training, watch) are new files in the same format. A mode cannot script anything: it only combines what the game offers.
 
-- Example: [`native/internal/mode/quick-versus.jsonc`](../native/internal/mode/quick-versus.jsonc)
+Versus (a mode) is not quick versus: quick versus starts one match straight from the command line, without any menu, as MUGEN and Ikemen GO do (see [command-line.md](command-line.md)).
+
+- Example: [`native/internal/mode/versus.jsonc`](../native/internal/mode/versus.jsonc)
 - JSON Schema: [`native/internal/mode/mode.schema.json`](../native/internal/mode/mode.schema.json)
 - Loader: `native/internal/mode` (Go, imported by the native game) and `native/cmd/mode-wasm` (the same loader built to WebAssembly for the web game)
 
@@ -16,7 +18,7 @@ flowchart LR
   r -- back --> cs
 ```
 
-The diagram shows Quick Versus: the flow's screens in order, then what follows a match. A ladder mode (arcade) would set `onWin: nextOpponent` to fight the next CPU opponent, and `onLose: continue` to show the continue screen.
+The diagram shows Versus: the flow's screens in order, then what follows a match. A ladder mode (arcade) would set `onWin: nextOpponent` to fight the next CPU opponent, and `onLose: continue` to show the continue screen.
 
 ## File
 
@@ -26,7 +28,7 @@ A mode is one JSONC file: JSON with `//` and `/* */` comments and trailing comma
 |---|---|---|
 | `$schema` | string, optional | Path or URL of the schema, for editors. |
 | `formatVersion` | `1` | Format version. Only `1` exists. |
-| `id` | non-empty string | Stable identifier, e.g. `quick-versus`. |
+| `id` | non-empty string | Stable identifier, e.g. `versus`. |
 | `name` | non-empty string | Name the main menu shows. |
 | `flow` | non-empty array of steps | The screens, in order. Must include a `match` screen. |
 | `rules` | object | The match rules, below. |

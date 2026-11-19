@@ -26,12 +26,12 @@ const valid = `{
             "opponents": {"kind": "ladder", "count": 8}, "onWin": "nextOpponent", "onLose": "continue"}
 }`
 
-func TestParse_QuickVersusExample_LoadsEveryField(t *testing.T) {
-	m, err := Parse("quick-versus.jsonc", mustRead(t, "quick-versus.jsonc"))
+func TestParse_VersusExample_LoadsEveryField(t *testing.T) {
+	m, err := Parse("versus.jsonc", mustRead(t, "versus.jsonc"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.ID != "quick-versus" || m.Name != "Quick Versus" || len(m.Flow) != 6 {
+	if m.ID != "versus" || m.Name != "Versus" || len(m.Flow) != 6 {
 		t.Fatalf("mode = %+v", m)
 	}
 	if m.Flow[0].Screen != ScreenCharacterSelect || strings.Join(m.Flow[0].Sides, ",") != "p1,p2" {

@@ -9,4 +9,4 @@ Roadmap decision `030`: the pause menu lists the game's entries (resume, restart
 
 ## Acceptance Criteria
 - [ ] A mode can add entries only from the offered set; an unknown entry is a validation error
-- [ ] Quick versus shows only the game's entries
+- [ ] Versus shows only the game's entries

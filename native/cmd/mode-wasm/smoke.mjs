@@ -15,14 +15,14 @@ const { instance } = await WebAssembly.instantiate(
 go.run(instance);
 
 const example = readFileSync(
-  new URL("../../internal/mode/quick-versus.jsonc", import.meta.url),
+  new URL("../../internal/mode/versus.jsonc", import.meta.url),
   "utf8",
 );
 const ok = JSON.parse(
-  globalThis.OpenKakutouMode.parse("quick-versus.jsonc", example),
+  globalThis.OpenKakutouMode.parse("versus.jsonc", example),
 );
 assert.equal(ok.ok, true);
-assert.equal(ok.mode.id, "quick-versus");
+assert.equal(ok.mode.id, "versus");
 assert.equal(ok.mode.rules.rounds, 3);
 assert.equal(ok.mode.flow[0].screen, "characterSelect");
 

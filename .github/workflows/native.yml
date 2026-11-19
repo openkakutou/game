@@ -39,7 +39,7 @@ jobs:
             native/dist/smoke/*.png
 
   # The mode loader's WebAssembly build (cmd/mode-wasm), run under Node with
-  # the same quick-versus example the Go tests load.
+  # the same versus example the Go tests load.
   mode-wasm:
     runs-on: ubuntu-latest
     timeout-minutes: 10
