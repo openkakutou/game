@@ -12,6 +12,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // FormatVersion is the only formatVersion this loader reads.
@@ -101,6 +102,45 @@ type Rules struct {
 	Opponents        Opponents `json:"opponents"`
 	OnWin            Outcome   `json:"onWin"`
 	OnLose           Outcome   `json:"onLose"`
+	Roster           Roster    `json:"roster"` // the zero Roster shows everything
+}
+
+// Roster says which characters and stages the mode shows (roadmap decision
+// 034).
+type Roster struct {
+	Characters CharacterRoster `json:"characters"`
+	Stages     StageRoster     `json:"stages"`
+}
+
+// CharacterRoster filters the characters: Select is what the select screens
+// show, Opponents the pool a CPU opponent can come from.
+type CharacterRoster struct {
+	Select    Filter `json:"select"`
+	Opponents Filter `json:"opponents"`
+}
+
+// StageRoster filters the stages the select screens show.
+type StageRoster struct {
+	Select Filter `json:"select"`
+}
+
+// Filter keeps the names in Include (every name when Include is nil, none
+// when it is empty), less the names in Exclude. Names are folder or file
+// names, matched ignoring case.
+type Filter struct {
+	Include []string `json:"include,omitempty"`
+	Exclude []string `json:"exclude,omitempty"`
+}
+
+// Allows is whether name passes the filter.
+func (f Filter) Allows(name string) bool {
+	named := func(list []string) bool {
+		return slices.ContainsFunc(list, func(n string) bool { return strings.EqualFold(n, name) })
+	}
+	if f.Include != nil && !named(f.Include) {
+		return false
+	}
+	return !named(f.Exclude)
 }
 
 // Side is one side's rule.
@@ -317,7 +357,7 @@ func (v *validator) params(path string, screen Screen, x any) []string {
 }
 
 func (v *validator) rules(x any) Rules {
-	obj := v.object("rules", x, []string{"sides", "rounds", "timeLimitSeconds", "opponents", "onWin", "onLose"})
+	obj := v.object("rules", x, []string{"sides", "rounds", "timeLimitSeconds", "opponents", "onWin", "onLose"}, "roster")
 	if obj == nil {
 		return Rules{}
 	}
@@ -353,7 +393,60 @@ func (v *validator) rules(x any) Rules {
 	if lose, ok := obj["onLose"]; ok {
 		r.OnLose = oneOf(v, "rules.onLose", lose, Outcomes)
 	}
+	if roster, ok := obj["roster"]; ok {
+		r.Roster = v.roster(roster)
+	}
 	return r
+}
+
+func (v *validator) roster(x any) Roster {
+	const path = "rules.roster"
+	obj := v.object(path, x, nil, "characters", "stages")
+	r := Roster{}
+	if chars, ok := obj["characters"]; ok {
+		cpath := join(path, "characters")
+		cobj := v.object(cpath, chars, nil, "select", "opponents")
+		r.Characters.Select = v.filter(join(cpath, "select"), cobj, "select")
+		r.Characters.Opponents = v.filter(join(cpath, "opponents"), cobj, "opponents")
+	}
+	if stages, ok := obj["stages"]; ok {
+		spath := join(path, "stages")
+		sobj := v.object(spath, stages, nil, "select")
+		r.Stages.Select = v.filter(join(spath, "select"), sobj, "select")
+	}
+	return r
+}
+
+// filter reads the filter under key of parent, the zero Filter when absent.
+func (v *validator) filter(path string, parent map[string]any, key string) Filter {
+	raw, ok := parent[key]
+	if !ok {
+		return Filter{}
+	}
+	obj := v.object(path, raw, nil, "include", "exclude")
+	f := Filter{}
+	if list, ok := obj["include"]; ok {
+		f.Include = v.names(join(path, "include"), list)
+	}
+	if list, ok := obj["exclude"]; ok {
+		f.Exclude = v.names(join(path, "exclude"), list)
+	}
+	return f
+}
+
+// names reads an array of non-empty strings; an empty array is an empty,
+// non-nil list.
+func (v *validator) names(path string, x any) []string {
+	list, ok := x.([]any)
+	if !ok {
+		v.fail(path, "must be an array of strings")
+		return nil
+	}
+	out := make([]string, 0, len(list))
+	for i, item := range list {
+		out = append(out, v.str(index(path, i), item))
+	}
+	return out
 }
 
 func (v *validator) opponents(x any) Opponents {

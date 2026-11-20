@@ -117,6 +117,9 @@ func run() error {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
 	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), modes)
+	for _, n := range game.RosterNotices(modes, chars, stages) {
+		warn(n)
+	}
 	lifebars, lifebarProblems := game.DiscoverLifebars(fsys)
 	for _, n := range lifebarProblems {
 		warn(n)

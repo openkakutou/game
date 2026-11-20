@@ -6,6 +6,24 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["formatVersion", "id", "name", "flow", "rules"],
+  "$defs": {
+    "filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Only these names. Absent: every name; empty: none."
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Not these names, whatever include says."
+        }
+      }
+    }
+  },
   "properties": {
     "$schema": { "type": "string" },
     "formatVersion": { "const": 1 },
@@ -130,6 +148,28 @@
         },
         "onLose": {
           "enum": ["results", "nextOpponent", "continue", "gameOver"]
+        },
+        "roster": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Which characters and stages the mode shows. Names are folder or file names, matched ignoring case.",
+          "properties": {
+            "characters": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "select": { "$ref": "#/$defs/filter", "description": "What the character select screens show." },
+                "opponents": { "$ref": "#/$defs/filter", "description": "The pool a CPU opponent can come from." }
+              }
+            },
+            "stages": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "select": { "$ref": "#/$defs/filter", "description": "What the stage select screens show." }
+              }
+            }
+          }
         }
       }
     }

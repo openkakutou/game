@@ -17,7 +17,7 @@ const previewPlaceholder = "#1d1c2a"
 type SideSelect struct {
 	// Shown is false for a side that does not pick (yet): no cursor, no portrait.
 	Shown bool
-	// Cursor is the roster index the side hovers, or has picked.
+	// Cursor is the cell the side hovers, or has picked.
 	Cursor int
 }
 
@@ -25,9 +25,12 @@ type SideSelect struct {
 type SelectState struct {
 	Title  string
 	Roster []game.Entry
-	Sides  [2]SideSelect
-	// Focus is the roster index the grid keeps in view when it scrolls: the
-	// cell of the side that is picking.
+	// Cells are the roster indexes the grid shows, in order: a mode can hide
+	// characters. A cell's portrait is its roster index's.
+	Cells []int
+	Sides [2]SideSelect
+	// Focus is the cell the grid keeps in view when it scrolls: the cell of
+	// the side that is picking.
 	Focus     int
 	Portraits PortraitSizes
 	ElapsedMs int
@@ -49,7 +52,7 @@ func (l *Layout) CharacterSelect(dst *DrawList, view View, s SelectState) {
 		l.grid(dst, view, c, s, screen)
 	}
 	for side, shown := range s.Sides {
-		if !shown.Shown || shown.Cursor >= len(s.Roster) {
+		if !shown.Shown || shown.Cursor >= len(s.Cells) {
 			continue
 		}
 		if c.Portrait != nil {
@@ -57,7 +60,7 @@ func (l *Layout) CharacterSelect(dst *DrawList, view View, s SelectState) {
 			if side == 1 {
 				lay, mirror = c.Portrait.P2, c.Portrait.MirrorP2 == nil || *c.Portrait.MirrorP2
 			}
-			l.portrait(dst, view, lay, s.Portraits, shown.Cursor, mirror, screen)
+			l.portrait(dst, view, lay, s.Portraits, s.Cells[shown.Cursor], mirror, screen)
 		}
 		if c.Name != nil {
 			part := c.Name.P1
@@ -65,7 +68,7 @@ func (l *Layout) CharacterSelect(dst *DrawList, view View, s SelectState) {
 				part = c.Name.P2
 			}
 			if part != nil {
-				l.text(dst, view, l.pack.scope("characterSelect", "name"), &part.Layout, part.Style, s.Roster[shown.Cursor].Display, screen, 1, "")
+				l.text(dst, view, l.pack.scope("characterSelect", "name"), &part.Layout, part.Style, s.Roster[s.Cells[shown.Cursor]].Display, screen, 1, "")
 			}
 		}
 	}
@@ -90,7 +93,7 @@ func (l *Layout) grid(dst *DrawList, view View, c *screenpack.CharacterSelect, s
 	box := place(screen, &g.Layout,
 		float32(g.Columns)*cell.w+float32(g.Columns-1)*gap[0],
 		float32(g.Rows)*cell.h+float32(g.Rows-1)*gap[1], unit)
-	totalRows := (len(s.Roster) + g.Columns - 1) / g.Columns
+	totalRows := (len(s.Cells) + g.Columns - 1) / g.Columns
 	first := max(0, min(s.Focus/g.Columns-g.Rows/2, totalRows-g.Rows))
 	sc := l.pack.scope("characterSelect", "grid")
 	slot := func(index int) (rect, bool) {
@@ -104,7 +107,7 @@ func (l *Layout) grid(dst *DrawList, view View, c *screenpack.CharacterSelect, s
 		for col := range g.Columns {
 			index := (first+row)*g.Columns + col
 			at, _ := slot(index)
-			if index >= len(s.Roster) {
+			if index >= len(s.Cells) {
 				if g.EmptyCell != nil {
 					l.element(dst, view, sc, g.EmptyCell, at, s.ElapsedMs)
 				}
@@ -113,7 +116,7 @@ func (l *Layout) grid(dst *DrawList, view View, c *screenpack.CharacterSelect, s
 			if g.Cell != nil {
 				l.element(dst, view, sc, g.Cell, at, s.ElapsedMs)
 			}
-			l.smallPortrait(dst, s.Portraits, index, at)
+			l.smallPortrait(dst, s.Portraits, s.Cells[index], at)
 		}
 	}
 	l.cursors(dst, view, c, s, slot)
@@ -186,8 +189,11 @@ func (l *Layout) portrait(dst *DrawList, view View, lay *screenpack.Layout, ps P
 
 // StageSelectState is what the game shows on the stage select.
 type StageSelectState struct {
-	Title     string
-	Roster    []game.Entry
+	Title  string
+	Roster []game.Entry
+	// Cells are the roster indexes the screen steps over, in order; Cursor
+	// is a position in it.
+	Cells     []int
 	Cursor    int
 	ElapsedMs int
 }
@@ -206,10 +212,10 @@ func (l *Layout) StageSelect(dst *DrawList, view View, s StageSelectState) {
 		box := place(screen, st.Preview, float32(*st.Preview.Size[0])*unit, float32(*st.Preview.Size[1])*unit, unit)
 		dst.Ops = append(dst.Ops, Op{Kind: OpRect, X: box.x, Y: box.y, W: box.w, H: box.h, Color: parseColor(previewPlaceholder, 1)})
 	}
-	if st.Name != nil && s.Cursor < len(s.Roster) {
-		l.text(dst, view, l.pack.scope("stageSelect", "name"), &st.Name.Layout, st.Name.Style, s.Roster[s.Cursor].Display, screen, 1, "")
+	if st.Name != nil && s.Cursor < len(s.Cells) {
+		l.text(dst, view, l.pack.scope("stageSelect", "name"), &st.Name.Layout, st.Name.Style, s.Roster[s.Cells[s.Cursor]].Display, screen, 1, "")
 	}
-	if st.Arrows != nil && len(s.Roster) > 1 {
+	if st.Arrows != nil && len(s.Cells) > 1 {
 		sc := l.pack.scope("stageSelect", "arrows")
 		if st.Arrows.Left != nil {
 			l.element(dst, view, sc, st.Arrows.Left, screen, s.ElapsedMs)

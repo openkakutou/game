@@ -30,6 +30,15 @@ func roster(n int) []game.Entry {
 	return out
 }
 
+// cells are the roster indexes 0..n-1: a roster with nothing hidden.
+func cells(n int) []int {
+	out := make([]int, n)
+	for i := range out {
+		out[i] = i
+	}
+	return out
+}
+
 // portraitOps are the portrait quads, in paint order.
 func portraitOps(l *ui.DrawList, large bool) []ui.Op {
 	var out []ui.Op
@@ -59,7 +68,7 @@ func drawSelect(l *ui.Layout, s ui.SelectState) *ui.DrawList {
 func TestCharacterSelect_TheGridPlacesACellOrAnEmptyCellInEverySlot(t *testing.T) {
 	// 1280x720: a cell is 72 px, the spacing 14.4 px, so slot (column, row)
 	// starts at (86.4 x column, 86.4 x row). 4 characters fill 4 of the 6 slots.
-	list := drawSelect(selectLayout(t, gridPart), ui.SelectState{Roster: roster(4), Portraits: portraits{missing: -1}})
+	list := drawSelect(selectLayout(t, gridPart), ui.SelectState{Roster: roster(4), Cells: cells(4), Portraits: portraits{missing: -1}})
 	cells := rectOps(list, red)
 	wantX := []float32{0, 86.4, 172.8, 0}
 	wantY := []float32{0, 0, 0, 86.4}
@@ -88,7 +97,7 @@ func TestCharacterSelect_TheGridScrollsToKeepTheFocusedCellInView(t *testing.T) 
 		first int
 	}{{0, 0}, {4, 0}, {6, 3}, {8, 3}}
 	for _, c := range cases {
-		list := drawSelect(l, ui.SelectState{Roster: roster(9), Focus: c.focus, Portraits: portraits{missing: -1}})
+		list := drawSelect(l, ui.SelectState{Roster: roster(9), Cells: cells(9), Focus: c.focus, Portraits: portraits{missing: -1}})
 		var got []int
 		for _, op := range portraitOps(list, false) {
 			got = append(got, op.Portrait.Character)
@@ -109,7 +118,7 @@ func TestCharacterSelect_TheGridScrollsToKeepTheFocusedCellInView(t *testing.T) 
 func TestCharacterSelect_ASmallPortraitIsFittedAndCenteredInItsCell(t *testing.T) {
 	// A 50x25 portrait in a 72x72 cell: scale min(72/50, 72/25) = 1.44, so
 	// 72x36, centered vertically: y = (72-36)/2.
-	list := drawSelect(selectLayout(t, gridPart), ui.SelectState{Roster: roster(1), Portraits: portraits{missing: -1}})
+	list := drawSelect(selectLayout(t, gridPart), ui.SelectState{Roster: roster(1), Cells: cells(1), Portraits: portraits{missing: -1}})
 	p := portraitOps(list, false)[0]
 	near(t, "x", p.X, 0)
 	near(t, "y", p.Y, 18)
@@ -119,13 +128,45 @@ func TestCharacterSelect_ASmallPortraitIsFittedAndCenteredInItsCell(t *testing.T
 }
 
 func TestCharacterSelect_ACharacterWithoutPortraitShowsItsCellAlone(t *testing.T) {
-	list := drawSelect(selectLayout(t, gridPart), ui.SelectState{Roster: roster(3), Portraits: portraits{missing: 1}})
+	list := drawSelect(selectLayout(t, gridPart), ui.SelectState{Roster: roster(3), Cells: cells(3), Portraits: portraits{missing: 1}})
 	if len(rectOps(list, red)) != 3 {
 		t.Errorf("a cell is missing")
 	}
 	got := portraitOps(list, false)
 	if len(got) != 2 || got[0].Portrait.Character != 0 || got[1].Portrait.Character != 2 {
 		t.Errorf("portraits = %+v, want characters 0 and 2", got)
+	}
+}
+
+func TestCharacterSelect_OnlyTheCellsAreDrawnEachWithItsRosterIndexPortrait(t *testing.T) {
+	// A roster of 5 with characters 1 and 3 hidden: cells 0 2 4.
+	s := ui.SelectState{Roster: roster(5), Cells: []int{0, 2, 4}, Portraits: portraits{missing: -1}}
+	s.Sides[0] = ui.SideSelect{Shown: true, Cursor: 2} // the third cell: character 4
+	list := drawSelect(selectLayout(t, gridPart+`, "portrait": { "p1": { "size": [null, 45] } }, "name": { "p1": { "style": "left" } }`), s)
+	if len(rectOps(list, red)) != 3 {
+		t.Errorf("cells drawn = %d, want 3", len(rectOps(list, red)))
+	}
+	small := portraitOps(list, false)
+	if len(small) != 3 || small[0].Portrait.Character != 0 || small[1].Portrait.Character != 2 || small[2].Portrait.Character != 4 {
+		t.Errorf("small portraits = %+v, want characters 0 2 4", small)
+	}
+	big := portraitOps(list, true)
+	if len(big) != 1 || big[0].Portrait.Character != 4 {
+		t.Errorf("large portraits = %+v, want character 4", big)
+	}
+	only(t, list, "Fighter E")
+}
+
+func TestStageSelect_ShowsTheNameOfTheCellAndArrowsOverTheCells(t *testing.T) {
+	parts := `"name": { "style": "center", "anchor": "bottom", "pivot": "top" },
+	  "arrows": { "left": { "type": "rect", "color": "#ff0000", "size": [6, 6] },
+	              "right": { "type": "rect", "color": "#ff0000", "size": [6, 6] } }`
+	l := layoutOf(t, screenGame(t, "stageSelect", parts, nil))
+	var list ui.DrawList
+	l.StageSelect(&list, view720, ui.StageSelectState{Roster: roster(3), Cells: []int{2}, Cursor: 0})
+	only(t, &list, "Fighter C")
+	if len(rectOps(&list, red)) != 0 {
+		t.Errorf("arrows drawn with one visible stage")
 	}
 }
 
@@ -136,7 +177,7 @@ const cursorParts = gridPart + `, "cursor": {
 
 func TestCharacterSelect_EachShownSideHasACursorOnItsCell(t *testing.T) {
 	l := selectLayout(t, cursorParts)
-	s := ui.SelectState{Roster: roster(4), Portraits: portraits{missing: -1}}
+	s := ui.SelectState{Roster: roster(4), Cells: cells(4), Portraits: portraits{missing: -1}}
 	s.Sides = [2]ui.SideSelect{{Shown: true, Cursor: 1}, {Shown: true, Cursor: 3}}
 	list := drawSelect(l, s)
 	// A 12-unit (86.4 px) cursor centered in a 72 px cell is 7.2 px out on each side.
@@ -152,7 +193,7 @@ func TestCharacterSelect_EachShownSideHasACursorOnItsCell(t *testing.T) {
 }
 
 func TestCharacterSelect_BothSidesOnOneCellShowTheBothElementInstead(t *testing.T) {
-	s := ui.SelectState{Roster: roster(4), Portraits: portraits{missing: -1}}
+	s := ui.SelectState{Roster: roster(4), Cells: cells(4), Portraits: portraits{missing: -1}}
 	s.Sides = [2]ui.SideSelect{{Shown: true, Cursor: 1}, {Shown: true, Cursor: 1}}
 	list := drawSelect(selectLayout(t, cursorParts), s)
 	both := rectOps(list, ui.Color{R: 1, B: 1, A: 1})
@@ -164,7 +205,7 @@ func TestCharacterSelect_BothSidesOnOneCellShowTheBothElementInstead(t *testing.
 }
 
 func TestCharacterSelect_ASideNotYetPickingHasNoCursorNorPortrait(t *testing.T) {
-	s := ui.SelectState{Roster: roster(4), Portraits: portraits{missing: -1}}
+	s := ui.SelectState{Roster: roster(4), Cells: cells(4), Portraits: portraits{missing: -1}}
 	s.Sides = [2]ui.SideSelect{{Shown: true, Cursor: 0}}
 	list := drawSelect(selectLayout(t, cursorParts+`, "portrait": { "p1": { "size": [null, 45] }, "p2": { "size": [null, 45] } }`), s)
 	if len(rectOps(list, ui.Color{R: 1, G: 1, A: 1})) != 0 {
@@ -181,7 +222,7 @@ const bigParts = `"portrait": { "p1": { "anchor": "left", "offset": [6, -10], "s
             "p2": { "style": "right", "anchor": "right", "offset": [-6, 16] } }`
 
 func TestCharacterSelect_TheHoveredCharactersLargePortraitAndNameAreShownPerSide(t *testing.T) {
-	s := ui.SelectState{Roster: roster(4), Portraits: portraits{missing: -1}}
+	s := ui.SelectState{Roster: roster(4), Cells: cells(4), Portraits: portraits{missing: -1}}
 	s.Sides = [2]ui.SideSelect{{Shown: true, Cursor: 2}, {Shown: true, Cursor: 3}}
 	list := drawSelect(selectLayout(t, bigParts), s)
 	big := portraitOps(list, true)
@@ -210,7 +251,7 @@ func TestCharacterSelect_TheHoveredCharactersLargePortraitAndNameAreShownPerSide
 
 func TestCharacterSelect_MirrorP2FalseKeepsTheSecondPortraitUpright(t *testing.T) {
 	parts := `"portrait": { "p1": { "size": [null, 45] }, "p2": { "size": [null, 45] }, "mirrorP2": false }`
-	s := ui.SelectState{Roster: roster(2), Portraits: portraits{missing: -1}}
+	s := ui.SelectState{Roster: roster(2), Cells: cells(2), Portraits: portraits{missing: -1}}
 	s.Sides = [2]ui.SideSelect{{Shown: true}, {Shown: true, Cursor: 1}}
 	big := portraitOps(drawSelect(selectLayout(t, parts), s), true)
 	near(t, "p2 u0", big[1].U0, 0)
@@ -221,7 +262,7 @@ func TestCharacterSelect_TheBuiltInScreenDrawsItsTitleGridAndCursor(t *testing.T
 	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	var list ui.DrawList
-	s := ui.SelectState{Title: "Player 1", Roster: roster(12), Portraits: portraits{missing: -1}}
+	s := ui.SelectState{Title: "Player 1", Roster: roster(12), Cells: cells(12), Portraits: portraits{missing: -1}}
 	s.Sides[0] = ui.SideSelect{Shown: true, Cursor: 0}
 	l.CharacterSelect(&list, view720, s)
 	if got := shownTexts(&list); len(got) == 0 || got[0] != "PLAYER 1" {
@@ -242,7 +283,7 @@ func TestStageSelect_ShowsThePreviewPlaceholderTheNameAndBothArrows(t *testing.T
 	              "right": { "type": "rect", "color": "#ff0000", "anchor": "center", "offset": [56, -4], "size": [6, 6] } }`
 	l := layoutOf(t, screenGame(t, "stageSelect", parts, nil))
 	var list ui.DrawList
-	l.StageSelect(&list, view720, ui.StageSelectState{Title: "Stage", Roster: roster(3), Cursor: 1})
+	l.StageSelect(&list, view720, ui.StageSelectState{Title: "Stage", Roster: roster(3), Cells: cells(3), Cursor: 1})
 	// Preview: 96x54 units = 691.2x388.8 px centered on (640, 360-28.8).
 	preview := rectOps(&list, ui.Color{R: 29.0 / 255, G: 28.0 / 255, B: 42.0 / 255, A: 1})
 	if len(preview) != 1 {
@@ -272,7 +313,7 @@ func TestStageSelect_ALoneStageHasNoArrows(t *testing.T) {
 	              "right": { "type": "rect", "color": "#ff0000", "size": [6, 6] } }`
 	l := layoutOf(t, screenGame(t, "stageSelect", parts, nil))
 	var list ui.DrawList
-	l.StageSelect(&list, view720, ui.StageSelectState{Roster: roster(1)})
+	l.StageSelect(&list, view720, ui.StageSelectState{Roster: roster(1), Cells: cells(1)})
 	if len(rectOps(&list, red)) != 0 {
 		t.Errorf("arrows drawn with nothing to step to")
 	}
@@ -314,13 +355,13 @@ func TestResults_DrawsTheWinnersLargePortrait(t *testing.T) {
 func TestSelectScreens_AFrameAllocatesNothingOnceWarm(t *testing.T) {
 	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
-	sel := ui.SelectState{Title: "Player 1", Roster: roster(25), Focus: 20, Portraits: portraits{missing: 3}}
+	sel := ui.SelectState{Title: "Player 1", Roster: roster(25), Cells: cells(25), Focus: 20, Portraits: portraits{missing: 3}}
 	sel.Sides = [2]ui.SideSelect{{Shown: true, Cursor: 20}, {Shown: true, Cursor: 20}}
 	stages := roster(5)
 	frames := map[string]func(*ui.DrawList){
 		"character select": func(d *ui.DrawList) { l.CharacterSelect(d, view720, sel) },
 		"stage select": func(d *ui.DrawList) {
-			l.StageSelect(d, view720, ui.StageSelectState{Title: "Stage", Roster: stages, Cursor: 2})
+			l.StageSelect(d, view720, ui.StageSelectState{Title: "Stage", Roster: stages, Cells: cells(5), Cursor: 2})
 		},
 		"versus": func(d *ui.DrawList) {
 			l.Versus(d, view720, ui.VersusState{P1: "a", P2: "b", P1Char: 1, P2Char: 2, Portraits: portraits{missing: -1}})

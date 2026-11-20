@@ -194,7 +194,7 @@ func (f *Flow) SelectCursors() [2]SideCursor {
 		side := sideIndex(name)
 		switch {
 		case pos < f.pickPos:
-			out[side] = SideCursor{Shown: true, Cursor: f.Picks[side]}
+			out[side] = SideCursor{Shown: true, Cursor: viewPos(f.charView, f.Picks[side])}
 		case pos == f.pickPos:
 			out[side] = SideCursor{Shown: true, Cursor: f.Cursor}
 		}
@@ -214,6 +214,7 @@ func (f *Flow) SortRosters(charBy string, charDescending bool, stageBy string, s
 		f.Picks[i] = movedIndex(chars, f.Chars, pick)
 	}
 	f.StageNo = movedIndex(stages, f.Stages, f.StageNo)
+	f.applyRoster()
 }
 
 // movedIndex is where the entry at index i of before sits in after, the same

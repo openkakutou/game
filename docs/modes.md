@@ -65,8 +65,38 @@ Title, main menu, options, pause and move list belong to the game itself, not to
 | `opponents.kind` | `chosen` or `ladder` | Opponents picked on the select screen, or a ladder of CPU opponents. |
 | `opponents.count` | integer ≥ 1 | Ladder length. Required for `ladder`, refused otherwise. |
 | `onWin`, `onLose` | `results`, `nextOpponent`, `continue` or `gameOver` | What follows a won or a lost match. |
+| `roster` | object, optional | Which characters and stages the mode shows, see below. Absent: everything. |
 
 The native game does not run the `continue` and `victory` screens, nor the outcomes other than `results`, yet: they show an error screen naming them.
+
+### Roster filter
+
+`rules.roster` lets a mode hide characters and stages, by folder name for a character and by file name (without `.def`) for a stage, matched ignoring case. Every level is optional:
+
+```jsonc
+"roster": {
+  "characters": {
+    "select":    { "include": ["..."], "exclude": ["..."] }, // what the character select screens show
+    "opponents": { "include": ["..."], "exclude": ["..."] }  // the pool a CPU opponent can come from
+  },
+  "stages": {
+    "select": { "include": ["..."], "exclude": ["..."] }     // what the stage select screens show
+  }
+}
+```
+
+In a list, `include` absent means every name, an `include` that is an empty array means none, and `exclude` then removes names. Both are arrays of non-empty strings; any other key is refused with the usual file, field and reason error. An arcade-like mode keeps its boss off the select screen but fights it:
+
+```jsonc
+"roster": {
+  "characters": {
+    "select":    { "exclude": ["boss"] },
+    "opponents": { "include": ["kfm", "boss"] }
+  }
+}
+```
+
+A mode that leaves no character (or no stage) on a select list shows an error screen naming the mode and the list, and Enter goes back to the main menu. A name that matches no installed character or stage is not an error: the game prints a notice on stderr once at startup, and the name matches nothing. The native game uses `opponents` through the opponent pool, which the arcade ladder (`opponents.kind: "ladder"`) will draw from; `chosen` modes ignore it.
 
 ## Errors
 

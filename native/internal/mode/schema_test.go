@@ -52,3 +52,41 @@ func strs[T ~string](values []T) []string {
 	}
 	return out
 }
+
+// The roster rule's object keys, stated in the schema and in this package.
+func TestSchema_RosterKeysMatchThePackage(t *testing.T) {
+	var s map[string]any
+	if err := json.Unmarshal(mustRead(t, "mode.schema.json"), &s); err != nil {
+		t.Fatal(err)
+	}
+	keys := func(node map[string]any) []string {
+		var out []string
+		for k := range node["properties"].(map[string]any) {
+			out = append(out, k)
+		}
+		slices.Sort(out)
+		return out
+	}
+	child := func(node map[string]any, k string) map[string]any {
+		return node["properties"].(map[string]any)[k].(map[string]any)
+	}
+	roster := child(child(s, "rules"), "roster")
+	if got := keys(roster); !slices.Equal(got, []string{"characters", "stages"}) {
+		t.Errorf("roster keys = %v", got)
+	}
+	if got := keys(child(roster, "characters")); !slices.Equal(got, []string{"opponents", "select"}) {
+		t.Errorf("roster.characters keys = %v", got)
+	}
+	if got := keys(child(roster, "stages")); !slices.Equal(got, []string{"select"}) {
+		t.Errorf("roster.stages keys = %v", got)
+	}
+	for _, ref := range []map[string]any{child(child(roster, "characters"), "select"), child(child(roster, "characters"), "opponents"), child(child(roster, "stages"), "select")} {
+		if ref["$ref"] != "#/$defs/filter" {
+			t.Errorf("a roster list refers to %v, want #/$defs/filter", ref["$ref"])
+		}
+	}
+	filter := s["$defs"].(map[string]any)["filter"].(map[string]any)
+	if got := keys(filter); !slices.Equal(got, []string{"exclude", "include"}) {
+		t.Errorf("filter keys = %v", got)
+	}
+}

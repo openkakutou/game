@@ -183,13 +183,13 @@ func (r *Renderer) layoutSelect(f *game.Flow, view ui.View, ms int) {
 		sides[i] = ui.SideSelect{Shown: c.Shown, Cursor: c.Cursor}
 	}
 	r.layout.CharacterSelect(&r.list, view, ui.SelectState{
-		Title: selectTitles[f.Picking], Roster: f.Chars, Sides: sides, Focus: f.Cursor,
+		Title: selectTitles[f.Picking], Roster: f.Chars, Cells: f.VisibleChars(), Sides: sides, Focus: f.Cursor,
 		Portraits: r.portraits, ElapsedMs: ms,
 	})
 }
 
 func (r *Renderer) layoutStage(f *game.Flow, view ui.View, ms int) {
-	r.layout.StageSelect(&r.list, view, ui.StageSelectState{Title: "Select a stage", Roster: f.Stages, Cursor: f.Cursor, ElapsedMs: ms})
+	r.layout.StageSelect(&r.list, view, ui.StageSelectState{Title: "Select a stage", Roster: f.Stages, Cells: f.VisibleStages(), Cursor: f.Cursor, ElapsedMs: ms})
 }
 
 // charName is the name of the character side picked, "" before any pick.

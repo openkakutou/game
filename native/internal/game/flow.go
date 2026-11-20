@@ -97,7 +97,10 @@ func DefaultLoader(fsys fs.FS, stateDirs ...string) Loader {
 // chosen mode's flow.
 type Flow struct {
 	Chars, Stages []Entry
-	Loader        Loader
+	// charView and stageView are the roster indexes the mode's select
+	// screens show (see VisibleChars, VisibleStages).
+	charView, stageView []int
+	Loader              Loader
 	// Settings are the persisted settings; the host replaces the defaults
 	// with LoadSettings' result.
 	Settings *Settings
@@ -118,7 +121,9 @@ type Flow struct {
 	// its position in the characterSelect step's sides.
 	Picking int
 	pickPos int
-	Cursor  int
+	// Cursor is the highlighted cell of the select screen being shown: a
+	// position in VisibleChars or VisibleStages.
+	Cursor int
 	// GridColumns is how many cells a row of the character select grid has
 	// (the screenpack's); 0 means a single row of every character.
 	GridColumns int
@@ -224,6 +229,11 @@ func (f *Flow) enterMode(i int) {
 	f.TimeIdx = slices.Index(f.timeOpts, timeLimit)
 	f.Picks, f.StageNo, f.Player2CPU = [2]int{}, 0, false
 	f.Match, f.Paused = nil, false
+	f.applyRoster()
+	if msg := f.emptyRosterMessage(); msg != "" {
+		f.fail(msg)
+		return
+	}
 	if len(m.Flow) == 0 {
 		f.fail("The game mode has no screens.")
 		return
@@ -391,9 +401,9 @@ func (f *Flow) enter(i int, returning bool) {
 		}
 		f.Screen = ScreenSelect
 		f.setPicker(pos)
-		f.Cursor = f.Picks[f.Picking]
+		f.Cursor = viewPos(f.charView, f.Picks[f.Picking])
 	case mode.ScreenStageSelect:
-		f.Screen, f.Cursor = ScreenStage, f.StageNo
+		f.Screen, f.Cursor = ScreenStage, viewPos(f.stageView, f.StageNo)
 	case mode.ScreenMatchSetup:
 		f.Screen, f.SetupRow = ScreenSetup, SetupRowStart
 	case mode.ScreenVersus:
@@ -440,9 +450,9 @@ func (f *Flow) navSelect(n Nav) {
 	sides := f.Mode.Flow[f.Step].Sides
 	switch n {
 	case NavUp, NavDown, NavLeft, NavRight:
-		f.Cursor = gridMove(f.Cursor, n, f.GridColumns, len(f.Chars))
+		f.Cursor = gridMove(f.Cursor, n, f.GridColumns, len(f.charView))
 	case NavConfirm:
-		f.Picks[f.Picking] = f.Cursor
+		f.Picks[f.Picking] = f.charView[f.Cursor]
 		if f.pickPos < len(sides)-1 {
 			f.setPicker(f.pickPos + 1)
 			return
@@ -451,7 +461,7 @@ func (f *Flow) navSelect(n Nav) {
 	case NavCancel:
 		if f.pickPos > 0 {
 			f.setPicker(f.pickPos - 1)
-			f.Cursor = f.Picks[f.Picking]
+			f.Cursor = viewPos(f.charView, f.Picks[f.Picking])
 			return
 		}
 		f.back()
@@ -461,11 +471,11 @@ func (f *Flow) navSelect(n Nav) {
 func (f *Flow) navStage(n Nav) {
 	switch n {
 	case NavUp, NavLeft:
-		f.Cursor = wrap(f.Cursor, -1, len(f.Stages))
+		f.Cursor = wrap(f.Cursor, -1, len(f.stageView))
 	case NavDown, NavRight:
-		f.Cursor = wrap(f.Cursor, 1, len(f.Stages))
+		f.Cursor = wrap(f.Cursor, 1, len(f.stageView))
 	case NavConfirm:
-		f.StageNo = f.Cursor
+		f.StageNo = f.stageView[f.Cursor]
 		f.next()
 	case NavCancel:
 		f.back()
