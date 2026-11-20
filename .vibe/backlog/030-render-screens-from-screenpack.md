@@ -1,5 +1,5 @@
 ---
-status: todo
+status: in_progress
 ---
 # Render the game's screens from an OpenKakutou screenpack
 
