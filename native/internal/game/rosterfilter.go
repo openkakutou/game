@@ -47,7 +47,8 @@ func allowedIndexes(entries []Entry, filter mode.Filter) []int {
 // viewPos is the position in view of the roster index i; 0 when i is not
 // shown (a side that has not picked yet points at the first roster entry).
 func viewPos(view []int, i int) int {
-	if at := slices.Index(view, i); at >= 0 {
+	at := slices.Index(view, i)
+	if at >= 0 {
 		return at
 	}
 	return 0

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/openkakutou/game/native/internal/mode"
+	"github.com/openkakutou/stage"
 )
 
 // filterChars and filterStages are the installed content of the roster
@@ -237,5 +238,43 @@ func TestRosterFilter_VersusAndWatch_ShowEveryCharacterAndStage(t *testing.T) {
 	}
 	if got := f.VisibleStages(); !slices.Equal(got, []int{0, 1, 2}) {
 		t.Errorf("versus stages = %v", got)
+	}
+}
+
+// recordingFlow enters src's mode over entries whose DefPath is their name;
+// the loader records the names it is asked for and then refuses.
+func recordingFlow(t *testing.T, src string, chars, stages []Entry) (*Flow, *[]string) {
+	t.Helper()
+	m, err := mode.Parse("t.jsonc", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var loaded []string
+	l := Loader{
+		Fighter: func(def string) (*Fighter, error) { loaded = append(loaded, def); return &Fighter{}, nil },
+		Stage:   func(def string) (*stage.Stage, error) { loaded = append(loaded, def); return nil, errors.New("stop") },
+	}
+	return inMode(t, NewFlow(nil, chars, stages, l, []mode.Mode{m})), &loaded
+}
+
+func TestRosterFilter_ModeWithoutStageSelect_PlaysTheOnlyVisibleStage(t *testing.T) {
+	src := strings.Replace(modeSrc(steps(stepMatch), "human", "human", 1, 0, "results", "results"),
+		`"rounds"`, `"roster": {"stages": {"select": {"include": ["training"]}}}, "rounds"`, 1)
+	stages := []Entry{{Name: "arena", DefPath: "arena"}, {Name: "training", DefPath: "training"}}
+	_, loaded := recordingFlow(t, src, []Entry{{Name: "a", DefPath: "a"}}, stages)
+	if want := []string{"a", "a", "training"}; !slices.Equal(*loaded, want) {
+		t.Errorf("loaded %v, want %v", *loaded, want)
+	}
+}
+
+func TestRosterFilter_SideThatNeverPicks_StartsOnAVisibleCharacter(t *testing.T) {
+	src := strings.Replace(modeSrc(steps(`{"screen": "characterSelect", "params": {"sides": ["p1"]}}`, stepStage, stepMatch), "human", "human", 1, 0, "results", "results"),
+		`"rounds"`, `"roster": {"characters": {"select": {"exclude": ["boss"]}}}, "rounds"`, 1)
+	chars := []Entry{{Name: "boss", DefPath: "boss"}, {Name: "kfm", DefPath: "kfm"}}
+	f, loaded := recordingFlow(t, src, chars, []Entry{{Name: "s", DefPath: "s"}})
+	f.Navigate(NavConfirm) // P1 picks the first visible character
+	f.Navigate(NavConfirm) // the stage
+	if want := []string{"kfm", "kfm", "s"}; !slices.Equal(*loaded, want) {
+		t.Errorf("loaded %v, want %v: P2 must not be the hidden boss", *loaded, want)
 	}
 }

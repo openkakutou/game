@@ -128,7 +128,7 @@ type StageRoster struct {
 // when it is empty), less the names in Exclude. Names are folder or file
 // names, matched ignoring case.
 type Filter struct {
-	Include []string `json:"include,omitempty"`
+	Include []string `json:"include,omitzero"` // omitzero: an empty list stays, only nil is dropped
 	Exclude []string `json:"exclude,omitempty"`
 }
 

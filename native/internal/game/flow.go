@@ -227,13 +227,17 @@ func (f *Flow) enterMode(i int) {
 	f.timeOpts = withOption(TimeOptions, timeLimit)
 	f.RoundIdx = slices.Index(f.roundOpts, rounds)
 	f.TimeIdx = slices.Index(f.timeOpts, timeLimit)
-	f.Picks, f.StageNo, f.Player2CPU = [2]int{}, 0, false
+	f.Player2CPU = false
 	f.Match, f.Paused = nil, false
 	f.applyRoster()
-	if msg := f.emptyRosterMessage(); msg != "" {
+	msg := f.emptyRosterMessage()
+	if msg != "" {
 		f.fail(msg)
 		return
 	}
+	// A side that never picks, or a flow without stage select, plays the
+	// first visible entry.
+	f.Picks, f.StageNo = [2]int{f.charView[0], f.charView[0]}, f.stageView[0]
 	if len(m.Flow) == 0 {
 		f.fail("The game mode has no screens.")
 		return
@@ -418,7 +422,7 @@ func (f *Flow) enter(i int, returning bool) {
 }
 
 // setPicker makes the pos-th side of the current characterSelect step pick.
-// A side no characterSelect step lists keeps index 0, the first roster entry.
+// A side no characterSelect step lists keeps the first visible character.
 func (f *Flow) setPicker(pos int) {
 	f.pickPos = pos
 	f.Picking = sideIndex(f.Mode.Flow[f.Step].Sides[pos])

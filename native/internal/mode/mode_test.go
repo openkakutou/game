@@ -1,6 +1,7 @@
 package mode
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -252,5 +253,19 @@ func TestFilter_Allows(t *testing.T) {
 				t.Errorf("%+v.Allows(%q) = %v, want %v", c.filter, c.of, got, c.want)
 			}
 		})
+	}
+}
+
+func TestMarshal_EmptyIncludeKeepsItsMeaningInJSON(t *testing.T) {
+	out, err := json.Marshal(Filter{Include: []string{}, Exclude: nil})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(out) != `{"include":[]}` {
+		t.Errorf("json = %s, want {\"include\":[]}", out)
+	}
+	out, err = json.Marshal(Filter{Exclude: []string{"a"}})
+	if err != nil || string(out) != `{"exclude":["a"]}` {
+		t.Errorf("json = %s (%v), want an absent include dropped", out, err)
 	}
 }
