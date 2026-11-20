@@ -13,6 +13,9 @@ pid=$!
 sleep 2
 shot() { import -window root "$out/$1.png"; }
 key() { xdotool key --clearmodifiers "$@"; sleep 0.4; }
+shot 0a-title
+key Return; shot 0b-main-menu    # title -> main menu
+key Return                       # Versus, the only mode of the fixture
 shot 1-select-p1
 key Return; shot 2-select-p2
 key Right Return; shot 3-stage
@@ -44,6 +47,7 @@ sky=$(convert "$out/5-match.png" -format '%[hex:u.p{200,300}]' info:)
 ./dist/openkakutou-linux-amd64 -content testdata/content -width 960 -height 720 &
 pid=$!
 sleep 2
+key Return; key Return                     # title, Versus
 key Return; key Right Return; key Return   # P1, P2, stage
 key Up Right; shot 9-setup-cpu             # Player 2 row -> CPU
 key Down Return                            # Start
@@ -53,7 +57,7 @@ kill -0 $pid
 kill $pid; wait $pid 2>/dev/null || true
 cmp -s "$out/5-match.png" "$out/10-match-cpu.png" && { echo "CPU did not move"; exit 1; }
 
-# 2. Deterministic in-program capture and error screen.
+# 2. Deterministic in-program capture (the title screen) and error screen.
 ./dist/openkakutou-linux-amd64 -content testdata/content -frames 5 -capture "$out/7-capture.png"
 ./dist/openkakutou-linux-amd64 -content /nonexistent -frames 5 -capture "$out/8-error.png"
 
@@ -71,6 +75,6 @@ bar=$(convert "$out/12-lifebar.png" -format '%[hex:u.p{150,40}]' info:)
 for f in "$out"/*.png; do
   colors=$(identify -format %k "$f")
   echo "$(basename "$f"): $colors colors"
-  [ "$colors" -gt 3 ] || { echo "blank screenshot: $f"; exit 1; }
+  [ "$colors" -gt 2 ] || { echo "blank screenshot: $f"; exit 1; }
 done
 echo "smoke OK"

@@ -5,7 +5,7 @@ A **mode** is a data file, not code: the sequence of built-in screens a player g
 Versus (a mode) is not quick versus: quick versus starts one match straight from the command line, without any menu, as MUGEN and Ikemen GO do (see [command-line.md](command-line.md)).
 
 - Example: [`native/internal/mode/versus.jsonc`](../native/internal/mode/versus.jsonc)
-- Where the game reads it: the desktop game plays Versus from `modes/versus.jsonc` in its game folder; when that file is missing or invalid it prints why on stderr and uses its built-in copy (the same file).
+- Where the game reads it: the desktop game reads every `.json` or `.jsonc` file of the `modes/` folder in its game folder (folder and extension in any case). It lists them in the main menu, in file-name order ignoring case, then Quit. A file that is not a valid mode is left out and its error (file, field, reason) is printed on stderr, as is a second file with the id of an earlier one. When no valid mode has the id `versus`, the built-in Versus (the same file as the shipped `modes/versus.jsonc`) is added after the others, with a notice on stderr.
 - JSON Schema: [`native/internal/mode/mode.schema.json`](../native/internal/mode/mode.schema.json)
 - Loader: `native/internal/mode` (Go, imported by the native game) and `native/cmd/mode-wasm` (the same loader built to WebAssembly for the web game)
 

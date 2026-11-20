@@ -247,12 +247,29 @@ func TestNewMatch_RejectsBadInput(t *testing.T) {
 	}
 }
 
-func newTestFlow(t *testing.T) *Flow {
+// newTitleFlow is a flow over the fixture content with the Versus mode only,
+// on the title screen.
+func newTitleFlow(t *testing.T) *Flow {
 	t.Helper()
 	fsys := os.DirFS(content)
 	chars, _ := DiscoverCharacters(fsys, "chars")
 	stages, _ := DiscoverStages(fsys, "stages")
-	return NewFlow(fsys, chars, stages, DefaultLoader(fsys), versusMode(t))
+	return NewFlow(fsys, chars, stages, DefaultLoader(fsys), []mode.Mode{versusMode(t)})
+}
+
+// newTestFlow is newTitleFlow already inside the Versus mode.
+func newTestFlow(t *testing.T) *Flow { return inMode(t, newTitleFlow(t)) }
+
+// inMode walks a flow from the title through the main menu into the mode under
+// the menu cursor.
+func inMode(t *testing.T, f *Flow) *Flow {
+	t.Helper()
+	f.Navigate(NavConfirm) // title -> main menu
+	f.Navigate(NavConfirm) // the mode
+	if f.Screen == ScreenTitle || f.Screen == ScreenMainMenu {
+		t.Fatalf("screen = %v, want inside the mode", f.Screen)
+	}
+	return f
 }
 
 func versusMode(t *testing.T) mode.Mode {
@@ -309,7 +326,7 @@ func TestFlow_FullPathSelectionToResultAndRematch(t *testing.T) {
 	f.Navigate(NavDown)    // Character Change
 	f.Navigate(NavConfirm) // leave match
 	if f.Screen != ScreenSelect || f.Picking != 0 {
-		t.Errorf("cancel should return to selection, got %v", f.Screen)
+		t.Errorf("Character Change should return to selection, got %v", f.Screen)
 	}
 }
 
@@ -325,8 +342,8 @@ func TestFlow_CursorWrapsAndCancelBacksOut(t *testing.T) {
 		t.Errorf("cancel in P2 pick: picking=%d cursor=%d", f.Picking, f.Cursor)
 	}
 	f.Navigate(NavCancel)
-	if !f.Quit {
-		t.Error("cancel on the first screen should quit")
+	if f.Screen != ScreenMainMenu || f.MenuCursor != 0 || f.Quit {
+		t.Errorf("screen=%v menu cursor=%d quit=%v, want the main menu on Versus", f.Screen, f.MenuCursor, f.Quit)
 	}
 }
 
@@ -340,11 +357,11 @@ func TestFlow_MirrorMatchAllowed(t *testing.T) {
 }
 
 func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
-	f := NewFlow(os.DirFS("."), nil, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), versusMode(t))
+	f := NewFlow(os.DirFS("."), nil, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
 	if f.Screen != ScreenError || f.Message == "" {
 		t.Errorf("no characters: screen=%v", f.Screen)
 	}
-	f = NewFlow(os.DirFS("."), []Entry{{"c", "c.def"}}, nil, DefaultLoader(os.DirFS(".")), versusMode(t))
+	f = NewFlow(os.DirFS("."), []Entry{{"c", "c.def"}}, nil, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
 	if f.Screen != ScreenError {
 		t.Errorf("no stages: screen=%v", f.Screen)
 	}
@@ -355,7 +372,8 @@ func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
 }
 
 func TestFlow_UnloadableCharacterShowsErrorNamingIt(t *testing.T) {
-	f := NewFlow(os.DirFS("."), []Entry{{"ghost", "ghost/ghost.def"}}, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), versusMode(t))
+	f := NewFlow(os.DirFS("."), []Entry{{"ghost", "ghost/ghost.def"}}, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
+	inMode(t, f)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/openkakutou/game/native/internal/mode"
 	"os"
 	"path/filepath"
 	"slices"
@@ -204,7 +205,7 @@ func quickFlow(t *testing.T) *Flow {
 	t.Helper()
 	fsys := os.DirFS(content)
 	stages, _ := DiscoverStages(fsys, "stages")
-	return NewFlow(fsys, nil, stages, DefaultLoader(fsys), versusMode(t))
+	return NewFlow(fsys, nil, stages, DefaultLoader(fsys), []mode.Mode{versusMode(t)})
 }
 
 func TestStartQuickVersus_StartsTheMatchWithoutMenus(t *testing.T) {

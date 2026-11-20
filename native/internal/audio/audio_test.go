@@ -53,7 +53,9 @@ func matchFlow(t *testing.T) *game.Flow {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys), versus)
+	f := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys), []mode.Mode{versus})
+	f.Navigate(game.NavConfirm) // title -> main menu
+	f.Navigate(game.NavConfirm) // Versus
 	f.Navigate(game.NavConfirm)
 	f.Navigate(game.NavRight)
 	f.Navigate(game.NavConfirm)

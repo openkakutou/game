@@ -64,6 +64,10 @@ func (f *Flow) choosePause(item PauseItem) {
 	case PauseCharacterChange:
 		f.toSelect()
 	case PauseExit:
-		f.Quit = true
+		if f.quick != nil {
+			f.Quit = true
+			return
+		}
+		f.toMenu()
 	}
 }

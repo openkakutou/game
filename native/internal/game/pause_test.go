@@ -81,7 +81,7 @@ func TestPause_RestartStartsTheSameMatchFresh(t *testing.T) {
 	}
 }
 
-func TestPause_ExitQuitsAndItemsDependOnTheMode(t *testing.T) {
+func TestPause_ExitGoesBackToTheMainMenuAndItemsDependOnTheMode(t *testing.T) {
 	f := pausedMatch(t)
 	items := f.PauseItems()
 	if len(items) != 4 || items[2].Label() != "Character Change" || items[3].Label() != "Exit" {
@@ -90,7 +90,8 @@ func TestPause_ExitQuitsAndItemsDependOnTheMode(t *testing.T) {
 	f.Navigate(NavCancel)
 	f.Navigate(NavUp)
 	f.Navigate(NavConfirm)
-	if !f.Quit {
-		t.Fatal("Exit must quit the game")
+	if f.Quit || f.Screen != ScreenMainMenu || f.Paused || f.Match != nil || f.MenuCursor != 0 {
+		t.Fatalf("quit=%v screen=%v paused=%v match=%v menu cursor=%d, want the main menu on Versus with no match",
+			f.Quit, f.Screen, f.Paused, f.Match, f.MenuCursor)
 	}
 }

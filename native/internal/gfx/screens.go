@@ -68,6 +68,11 @@ func (r *Renderer) Draw(f *game.Flow) {
 	w := r.win
 	w.Rect(0, 0, VW, VH, darkBg)
 	switch f.Screen {
+	case game.ScreenTitle:
+		w.TextCentered(80, 4, gold, "OpenKakutou")
+		w.TextCentered(150, 1, grey, "Press Enter or Start")
+	case game.ScreenMainMenu:
+		r.drawList(f, "Main menu", "", f.MainMenuItems(), f.MenuCursor)
 	case game.ScreenSelect:
 		r.drawList(f, "Select your fighter", fmt.Sprintf("Player %d", f.Picking+1), names(f.Chars), f.Cursor)
 	case game.ScreenStage:

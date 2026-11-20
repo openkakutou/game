@@ -93,11 +93,11 @@ func run() error {
 		stages, stageErr = game.DiscoverStages(fsys, stagesDir)
 		folderErr = errors.Join(charErr, stageErr)
 	}
-	versus, modeNotices := game.VersusMode(fsys)
+	modes, modeNotices := game.DiscoverModes(fsys)
 	for _, n := range modeNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
-	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), versus)
+	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), modes)
 	hud, lifebarNotices := game.SelectLifebar(fsys)
 	flow.Lifebar = hud
 	for _, n := range lifebarNotices {

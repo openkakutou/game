@@ -37,7 +37,7 @@ func flowFromSrc(t *testing.T, src string) *Flow {
 	fsys := os.DirFS(content)
 	chars, _ := DiscoverCharacters(fsys, "chars")
 	stages, _ := DiscoverStages(fsys, "stages")
-	return NewFlow(fsys, chars, stages, DefaultLoader(fsys), m)
+	return inMode(t, NewFlow(fsys, chars, stages, DefaultLoader(fsys), []mode.Mode{m}))
 }
 
 func steps(s ...string) string { return strings.Join(s, ",") }
@@ -160,8 +160,8 @@ func TestCharacterSelect_OnlyP1SidePicksAndP2KeepsFirstEntry(t *testing.T) {
 		t.Errorf("screen=%v picking=%d cursor=%d, want P1 picking", f.Screen, f.Picking, f.Cursor)
 	}
 	f.Navigate(NavCancel)
-	if !f.Quit {
-		t.Error("cancel on the first step should quit")
+	if f.Screen != ScreenMainMenu {
+		t.Error("cancel on the first step should return to the main menu")
 	}
 }
 

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/openkakutou/game/native/internal/mode"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -78,7 +79,8 @@ func scriptedMatch(t *testing.T, fsys fs.FS, ticks int) *Flow {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := NewFlow(fsys, chars, stages, DefaultLoader(fsys), versusMode(t))
+	f := NewFlow(fsys, chars, stages, DefaultLoader(fsys), []mode.Mode{versusMode(t)})
+	inMode(t, f)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavRight)
 	f.Navigate(NavConfirm)

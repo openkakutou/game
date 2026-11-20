@@ -18,10 +18,12 @@ type Screen int
 // The game's screens, in flow order. ScreenError is shown when content cannot
 // be loaded or the mode asks for something not supported yet.
 const (
-	ScreenSelect Screen = iota // the sides of a characterSelect step pick a character
-	ScreenStage                // pick a stage
-	ScreenSetup                // rounds and time limit
-	ScreenVersus               // both picked characters, before the match
+	ScreenTitle    Screen = iota
+	ScreenMainMenu        // the installed modes, then Quit
+	ScreenSelect          // the sides of a characterSelect step pick a character
+	ScreenStage           // pick a stage
+	ScreenSetup           // rounds and time limit
+	ScreenVersus          // both picked characters, before the match
 	ScreenMatch
 	ScreenResult
 	ScreenError
@@ -83,11 +85,19 @@ func DefaultLoader(fsys fs.FS, stateDirs ...string) Loader {
 	}
 }
 
-// Flow is the screen state machine: it walks the steps of its mode's flow.
+// Flow is the screen state machine: title, main menu, then the steps of the
+// chosen mode's flow.
 type Flow struct {
 	Chars, Stages []Entry
 	Loader        Loader
-	Mode          mode.Mode
+	// Modes are the installed modes, in main menu order; Mode is the one being
+	// played.
+	Modes []mode.Mode
+	Mode  mode.Mode
+	// MenuCursor is the highlighted main menu item: a mode's index in Modes,
+	// or len(Modes) for Quit.
+	MenuCursor int
+	menuLabels []string // mode names, then "Quit"
 	// Step is the index in Mode.Flow of the step being shown.
 	Step int
 
@@ -147,26 +157,76 @@ type Flow struct {
 	Quit bool
 }
 
-// NewFlow starts at the first step of the mode m over the content fsys. An
-// empty roster or stage list, or a mode without steps, goes straight to an
-// error screen instead of an unusable menu.
-func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader, m mode.Mode) *Flow {
-	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, Mode: m}
-	f.roundOpts = withOption(RoundOptions, m.Rules.Rounds)
-	f.timeOpts = withOption(TimeOptions, m.Rules.TimeLimitSeconds)
-	f.RoundIdx = slices.Index(f.roundOpts, m.Rules.Rounds)
-	f.TimeIdx = slices.Index(f.timeOpts, m.Rules.TimeLimitSeconds)
+// NewFlow starts on the title screen, over the content fsys, offering modes
+// in the main menu. An empty roster or stage list goes straight to an error
+// screen instead of an unusable menu.
+func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader, modes []mode.Mode) *Flow {
+	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, Modes: modes}
+	for _, m := range modes {
+		f.menuLabels = append(f.menuLabels, m.Name)
+	}
+	f.menuLabels = append(f.menuLabels, "Quit")
 	switch {
 	case len(chars) == 0:
 		f.fail("No characters found. Put character folders in the characters folder.")
 	case len(stages) == 0:
 		f.fail("No stages found. Put stage .def files in the stages folder.")
-	case len(m.Flow) == 0:
-		f.fail("The game mode has no screens.")
 	default:
-		f.enter(0, false)
+		f.Screen = ScreenTitle
 	}
 	return f
+}
+
+// MainMenuItems are the main menu's labels: each mode's name, then Quit.
+func (f *Flow) MainMenuItems() []string { return f.menuLabels }
+
+// enterMode starts the mode Modes[i] afresh, at its first step.
+func (f *Flow) enterMode(i int) {
+	m := f.Modes[i]
+	f.Mode, f.MenuCursor = m, i
+	f.roundOpts = withOption(RoundOptions, m.Rules.Rounds)
+	f.timeOpts = withOption(TimeOptions, m.Rules.TimeLimitSeconds)
+	f.RoundIdx = slices.Index(f.roundOpts, m.Rules.Rounds)
+	f.TimeIdx = slices.Index(f.timeOpts, m.Rules.TimeLimitSeconds)
+	f.Picks, f.StageNo, f.Player2CPU = [2]int{}, 0, false
+	f.Match, f.Paused = nil, false
+	if len(m.Flow) == 0 {
+		f.fail("The game mode has no screens.")
+		return
+	}
+	f.enter(0, false)
+}
+
+// toMenu shows the main menu, its cursor on the mode being played.
+func (f *Flow) toMenu() {
+	f.Match, f.Paused = nil, false
+	f.Screen = ScreenMainMenu
+}
+
+func (f *Flow) navTitle(n Nav) {
+	switch n {
+	case NavConfirm, NavPause:
+		f.toMenu()
+	case NavCancel:
+		f.Quit = true
+	}
+}
+
+func (f *Flow) navMainMenu(n Nav) {
+	switch n {
+	case NavUp:
+		f.MenuCursor = wrap(f.MenuCursor, -1, len(f.menuLabels))
+	case NavDown:
+		f.MenuCursor = wrap(f.MenuCursor, 1, len(f.menuLabels))
+	case NavConfirm:
+		if f.MenuCursor == len(f.Modes) {
+			f.Quit = true
+			return
+		}
+		f.enterMode(f.MenuCursor)
+	case NavCancel:
+		f.Screen = ScreenTitle
+	}
 }
 
 // withOption returns options, with value added in order when it lacks it.
@@ -208,6 +268,10 @@ func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
 // Navigate applies a menu input to the current screen.
 func (f *Flow) Navigate(n Nav) {
 	switch f.Screen {
+	case ScreenTitle:
+		f.navTitle(n)
+	case ScreenMainMenu:
+		f.navMainMenu(n)
 	case ScreenSelect:
 		f.navSelect(n)
 	case ScreenStage:
@@ -296,7 +360,7 @@ func (f *Flow) next() {
 }
 
 // back shows the previous interactive step, never the VS screen nor the
-// match; cancelling the first one quits.
+// match; cancelling the first one shows the main menu.
 func (f *Flow) back() {
 	for i := f.Step - 1; i >= 0; i-- {
 		switch f.Mode.Flow[i].Screen {
@@ -305,7 +369,7 @@ func (f *Flow) back() {
 			return
 		}
 	}
-	f.Quit = true
+	f.toMenu()
 }
 
 func (f *Flow) navSelect(n Nav) {
@@ -404,15 +468,15 @@ func (f *Flow) navResult(n Nav) {
 }
 
 // toSelect goes back to the flow's first characterSelect step, P1 picking.
-// shortcut: a flow without one quits, upgrade when a mode needs another way
-// to change characters.
+// shortcut: a flow without one shows the main menu, upgrade when a mode needs
+// another way to change characters.
 func (f *Flow) toSelect() {
-	f.Match, f.Paused = nil, false
 	i := slices.IndexFunc(f.Mode.Flow, func(s mode.Step) bool { return s.Screen == mode.ScreenCharacterSelect })
 	if i < 0 {
-		f.Quit = true
+		f.toMenu()
 		return
 	}
+	f.Match, f.Paused = nil, false
 	f.enter(i, false)
 }
 
