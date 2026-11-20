@@ -30,7 +30,7 @@ func (c *Core) Tick(id int, inputs string) string {
 	if err := s.match.Step(s.in); err != nil {
 		return fail("the match stopped: %v", err)
 	}
-	s.followCamera(false)
+	s.followCamera()
 	return s.snapshot(0)
 }
 

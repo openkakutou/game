@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Screen edges from the match camera
 
@@ -9,6 +9,9 @@ Ikemen GO's camera is part of the simulation: each tick it sets the screen edges
 🔒 MUST: as Ikemen GO (commit `54d4148a`).
 
 ## Acceptance Criteria
-- [ ] The match keeps its own camera (Ikemen GO's 320-unit game width) and passes the screen edges to the engine each tick, in the native and web builds
-- [ ] Fighters cannot walk off screen, as in Ikemen GO
-- [ ] The renderer draws from the same camera
+- [x] The match keeps its own camera (Ikemen GO's 320-unit game width) and passes the screen edges to the engine each tick, in the native and web builds
+- [x] Fighters cannot walk off screen, as in Ikemen GO
+- [x] The renderer draws from the same camera
+
+## Notes
+- 2026-11-21: done (decision 031). The web build reads the same camera through the core snapshot's camX.

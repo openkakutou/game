@@ -180,6 +180,13 @@ type Match struct {
 	Winner match.Side
 
 	starting [2]match.FighterState
+	// cam is the match's own camera, in stage units: Ikemen GO's camera is
+	// part of the simulation and sets the screen edges the fighters stay
+	// between (system.go:2871-2881). camX is its position, margins the
+	// stage's screenleft and screenright.
+	cam      StageCamera
+	camX     float64
+	margins  [2]float64
 	programs [2]engine.FighterProgram
 	missing  [2][]string // state files each character could not find
 	runtimes [2]engine.FighterRuntime
@@ -204,6 +211,9 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 	}
 	bounds := ResolveBounds(st)
 	m := &Match{Setup: setup, Bounds: bounds, Progress: progress, starting: StartingFighters(bounds)}
+	width := stageWidth(st)
+	m.cam = NewStageCamera(st, CameraTension(st), 1, width)
+	m.margins = screenMargins(st, width)
 	for i, f := range []*Fighter{p1, p2} {
 		m.programs[i] = f.Program
 		m.missing[i] = f.Missing
@@ -272,6 +282,7 @@ func (m *Match) reset(roundNo int) error {
 	}
 	m.State = *state
 	m.tick = 0
+	m.camX = m.cam.Follow(m.cam.Start(), m.starting[0].Position.X, m.starting[1].Position.X, true)
 	m.cues = m.cues[:0]
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
@@ -320,12 +331,14 @@ func (m *Match) Step(in [2]input.TickInput) error {
 		return fmt.Errorf("match is already over")
 	}
 	m.tick++
-	cfg := engine.TickConfig{Bounds: &m.Bounds, Gravity: DefaultGravity, Tick: m.tick, ComboWindow: DefaultComboWindow}
+	cfg := engine.TickConfig{Bounds: &m.Bounds, Screen: m.Screen(), Gravity: DefaultGravity, Tick: m.tick, ComboWindow: DefaultComboWindow}
 	res, err := engine.Tick(m.State, m.programs, m.runtimes, in, cfg)
 	if err != nil {
 		return err
 	}
 	m.State, m.runtimes = res.State, res.Fighters
+	x0, x1 := m.State.Fighters[0].Position.X, m.State.Fighters[1].Position.X
+	m.camX = m.cam.Follow(m.camX, min(x0, x1), max(x0, x1), false)
 	m.syncAnim()
 	m.queueCues(res.Sounds)
 	if m.Setup.Training {
@@ -339,6 +352,47 @@ func (m *Match) Step(in [2]input.TickInput) error {
 		m.Over, m.Winner = m.Progress.MatchOutcome()
 	}
 	return nil
+}
+
+// CameraX is the match camera's position, in stage units.
+func (m *Match) CameraX() float64 { return m.camX }
+
+// Screen is the left and right edges the fighters stay between: the
+// camera's view less the stage's margins (Ikemen GO sys.xmin, sys.xmax,
+// system.go:2871-2876), as of the last tick.
+func (m *Match) Screen() [2]float64 {
+	half := m.cam.halfWidth
+	left, right := m.camX-half+m.margins[0], m.camX+half-m.margins[1]
+	if left > right {
+		left = (left + right) / 2
+		right = left
+	}
+	return [2]float64{left, right}
+}
+
+// stageWidth is the stage's localcoord width, the width of the match's view
+// in stage units.
+func stageWidth(st *stage.Stage) float64 {
+	if st.BGdef.LocalCoordWidth > 0 {
+		return float64(st.BGdef.LocalCoordWidth)
+	}
+	return mugenLocalWidth
+}
+
+// defaultScreenMargin is Ikemen GO's screenleft and screenright default at a
+// 320-wide localcoord, scaled to the stage's (stage.go:1149, 1310-1316).
+const defaultScreenMargin = 15
+
+func screenMargins(st *stage.Stage, width float64) [2]float64 {
+	def := float64(int(defaultScreenMargin * width / mugenLocalWidth))
+	margins := [2]float64{def, def}
+	if l := st.StageBoundaries.ScreenLeft; l != nil {
+		margins[0] = float64(*l)
+	}
+	if r := st.StageBoundaries.ScreenRight; r != nil {
+		margins[1] = float64(*r)
+	}
+	return margins
 }
 
 // Ticks is how many ticks the current round has simulated.

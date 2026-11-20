@@ -12,6 +12,8 @@ github.com/openkakutou/engine/v2 v2.26.0 h1:5L7Qn2GSR1WVwWgN72XivVWeYN5prF4ancbx
 github.com/openkakutou/engine/v2 v2.26.0/go.mod h1:Gj1EFQyI3dEvV2dZ8hYIxelKCKOYUfN6E9oyIJ4I2rw=
 github.com/openkakutou/engine/v2 v2.27.0 h1:YlmOaIIvPO6zKw9QPHkhXXyeLE/7FDcE+3mdDnKVaRc=
 github.com/openkakutou/engine/v2 v2.27.0/go.mod h1:Gj1EFQyI3dEvV2dZ8hYIxelKCKOYUfN6E9oyIJ4I2rw=
+github.com/openkakutou/engine/v2 v2.28.0 h1:pTRRox/Lg0epC3LWe8W7lUUf3oHTtzb5S4QjArzNYuA=
+github.com/openkakutou/engine/v2 v2.28.0/go.mod h1:Gj1EFQyI3dEvV2dZ8hYIxelKCKOYUfN6E9oyIJ4I2rw=
 github.com/openkakutou/fnt v0.2.0 h1:ZLMWv1eX8vSGkSOEz+634l9sCxPCCak3n5dihrJVP0A=
 github.com/openkakutou/fnt v0.2.0/go.mod h1:3Doe0iB5tRXZDPA6/q02zWDiL4caJ70qK7vBj+HAITM=
 github.com/openkakutou/screenpack v0.7.0 h1:+AUoBS1hR6ldMlHCKLSwkp+YM8DSgGelhTBia8OSdcs=
@@ -22,6 +24,8 @@ github.com/openkakutou/snd v0.7.2 h1:CZdAs+a6E6Zp2HSIe9xMXu23vjQk3t6855E6B77kVzU
 github.com/openkakutou/snd v0.7.2/go.mod h1:fAAbJE/dewexjPY3NyPhmxrYhr2sSPe5wprBVnJwHiw=
 github.com/openkakutou/stage v0.17.0 h1:WUsPvxZPDUM38DqSxcIZp8jyCoJyUSS7EMrmicBDgGo=
 github.com/openkakutou/stage v0.17.0/go.mod h1:c9SVqDOrnOOc1/C023jQk0urHI7DhVdnkULJeP9BvFA=
+github.com/openkakutou/stage v0.18.0 h1:8c7fTx9O3LVnYEHINIpzCzr+ft454574y4MOjBP8+l8=
+github.com/openkakutou/stage v0.18.0/go.mod h1:c9SVqDOrnOOc1/C023jQk0urHI7DhVdnkULJeP9BvFA=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 h1:1EYB5IzjZawrrnELUi78f9fPu57HuXjmddZPjrls/28=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.3/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
 github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f h1:9hiVElpCmKzsBKQHkBqZ8LGzt82iLfM8egxr4sew+Ys=

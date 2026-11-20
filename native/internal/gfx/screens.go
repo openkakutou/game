@@ -51,10 +51,9 @@ type Renderer struct {
 	behind, front []int
 	// stageAxis is each loaded stage sprite's axis, from the stage's sheet.
 	stageAxis map[spriteKey][2]int
-	// The stage camera and view mapping, set up once per match.
-	cam               game.StageCamera
+	// camX is the match camera in view pixels; the view mapping is set up
+	// once per match.
 	camX              float64
-	camTick           int
 	stageScale, shift float64
 	// lifebar draws the flow's lifebar, when it has one.
 	lifebar *lifebarHUD
@@ -163,8 +162,6 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 	r.behind, r.front = game.SplitLayers(f.Stage.Elements)
 	r.stageScale = game.StageScale(f.Stage, VW)
 	r.shift = game.StageGroundShift(f.Stage, r.stageScale, VH)
-	r.cam = game.NewStageCamera(f.Stage, game.CameraTension(f.Stage), r.stageScale, VW)
-	r.camTick = -1
 	if r.lifebar != nil {
 		r.lifebar.tick = -1
 	}
@@ -326,7 +323,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 
 	p1 := m.State.Fighters[match.SideP1]
 	p2 := m.State.Fighters[match.SideP2]
-	r.followFighters(m.Ticks(), p1.Position.X, p2.Position.X)
+	r.camX = m.CameraX() * r.stageScale // the match's camera, in view pixels
 	camX := float32(r.camX)
 	r.drawLayers(f, r.behind, m.Ticks(), r.camX)
 	for i, fs := range []match.FighterState{p1, p2} {
@@ -356,20 +353,6 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	}
 	r.drawLayers(f, r.front, m.Ticks(), r.camX)
 	r.drawHUD(f)
-}
-
-// followFighters moves the camera once per simulated tick, snapping to the
-// fighters on a round's first tick (Ikemen GO camera.go:210).
-func (r *Renderer) followFighters(tick int, x1, x2 float64) {
-	if tick == r.camTick {
-		return
-	}
-	snap := tick < r.camTick || r.camTick < 0
-	if snap {
-		r.camX = r.cam.Start()
-	}
-	r.camX = r.cam.Follow(r.camX, min(x1, x2), max(x1, x2), snap)
-	r.camTick = tick
 }
 
 func spriteMeta(fighter *game.Fighter, fr air.Frame) (sff.Sprite, bool) {

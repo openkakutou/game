@@ -27,7 +27,8 @@ type Core struct {
 // session is one running match and the buffers its ticks reuse.
 type session struct {
 	match *game.Match
-	cam   game.StageCamera
+	// scale converts the match camera's stage units to view pixels.
+	scale float64
 	camX  float64
 	cpu   *game.CPU // drives player 2 when set
 	// in is the inputs of the tick being stepped; the button maps are reused.
@@ -116,7 +117,7 @@ func (c *Core) StartMatch(req string) string {
 		return fail("cannot start the match: %v", err)
 	}
 	s := &session{match: m, buf: make([]byte, 0, 1024)}
-	s.cam = game.NewStageCamera(st, game.CameraTension(st), game.StageScale(st, r.ViewWidth), r.ViewWidth)
+	s.scale = game.StageScale(st, r.ViewWidth)
 	s.roundTimerTicks, s.roundsToWin = setup.RoundTimerTicks(), m.Progress.RoundsToWin()
 	if r.P2CPU {
 		s.cpu = game.NewCPU(game.DefaultAILevel, nil)
@@ -124,7 +125,7 @@ func (c *Core) StartMatch(req string) string {
 	for i := range s.in {
 		s.in[i].Buttons = make(map[string]bool, len(buttonNames))
 	}
-	s.followCamera(true)
+	s.followCamera()
 	c.nextID++
 	c.matches[c.nextID] = s
 	return s.snapshot(c.nextID)
@@ -143,7 +144,7 @@ func (c *Core) NextRound(id int) string {
 	if err := s.match.NextRound(); err != nil {
 		return fail("%v", err)
 	}
-	s.followCamera(true)
+	s.followCamera()
 	return s.snapshot(0)
 }
 
@@ -156,16 +157,8 @@ func (c *Core) CloseMatch(id int) string {
 	return okReply
 }
 
-// followCamera moves the camera to frame both fighters; snap jumps straight
-// there, as at the start of a round.
-func (s *session) followCamera(snap bool) {
-	x0 := s.match.State.Fighters[0].Position.X
-	x1 := s.match.State.Fighters[1].Position.X
-	if snap {
-		s.camX = s.cam.Start()
-	}
-	s.camX = s.cam.Follow(s.camX, min(x0, x1), max(x0, x1), snap)
-}
+// followCamera reads the match camera, in view pixels.
+func (s *session) followCamera() { s.camX = s.match.CameraX() * s.scale }
 
 // Failure is the error envelope for a call the JavaScript glue rejected
 // before reaching the core (wrong argument types).
