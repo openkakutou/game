@@ -26,6 +26,10 @@ const rootJSON = `{
     "center":  { "font": "body", "size": 5, "color": "#ffffff", "align": "center" },
     "right":   { "font": "body", "size": 5, "color": "#ffffff", "align": "right" },
     "upper":   { "font": "body", "size": 5, "color": "#ffffff", "uppercase": true },
+    "value":   { "font": "body", "size": 5, "color": "#ffaa00", "align": "right" },
+    "slot":    { "font": "body", "size": 5, "color": "#00aaff", "align": "right" },
+    "hot":     { "font": "body", "size": 5, "color": "#ffff00", "align": "right" },
+    "wait":    { "font": "body", "size": 5, "color": "#ff00ff", "align": "right" },
     "fancy":   { "font": "body", "size": 5, "color": "#00ff00",
                  "outline": { "color": "#0000ff", "width": 0.5 },
                  "shadow": { "color": "#00000080", "offset": [1, 1] } }
@@ -56,10 +60,16 @@ func pngOf(t *testing.T, w, h int) []byte {
 // the test font, a title screen made of parts, and extra files.
 func gameWith(t *testing.T, parts string, extra fstest.MapFS) fstest.MapFS {
 	t.Helper()
+	return screenGame(t, "title", parts, extra)
+}
+
+// screenGame is gameWith for the screen file named screen.
+func screenGame(t *testing.T, screen, parts string, extra fstest.MapFS) fstest.MapFS {
+	t.Helper()
 	game := fstest.MapFS{
-		"screenpacks/default/screenpack.json":            {Data: []byte(rootJSON)},
-		"screenpacks/default/fonts/NotoSans-Regular.ttf": {Data: fontBytes(t)},
-		"screenpacks/default/screens/title.json":         {Data: []byte(`{"formatVersion": 1, ` + parts + `}`)},
+		"screenpacks/default/screenpack.json":             {Data: []byte(rootJSON)},
+		"screenpacks/default/fonts/NotoSans-Regular.ttf":  {Data: fontBytes(t)},
+		"screenpacks/default/screens/" + screen + ".json": {Data: []byte(`{"formatVersion": 1, ` + parts + `}`)},
 	}
 	game["screenpacks/default/s.ogg"] = &fstest.MapFile{Data: []byte("sound")}
 	for name, file := range extra {
@@ -180,3 +190,15 @@ var (
 	red   = ui.Color{R: 1, G: 0, B: 0, A: 1}
 	green = ui.Color{R: 0, G: 1, B: 0, A: 1}
 )
+
+// shownTexts are the strings drawn, in order, a text with a shadow or an
+// outline counting once.
+func shownTexts(l *ui.DrawList) []string {
+	var out []string
+	for _, s := range onlyTexts(l) {
+		if len(out) == 0 || out[len(out)-1] != s {
+			out = append(out, s)
+		}
+	}
+	return out
+}

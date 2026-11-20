@@ -14,13 +14,31 @@ func (v View) unit() float32 { return float32(v.H) / 100 }
 // when an element gives no size: 1 image pixel = 1/240 of the height.
 const referenceLines = 240
 
+func (v View) rect() rect { return rect{0, 0, float32(v.W), float32(v.H)} }
+
 type rect struct{ x, y, w, h float32 }
 
-// Layout turns screens of a Pack into draw lists. It keeps no per-frame state.
-type Layout struct{ pack *Pack }
+// Layout turns screens of a Pack into draw lists. It keeps no per-frame
+// state, only a scratch slice reused between frames.
+// shortcut: a screen's own `transition` (how it enters and leaves) is not
+// applied by any screen; only element transitions are. Upgrade with the
+// screen-change work, which knows when a screen is entered and left.
+type Layout struct {
+	pack *Pack
+	rows []Row
+}
 
 // NewLayout returns a layout over pack.
 func NewLayout(pack *Pack) *Layout { return &Layout{pack: pack} }
+
+// labels turns plain entry labels into menu rows, in the layout's scratch.
+func (l *Layout) labels(entries []string) []Row {
+	l.rows = l.rows[:0]
+	for _, e := range entries {
+		l.rows = append(l.rows, Row{Label: e})
+	}
+	return l.rows
+}
 
 // anchorFactors are the fractions of a width and a height an anchor or pivot
 // name stands for; an unknown or empty name is the center.

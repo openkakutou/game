@@ -25,7 +25,7 @@ type TitleState struct {
 // menu, the version, foreground.
 func (l *Layout) Title(dst *DrawList, view View, s TitleState) {
 	t := l.pack.resolved.Screens.Title
-	screen := rect{0, 0, float32(view.W), float32(view.H)}
+	screen := view.rect()
 	l.elements(dst, view, l.pack.scope("title", ""), t.Background, screen, s.ElapsedMs)
 	if t.Logo != nil {
 		l.element(dst, view, l.pack.scope("title", "logo"), t.Logo, screen, s.ElapsedMs)
@@ -35,11 +35,11 @@ func (l *Layout) Title(dst *DrawList, view View, s TitleState) {
 		l.pressStart(dst, view, s, screen)
 	case PhaseMenu:
 		if t.Menu != nil {
-			l.menu(dst, view, l.pack.scope("title", "menu"), t.Menu, s.Entries, s.Cursor, screen, s.ElapsedMs)
+			l.menu(dst, view, l.pack.scope("title", "menu"), t.Menu, l.labels(s.Entries), s.Cursor, screen, s.ElapsedMs, noSlots)
 		}
 	}
 	if t.Version != nil && s.Version != "" {
-		l.text(dst, view, l.pack.scope("title", "version"), &t.Version.Layout, t.Version.Style, s.Version, screen, 1)
+		l.text(dst, view, l.pack.scope("title", "version"), &t.Version.Layout, t.Version.Style, s.Version, screen, 1, "")
 	}
 	l.elements(dst, view, l.pack.scope("title", ""), t.Foreground, screen, s.ElapsedMs)
 }
@@ -53,5 +53,5 @@ func (l *Layout) pressStart(dst *DrawList, view View, s TitleState, screen rect)
 	if ps.BlinkMs != nil && *ps.BlinkMs > 0 && (s.ElapsedMs / *ps.BlinkMs)%2 == 1 {
 		return
 	}
-	l.text(dst, view, l.pack.scope("title", "pressStart"), &ps.Layout, ps.Style, ps.Text, screen, 1)
+	l.text(dst, view, l.pack.scope("title", "pressStart"), &ps.Layout, ps.Style, ps.Text, screen, 1, "")
 }

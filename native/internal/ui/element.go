@@ -28,7 +28,7 @@ func (l *Layout) element(dst *DrawList, view View, sc scope, e *screenpack.Eleme
 	case "image":
 		l.imageElement(dst, view, sc, e, parent, alpha, elapsedMs)
 	case "text":
-		l.text(dst, view, sc, &e.Layout, e.Style, e.Text, parent, alpha)
+		l.text(dst, view, sc, &e.Layout, e.Style, e.Text, parent, alpha, "")
 	}
 }
 

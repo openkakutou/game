@@ -62,9 +62,15 @@ type Renderer struct {
 	layout  *ui.Layout
 	list    ui.DrawList
 	painter *listPainter
-	// titleSince is when the title screen last appeared, for its transitions.
-	titleSince time.Time
-	onTitle    bool
+	// packKind is the screenpack screen shown, and packSince when it appeared,
+	// for the transitions; the rest is what the screens' rows are built from
+	// (reused, rebuilt only when what they show changes).
+	packKind  packScreen
+	packSince time.Time
+	rows      []ui.Row
+	labels    []string
+	setup     setupRows
+	result    resultTexts
 }
 
 // NewRenderer builds a renderer for win drawing the screens of pack.
@@ -75,52 +81,28 @@ func NewRenderer(win *Window, pack *ui.Pack) *Renderer {
 	}
 }
 
-// drawTitle draws the screenpack's title screen: the "press start" phase on
-// the game's title, the menu phase on its main menu.
-func (r *Renderer) drawTitle(f *game.Flow) {
-	state := ui.TitleState{Phase: ui.PhasePressStart, ElapsedMs: int(time.Since(r.titleSince).Milliseconds())}
-	if f.Screen == game.ScreenMainMenu {
-		state.Phase, state.Entries, state.Cursor = ui.PhaseMenu, f.MainMenuItems(), f.MenuCursor
-	}
-	width, height := r.win.BeginPixels()
-	r.list.Reset()
-	r.layout.Title(&r.list, ui.View{W: width, H: height}, state)
-	r.painter.draw(&r.list)
-	r.win.EndPixels()
-}
-
 // Draw renders the current screen of f.
 func (r *Renderer) Draw(f *game.Flow) {
 	w := r.win
-	onTitle := f.Screen == game.ScreenTitle || f.Screen == game.ScreenMainMenu
-	if onTitle && !r.onTitle {
-		r.titleSince = time.Now()
+	kind := packScreenOf(f)
+	if kind != r.packKind {
+		r.packKind, r.packSince = kind, time.Now()
 	}
-	r.onTitle = onTitle
-	if onTitle {
-		r.drawTitle(f)
+	if kind != packNone && kind != packPause {
+		r.drawPack(f, kind)
 		return
 	}
 	w.Rect(0, 0, VW, VH, darkBg)
 	switch f.Screen {
 	case game.ScreenSelect:
-		r.drawList(f, "Select your fighter", fmt.Sprintf("Player %d", f.Picking+1), names(f.Chars), f.Cursor, nil)
+		r.drawList(f, "Select your fighter", fmt.Sprintf("Player %d", f.Picking+1), names(f.Chars), f.Cursor)
 	case game.ScreenStage:
-		r.drawList(f, "Select a stage", "", names(f.Stages), f.Cursor, nil)
-	case game.ScreenSetup:
-		r.drawSetup(f)
-	case game.ScreenVersus:
-		r.drawVersus(f)
+		r.drawList(f, "Select a stage", "", names(f.Stages), f.Cursor)
 	case game.ScreenMatch:
 		r.drawMatch(f)
-		if f.Paused {
-			r.drawPause(f)
+		if kind == packPause {
+			r.drawPack(f, packPause)
 		}
-	case game.ScreenResult:
-		r.drawResult(f)
-	case game.ScreenOptions, game.ScreenOptionsGameplay, game.ScreenOptionsAudio, game.ScreenOptionsVideo,
-		game.ScreenOptionsControls, game.ScreenOptionsBindings:
-		r.drawOptions(f)
 	case game.ScreenError:
 		w.TextCentered(70, 2, red, "Something went wrong")
 		r.wrapped(100, f.Message)
@@ -129,32 +111,6 @@ func (r *Renderer) Draw(f *game.Flow) {
 			leave = "Press enter to return to the main menu"
 		}
 		w.TextCentered(200, 1, grey, leave)
-	}
-}
-
-// drawPause dims the frozen match and lists the pause menu, titled PAUSE as
-// Ikemen GO's default [Pause Menu].
-func (r *Renderer) drawPause(f *game.Flow) {
-	w := r.win
-	w.Rect(0, 0, VW, VH, Color{0, 0, 0, 0.6})
-	w.TextCentered(70, 3, white, "PAUSE")
-	for i, item := range f.PauseItems() {
-		c := grey
-		if i == f.PauseCursor {
-			c = gold
-		}
-		w.TextCentered(float32(110+i*16), 1, c, item.Label())
-	}
-}
-
-// drawOptions lists the rows of an options screen, then the controls prompt
-// under the title and the settings notices (files ignored or not saved) in red above the help
-// line.
-func (r *Renderer) drawOptions(f *game.Flow) {
-	r.drawList(f, f.OptionsTitle(), "", f.OptionsItems(), f.OptionsCursor(), f.OptionsFlagged())
-	r.win.TextCentered(40, 1, gold, f.OptionsPrompt()) // under the title, above the rows
-	for i, notice := range f.Settings.Notices() {
-		r.win.TextCentered(float32(170+i*10), 1, red, notice)
 	}
 }
 
@@ -177,9 +133,8 @@ func (r *Renderer) wrapped(y float32, msg string) {
 	}
 }
 
-// drawList draws the rows of a menu around the cursor; the rows flagged are
-// red (flagged may be nil).
-func (r *Renderer) drawList(f *game.Flow, title, sub string, items []string, cursor int, flagged []bool) {
+// drawList draws the rows of a menu around the cursor.
+func (r *Renderer) drawList(f *game.Flow, title, sub string, items []string, cursor int) {
 	w := r.win
 	w.TextCentered(16, 2, gold, title)
 	if sub != "" {
@@ -205,63 +160,9 @@ func (r *Renderer) drawList(f *game.Flow, title, sub string, items []string, cur
 			w.Rect(70, y-3, 180, 13, panel)
 			w.Text(76, y, 1, gold, ">")
 		}
-		if i < len(flagged) && flagged[i] {
-			colour = red
-		}
 		w.Text(90, y, 1, colour, items[i])
 	}
 	w.TextCentered(222, 1, grey, "Arrows/pad move  Enter/A confirm  Esc/B back")
-}
-
-func (r *Renderer) drawSetup(f *game.Flow) {
-	w := r.win
-	w.TextCentered(16, 2, gold, "Match setup")
-	s := f.Setup()
-	time := "No limit"
-	if s.TimeLimitSeconds > 0 {
-		time = fmt.Sprintf("%d seconds", s.TimeLimitSeconds)
-	}
-	p2 := "Human"
-	if s.CPU[1] {
-		p2 = "CPU"
-	}
-	rows := []string{fmt.Sprintf("Rounds   < best of %d >", s.Rounds), "Time     < " + time + " >", "Player 2 < " + p2 + " >", "Start match"}
-	shown := 0
-	for i, text := range rows {
-		if i == game.SetupRowPlayer2 && !f.HasPlayer2Row() {
-			continue
-		}
-		y := float32(80 + shown*24)
-		shown++
-		col := grey
-		if i == f.SetupRow {
-			w.Rect(50, y-5, 220, 18, panel)
-			col = white
-		}
-		w.Text(60, y, 1.5, col, text)
-	}
-	w.TextCentered(222, 1, grey, "Up/down row  Left/right change  Enter")
-}
-
-// drawVersus shows both picked characters, P1 above P2.
-func (r *Renderer) drawVersus(f *game.Flow) {
-	w := r.win
-	w.TextCentered(70, 2, blue, f.Chars[f.Picks[0]].Name)
-	w.TextCentered(110, 3, white, "VS")
-	w.TextCentered(150, 2, red, f.Chars[f.Picks[1]].Name)
-	w.TextCentered(222, 1, grey, "Enter continue  Esc back")
-}
-
-func (r *Renderer) drawResult(f *game.Flow) {
-	w := r.win
-	col := blue
-	if f.ResultWinner == match.SideP2 {
-		col = red
-	}
-	w.TextCentered(70, 3, col, fmt.Sprintf("Player %d wins", int(f.ResultWinner)+1))
-	p := f.Match.Progress
-	w.TextCentered(120, 2, white, fmt.Sprintf("%d - %d", p.Wins[0], p.Wins[1]))
-	w.TextCentered(170, 1, grey, "Enter: rematch   Esc: back to selection")
 }
 
 // loadSprites decodes and uploads every sprite the match's animations

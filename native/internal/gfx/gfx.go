@@ -227,14 +227,12 @@ func NewTexture(px []color.RGBA, width, height int) *Texture {
 	return &Texture{id: id, W: width, H: height}
 }
 
-// smoothAndRepeat makes the texture linearly filtered and repeating, as
-// screenpack images are scaled to any size and may tile.
-func (t *Texture) smoothAndRepeat() {
+// smooth makes the texture linearly filtered, as screenpack images are
+// scaled to any size.
+func (t *Texture) smooth() {
 	gl.BindTexture(gl.TEXTURE_2D, t.id)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 }
 
 // Delete frees the texture.

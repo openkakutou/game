@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"io/fs"
@@ -53,8 +54,11 @@ func LoadPack(gameFS fs.FS) (pack *Pack, notices []string) {
 		panic(err) // same
 	}
 	folder, err := game.ResolvePath(gameFS, ".", packFolder)
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
 		return fallback, nil
+	}
+	if err != nil {
+		return fallback, []string{fmt.Sprintf("%s: %v; using the built-in screenpack", packFolder, err)}
 	}
 	sub, err := fs.Sub(gameFS, folder)
 	if err != nil {
@@ -189,8 +193,19 @@ func (p *Pack) scope(screen, part string) scope {
 // screenStyles are a screen's own text styles; it grows with each screen
 // the game draws from the pack.
 func screenStyles(s *screenpack.Screens, screen string) map[screenpack.StyleID]screenpack.TextStyle {
-	if screen == "title" {
+	switch screen {
+	case "title":
 		return s.Title.TextStyles
+	case "options":
+		return s.Options.TextStyles
+	case "pause":
+		return s.Pause.TextStyles
+	case "matchSetup":
+		return s.MatchSetup.TextStyles
+	case "versus":
+		return s.Versus.TextStyles
+	case "results":
+		return s.Results.TextStyles
 	}
 	return nil
 }

@@ -152,6 +152,8 @@ type Flow struct {
 	RoundOverTicks int
 	// ResultWinner is the match winner shown on the result screen.
 	ResultWinner match.Side
+	// ResultCursor is the highlighted entry of ResultItems.
+	ResultCursor int
 	// Message is the error text shown on ScreenError.
 	Message string
 	// Paused is set while the pause menu is open over the match; the
@@ -380,7 +382,7 @@ func (f *Flow) enter(i int, returning bool) {
 	case mode.ScreenMatch:
 		f.startMatch()
 	case mode.ScreenResults:
-		f.Screen = ScreenResult
+		f.Screen, f.ResultCursor = ScreenResult, 0
 	default:
 		f.fail(fmt.Sprintf("The %s screen is not supported yet.", step.Screen))
 	}
@@ -501,10 +503,25 @@ func (f *Flow) navVersus(n Nav) {
 	}
 }
 
+// resultItems are the entries of the result screen: rematch (same characters
+// and stage), then back to the character select.
+var resultItems = []string{"Rematch", "Back to selection"}
+
+// ResultItems are the entries the result screen offers.
+func (f *Flow) ResultItems() []string { return resultItems }
+
 func (f *Flow) navResult(n Nav) {
 	switch n {
-	case NavConfirm: // rematch, same characters and stage
-		f.startMatch()
+	case NavUp:
+		f.ResultCursor = wrap(f.ResultCursor, -1, len(resultItems))
+	case NavDown:
+		f.ResultCursor = wrap(f.ResultCursor, 1, len(resultItems))
+	case NavConfirm:
+		if f.ResultCursor == 0 {
+			f.startMatch()
+			return
+		}
+		f.toSelect()
 	case NavCancel:
 		f.toSelect()
 	}

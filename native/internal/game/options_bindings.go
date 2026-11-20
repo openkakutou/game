@@ -70,6 +70,10 @@ func (f *Flow) OptionsFlagged() []bool {
 	return f.options.bind.flagged
 }
 
+// OptionsColumn is the highlighted column of the bindings screen: the
+// keyboard's (0) or the pad's (1).
+func (f *Flow) OptionsColumn() int { return int(f.options.bind.device) }
+
 // WaitingForBinding reports whether the bindings screen waits for the next
 // key or button of the device, which the host then gives to Bind (the cancel
 // input still goes to Navigate).
@@ -222,11 +226,12 @@ func actionLabel(action string) string {
 
 // refreshBindingRows rebuilds the labels of the player's screen: each row
 // shows the action, its key and its button, the highlighted column in
-// angle brackets (the bitmap font has no square ones).
+// angle brackets (the bitmap font has no square ones); the cells hold the
+// action, key and button apart.
 func (f *Flow) refreshBindingRows() {
 	b := &f.options.bind
 	c := f.Settings.Controls
-	rows := f.options.rows[:0]
+	rows, cells := f.options.rows[:0], f.options.cells[:0]
 	b.flagged = b.flagged[:0]
 	for _, action := range bindRows {
 		key, button := "-", "-"
@@ -241,6 +246,7 @@ func (f *Flow) refreshBindingRows() {
 			_, held := f.holderOf(DevicePad, button, bindSlot{b.player, i})
 			shared = shared || held
 		}
+		cells = append(cells, OptionRow{Label: actionLabel(action), Values: [2]string{key, button}, Flagged: shared})
 		if b.device == DeviceKeyboard {
 			key = "<" + key + ">"
 		} else {
@@ -250,5 +256,6 @@ func (f *Flow) refreshBindingRows() {
 		b.flagged = append(b.flagged, shared)
 	}
 	f.options.rows = append(rows, "Back")
+	f.options.cells = append(cells, OptionRow{Label: "Back"})
 	b.flagged = append(b.flagged, false)
 }

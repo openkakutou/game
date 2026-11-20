@@ -3,6 +3,7 @@ package ui_test
 import (
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -90,5 +91,19 @@ func TestLoadPack_AFontThatCannotBeParsedIsARefusedFolder(t *testing.T) {
 	_, notices := ui.LoadPack(game)
 	if len(notices) != 1 || !strings.Contains(notices[0], "font") {
 		t.Errorf("notices = %q, want one about the font", notices)
+	}
+}
+
+func TestLoadPack_ASymbolicLinkInPlaceOfTheFolderIsRefusedWithANotice(t *testing.T) {
+	game := fstest.MapFS{
+		"screenpacks/default": {Mode: fs.ModeSymlink, Data: []byte("elsewhere")},
+	}
+	pack, notices := ui.LoadPack(game)
+	if len(notices) != 1 || !strings.Contains(notices[0], "symbolic link") {
+		t.Fatalf("notices = %q, want one saying screenpacks/default is a symbolic link", notices)
+	}
+	list := draw(ui.NewLayout(pack), menuState([]string{"Versus"}, 0))
+	if len(imageOps(list, "images/logo.png")) != 1 {
+		t.Errorf("the built-in logo is missing after the fallback")
 	}
 }

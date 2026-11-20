@@ -39,6 +39,24 @@ var concernScreens = [concernCount]Screen{ScreenOptionsGameplay, ScreenOptionsAu
 
 var concernTitles = [concernCount]string{"Gameplay", "Audio", "Video", "Controls"}
 
+// OptionRow is one row of an options screen: its label, its values (one for
+// a setting, a key then a button for a binding; "" for none) and whether the
+// row is flagged as a warning (a binding shared with another action).
+type OptionRow struct {
+	Label   string
+	Values  [2]string
+	Flagged bool
+}
+
+// optionsRows are the concerns list's rows, labels only.
+var optionsRows = func() []OptionRow {
+	rows := make([]OptionRow, len(optionsItems))
+	for i, label := range optionsItems {
+		rows[i] = OptionRow{Label: label}
+	}
+	return rows
+}()
+
 // optionsState is the options screens' own state.
 type optionsState struct {
 	// cursor is the highlighted row of the screen shown.
@@ -47,8 +65,10 @@ type optionsState struct {
 	// it goes back to the paused match.
 	fromPause bool
 	concern   Concern
-	// rows are the labels of the concern screen, rebuilt when a value changes.
-	rows []string
+	// rows are the labels of the concern screen, rebuilt when a value changes;
+	// cells are the same rows split into label and values.
+	rows  []string
+	cells []OptionRow
 	// gameplay, audio and video are the values when the concern screen was
 	// entered, to save only what changed.
 	gameplay Gameplay
@@ -76,6 +96,15 @@ func (f *Flow) OptionsItems() []string {
 		return optionsItems
 	}
 	return f.options.rows
+}
+
+// OptionsRows are the rows of the options screen shown, split into label and
+// values for a screen that lays them out in columns.
+func (f *Flow) OptionsRows() []OptionRow {
+	if f.Screen == ScreenOptions {
+		return optionsRows
+	}
+	return f.options.cells
 }
 
 // OptionsCursor is the highlighted row of the options screen shown.
@@ -269,29 +298,41 @@ func onOff(b bool) string {
 	return "Off"
 }
 
+// addRow appends a row to the concern screen: the label, and its value
+// when it has one (the flat text is the label, two spaces, the value).
+func (o *optionsState) addRow(label, value string) {
+	text := label
+	if value != "" {
+		text = label + "  " + value
+	}
+	o.rows = append(o.rows, text)
+	o.cells = append(o.cells, OptionRow{Label: label, Values: [2]string{value, ""}})
+}
+
 // refreshRows rebuilds the labels of the concern screen from the settings.
 func (f *Flow) refreshRows() {
-	s := f.Settings
-	rows := f.options.rows[:0]
-	switch f.options.concern {
+	s, o := f.Settings, &f.options
+	o.rows, o.cells = o.rows[:0], o.cells[:0]
+	switch o.concern {
 	case ConcernGameplay:
 		limit := "No limit"
 		if s.Gameplay.TimeLimitSeconds > 0 {
 			limit = strconv.Itoa(s.Gameplay.TimeLimitSeconds)
 		}
-		rows = append(rows, "Rounds  "+strconv.Itoa(s.Gameplay.Rounds), "Time  "+limit)
+		o.addRow("Rounds", strconv.Itoa(s.Gameplay.Rounds))
+		o.addRow("Time", limit)
 	case ConcernAudio:
-		rows = append(rows,
-			"Master  "+strconv.Itoa(s.Audio.Master),
-			"Music  "+strconv.Itoa(s.Audio.Music),
-			"Effects  "+strconv.Itoa(s.Audio.Effects))
+		o.addRow("Master", strconv.Itoa(s.Audio.Master))
+		o.addRow("Music", strconv.Itoa(s.Audio.Music))
+		o.addRow("Effects", strconv.Itoa(s.Audio.Effects))
 	case ConcernControls:
-		rows = append(rows, "Player 1", "Player 2", "Reset to defaults")
+		o.addRow("Player 1", "")
+		o.addRow("Player 2", "")
+		o.addRow("Reset to defaults", "")
 	case ConcernVideo:
-		rows = append(rows,
-			"Fullscreen  "+onOff(s.Video.Fullscreen),
-			"VSync  "+onOff(s.Video.VSync),
-			"Window  "+strconv.Itoa(s.Video.WindowWidth)+"x"+strconv.Itoa(s.Video.WindowHeight))
+		o.addRow("Fullscreen", onOff(s.Video.Fullscreen))
+		o.addRow("VSync", onOff(s.Video.VSync))
+		o.addRow("Window", strconv.Itoa(s.Video.WindowWidth)+"x"+strconv.Itoa(s.Video.WindowHeight))
 	}
-	f.options.rows = append(rows, "Back")
+	o.addRow("Back", "")
 }

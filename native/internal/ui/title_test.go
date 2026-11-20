@@ -389,3 +389,29 @@ func TestDrawList_ResetKeepsItsCapacitySoAFrameAllocatesNothing(t *testing.T) {
 		}
 	}
 }
+
+func pivotMenu(pivot string) string {
+	return `"menu": { "anchor": "center", "pivot": "` + pivot + `", "spacing": 6, "style": "left", "activeStyle": "left",
+	"cursor": { "type": "rect", "size": [20, 6], "color": "#ff0000" } }`
+}
+
+func TestTitle_TheFirstEntryIsAtThePivotWhateverThePivot(t *testing.T) {
+	// Rows are 6 units = 43.2 px; the anchor is the screen center (640, 360).
+	// The cursor is as high as a row, so its y is the active row's top.
+	cases := []struct {
+		pivot string
+		want  float32 // the first row's top
+	}{
+		{"top", 360},      // the row hangs from the point
+		{"center", 338.4}, // the row is centered on the point: 360 - 21.6
+		{"bottom", 316.8}, // the row ends on the point: 360 - 43.2
+	}
+	entries := []string{"a", "b", "c", "d", "e"}
+	for _, c := range cases {
+		l := layoutOf(t, gameWith(t, pivotMenu(c.pivot), nil))
+		first := rectOps(draw(l, menuState(entries, 0)), red)
+		near(t, c.pivot+" first row", first[0].Y, c.want)
+		third := rectOps(draw(l, menuState(entries, 2)), red)
+		near(t, c.pivot+" third row", third[0].Y, c.want+2*43.2)
+	}
+}

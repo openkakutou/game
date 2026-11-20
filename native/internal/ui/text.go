@@ -84,12 +84,33 @@ func (s styled) emit(dst *DrawList, text string, left, centerY, alpha float32) {
 
 // text draws a text placed by a layout inside parent: its box is the text's
 // own width by the style's line height, so the style's align changes nothing
-// for it (align matters between the entries of a menu).
-func (l *Layout) text(dst *DrawList, view View, sc scope, lay *screenpack.Layout, style screenpack.StyleID, text string, parent rect, alpha float32) {
+// for it (align matters between the entries of a menu). A tint ("#rrggbb")
+// replaces the style's color; "" keeps it.
+func (l *Layout) text(dst *DrawList, view View, sc scope, lay *screenpack.Layout, style screenpack.StyleID, text string, parent rect, alpha float32, tint string) {
 	s, ok := l.styled(sc, style, view)
 	if !ok {
 		return
 	}
+	if tint != "" {
+		s.style.Color = tint
+	}
 	box := place(parent, lay, s.width(text), float32(s.style.Size)*s.unit, s.unit)
 	s.emit(dst, text, box.x, box.y+box.h/2, alpha)
 }
+
+// alignFactor is how far along a line of free width the text starts: the
+// fraction of the free width left of a text aligned left, center or right.
+func alignFactor(align string) float32 {
+	switch align {
+	case "center":
+		return 0.5
+	case "right":
+		return 1
+	}
+	return 0
+}
+
+// warningColor tints what the game flags (a binding shared by two actions, a
+// settings notice): the format has no warning style, so it is the one color
+// the layout sets itself.
+const warningColor = "#dc3c3c"

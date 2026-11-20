@@ -15,7 +15,7 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-// atlasSize is the side of a glyph atlas texture, in pixels.
+// atlasSize is the side of a glyph atlas page, in pixels.
 const atlasSize = 1024
 
 type atlasKey struct {
@@ -23,25 +23,21 @@ type atlasKey struct {
 	px   int
 }
 
-// glyphEntry is where a glyph sits in its atlas, and where its bitmap goes
-// relative to the pen on the baseline.
+// glyphEntry is where a glyph sits in its atlas page, and where its bitmap
+// goes relative to the pen on the baseline.
 type glyphEntry struct {
+	page           int
 	u0, v0, u1, v1 float32
 	dx, dy, w, h   float32
 }
 
-// glyphAtlas holds the rasterized glyphs of one font at one pixel size, in
-// one alpha texture: printable ASCII at creation, any other character the
-// first time it is drawn.
-type glyphAtlas struct {
+// atlasPage is one alpha texture of an atlas and its free room.
+type atlasPage struct {
 	tex    *Texture
-	face   font.Face
-	glyphs map[rune]glyphEntry
-	// The shelf packer: the next free x on the current row, the row's top and height.
-	x, y, rowH int
+	packer shelfPacker
 }
 
-func newGlyphAtlas(face font.Face) *glyphAtlas {
+func newAtlasPage() *atlasPage {
 	var id uint32
 	gl.GenTextures(1, &id)
 	gl.BindTexture(gl.TEXTURE_2D, id)
@@ -51,16 +47,25 @@ func newGlyphAtlas(face font.Face) *glyphAtlas {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, atlasSize, atlasSize, 0, gl.ALPHA, gl.UNSIGNED_BYTE, nil)
-	a := &glyphAtlas{tex: &Texture{id: id, W: atlasSize, H: atlasSize}, face: face, glyphs: map[rune]glyphEntry{}}
-	for r := rune(' '); r <= '~'; r++ {
-		a.add(r)
-	}
-	return a
+	return &atlasPage{tex: &Texture{id: id, W: atlasSize, H: atlasSize}, packer: shelfPacker{size: atlasSize}}
 }
 
-// add rasterizes r into the atlas.
-// shortcut: a full atlas drops the glyph (nothing is drawn for it); upgrade
-// with a second atlas page if a screenpack needs thousands of glyphs at one size.
+// glyphAtlas holds the rasterized glyphs of one font at one pixel size, on as
+// many alpha pages as they need: a glyph is rasterized the first time it is
+// drawn, and every one gets a place.
+type glyphAtlas struct {
+	face   font.Face
+	pages  []*atlasPage
+	glyphs map[rune]glyphEntry
+}
+
+func newGlyphAtlas(face font.Face) *glyphAtlas {
+	return &glyphAtlas{face: face, glyphs: map[rune]glyphEntry{}}
+}
+
+// add rasterizes r onto the first page with room, or a new page. A glyph
+// larger than a whole page (a font size of thousands of pixels) is reported
+// once on stderr and left out.
 func (a *glyphAtlas) add(r rune) glyphEntry {
 	dr, mask, maskp, _, ok := a.face.Glyph(fixed.Point26_6{}, r)
 	alpha, isAlpha := mask.(*image.Alpha)
@@ -69,30 +74,42 @@ func (a *glyphAtlas) add(r rune) glyphEntry {
 		a.glyphs[r] = glyphEntry{}
 		return glyphEntry{}
 	}
-	if a.x+w+1 > atlasSize {
-		a.x, a.y, a.rowH = 0, a.y+a.rowH+1, 0
-	}
-	if a.y+h > atlasSize {
+	if w > atlasSize || h > atlasSize {
+		fmt.Fprintf(os.Stderr, "openkakutou: the glyph %q is %dx%d px, larger than a %d px atlas page: not drawn\n", r, w, h, atlasSize)
 		a.glyphs[r] = glyphEntry{}
 		return glyphEntry{}
 	}
+	page, x, y := a.room(w, h)
 	bitmap := make([]byte, w*h)
 	for row := 0; row < h; row++ {
 		from := (row+maskp.Y-alpha.Rect.Min.Y)*alpha.Stride + maskp.X - alpha.Rect.Min.X
 		copy(bitmap[row*w:(row+1)*w], alpha.Pix[from:from+w])
 	}
-	gl.BindTexture(gl.TEXTURE_2D, a.tex.id)
+	gl.BindTexture(gl.TEXTURE_2D, a.pages[page].tex.id)
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
-	gl.TexSubImage2D(gl.TEXTURE_2D, 0, int32(a.x), int32(a.y), int32(w), int32(h), gl.ALPHA, gl.UNSIGNED_BYTE, unsafe.Pointer(&bitmap[0]))
+	gl.TexSubImage2D(gl.TEXTURE_2D, 0, int32(x), int32(y), int32(w), int32(h), gl.ALPHA, gl.UNSIGNED_BYTE, unsafe.Pointer(&bitmap[0]))
 	e := glyphEntry{
-		u0: float32(a.x) / atlasSize, v0: float32(a.y) / atlasSize,
-		u1: float32(a.x+w) / atlasSize, v1: float32(a.y+h) / atlasSize,
+		page: page,
+		u0:   float32(x) / atlasSize, v0: float32(y) / atlasSize,
+		u1: float32(x+w) / atlasSize, v1: float32(y+h) / atlasSize,
 		dx: float32(dr.Min.X), dy: float32(dr.Min.Y), w: float32(w), h: float32(h),
 	}
 	a.glyphs[r] = e
-	a.x += w + 1
-	a.rowH = max(a.rowH, h)
 	return e
+}
+
+// room reserves a w x h place (no larger than a page) and returns its page
+// and corner, adding a page when none has room.
+func (a *glyphAtlas) room(w, h int) (page, x, y int) {
+	for i, p := range a.pages {
+		if x, y, ok := p.packer.place(w, h); ok {
+			return i, x, y
+		}
+	}
+	p := newAtlasPage()
+	a.pages = append(a.pages, p)
+	x, y, _ = p.packer.place(w, h) // an empty page holds any glyph that passed the size check
+	return len(a.pages) - 1, x, y
 }
 
 func (a *glyphAtlas) glyph(r rune) glyphEntry {
@@ -111,8 +128,9 @@ type listPainter struct {
 	textures map[ui.Asset]*Texture
 	atlases  map[atlasKey]*glyphAtlas
 	// batch holds textured vertices (x, y, u, v, r, g, b, a) of batchTex.
-	batch    []float32
-	batchTex *Texture
+	batch       []float32
+	batchTex    *Texture
+	batchRepeat [2]bool // wrap each axis instead of clamping, for tiled images
 }
 
 func newListPainter(win *Window, pack *ui.Pack) *listPainter {
@@ -134,7 +152,8 @@ func (p *listPainter) draw(list *ui.DrawList) {
 			p.win.Rect(op.X, op.Y, op.W, op.H, Color(op.Color))
 		case ui.OpImage:
 			if tex := p.texture(op.Asset); tex != nil {
-				p.quad(tex, op.X, op.Y, op.X+op.W, op.Y+op.H, op.U0, op.V0, op.U1, op.V1, op.Color)
+				repeat := [2]bool{op.U1 > 1, op.V1 > 1}
+				p.quad(tex, repeat, op.X, op.Y, op.X+op.W, op.Y+op.H, op.U0, op.V0, op.U1, op.V1, op.Color)
 			}
 		case ui.OpText:
 			p.text(list, op)
@@ -162,16 +181,16 @@ func (p *listPainter) text(list *ui.DrawList, op *ui.Op) {
 		}
 		x := float32(math.Round(float64(op.X+g.X))) + e.dx
 		y := baseline + e.dy
-		p.quad(atlas.tex, x, y, x+e.w, y+e.h, e.u0, e.v0, e.u1, e.v1, op.Color)
+		p.quad(atlas.pages[e.page].tex, [2]bool{}, x, y, x+e.w, y+e.h, e.u0, e.v0, e.u1, e.v1, op.Color)
 	}
 }
 
 // quad queues a textured rectangle, after flushing what another texture or
 // the colored batch still holds, to keep the draw order.
-func (p *listPainter) quad(tex *Texture, x0, y0, x1, y1, u0, v0, u1, v1 float32, c ui.Color) {
-	if p.batchTex != tex {
+func (p *listPainter) quad(tex *Texture, repeat [2]bool, x0, y0, x1, y1, u0, v0, u1, v1 float32, c ui.Color) {
+	if p.batchTex != tex || p.batchRepeat != repeat {
 		p.flushBatch()
-		p.batchTex = tex
+		p.batchTex, p.batchRepeat = tex, repeat
 	}
 	p.win.Flush()
 	p.batch = append(p.batch,
@@ -187,6 +206,8 @@ func (p *listPainter) flushBatch() {
 	const stride = 8 * 4
 	gl.Enable(gl.TEXTURE_2D)
 	gl.BindTexture(gl.TEXTURE_2D, p.batchTex.id)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode(p.batchRepeat[0]))
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode(p.batchRepeat[1]))
 	gl.EnableClientState(gl.TEXTURE_COORD_ARRAY)
 	gl.VertexPointer(2, gl.FLOAT, stride, unsafe.Pointer(&p.batch[0]))
 	gl.TexCoordPointer(2, gl.FLOAT, stride, unsafe.Pointer(&p.batch[2]))
@@ -195,6 +216,15 @@ func (p *listPainter) flushBatch() {
 	gl.DisableClientState(gl.TEXTURE_COORD_ARRAY)
 	gl.Disable(gl.TEXTURE_2D)
 	p.batch = p.batch[:0]
+}
+
+// wrapMode is how a texture axis wraps: repeating for a tiled image, else
+// clamped so a scaled image or sprite frame never bleeds across its edges.
+func wrapMode(repeat bool) int32 {
+	if repeat {
+		return gl.REPEAT
+	}
+	return gl.CLAMP_TO_EDGE
 }
 
 // texture returns an asset's texture, decoded and uploaded the first time.
@@ -229,6 +259,6 @@ func (p *listPainter) load(a ui.Asset) (*Texture, error) {
 		px[i] = color.RGBA{straight.Pix[4*i], straight.Pix[4*i+1], straight.Pix[4*i+2], straight.Pix[4*i+3]}
 	}
 	tex := NewTexture(px, b.Dx(), b.Dy())
-	tex.smoothAndRepeat()
+	tex.smooth()
 	return tex, nil
 }

@@ -142,6 +142,17 @@ cmp -s "$out/7-capture.png" "$out/11-quick-versus.png" && { echo "quick versus s
 bar=$(convert "$out/12-lifebar.png" -format '%[hex:u.p{150,40}]' info:)
 [ "$bar" = "FAD23C" ] || { echo "lifebar not drawn: P1 bar pixel is $bar, want FAD23C"; exit 1; }
 
+# Options, controls, match setup and VS are drawn from the screenpack too: its
+# gradient background (#1A1826 at 200x100, not the old flat #121420) and the
+# hundreds of colours of anti-aliased text; the pause menu, drawn over the
+# frozen match, has the same colour count (the old one had about 26).
+for shot_name in 13-options 14-options-audio 15-options-audio-music 16-options-controls 17-controls-player1 18-controls-waiting 19-controls-bound 4-setup 4b-versus 9-setup-cpu; do
+  bg=$(convert "$out/$shot_name.png" -format '%[hex:u.p{200,100}]' info:)
+  [ "$bg" = "1A1826" ] || { echo "$shot_name: the screenpack background is missing: pixel is $bg, want 1A1826"; exit 1; }
+  [ "$(identify -format %k "$out/$shot_name.png")" -gt 200 ] || { echo "$shot_name: too few colours for a screenpack screen"; exit 1; }
+done
+[ "$(identify -format %k "$out/6b-pause.png")" -gt 200 ] || { echo "6b-pause: too few colours for the screenpack pause menu"; exit 1; }
+
 for f in "$out"/*.png; do
   colors=$(identify -format %k "$f")
   echo "$(basename "$f"): $colors colors"
