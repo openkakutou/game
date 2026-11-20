@@ -328,7 +328,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	r.drawLayers(f, r.behind, m.Ticks(), r.camX)
 	for i, fs := range []match.FighterState{p1, p2} {
 		sx := VW/2 + float32(fs.Position.X) - camX
-		sy := groundY + float32(fs.Position.Y)
+		sy := fighterScreenY(groundY, float32(fs.Position.Y))
 		flip := fs.Facing == match.FacingLeft
 		drawn := false
 		if fr, ok := currentFrame(f.Fighters[i].Char.Animations, m.AnimNo[i], m.AnimTime[i]); ok && !fr.IsBlank() {
@@ -354,6 +354,10 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	r.drawLayers(f, r.front, m.Ticks(), r.camX)
 	r.drawHUD(f)
 }
+
+// fighterScreenY is the view row of a fighter at height y (the engine's Y
+// points up) over the ground line.
+func fighterScreenY(groundY, y float32) float32 { return groundY - y }
 
 func spriteMeta(fighter *game.Fighter, fr air.Frame) (sff.Sprite, bool) {
 	sp, err := fighter.Char.ResolveSprite(fr)

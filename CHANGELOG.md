@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- In the desktop game, a jumping fighter is drawn in the air instead of sinking below the ground.
 - In the desktop game's Appearance options, the sample lifebar no longer covers the page heading.
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
