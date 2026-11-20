@@ -118,9 +118,9 @@ func (f *Flow) enterConcern(c Concern) {
 	f.refreshRows()
 }
 
-// leaveConcern goes back to the concerns list, saving the concern when it
-// changed since it was entered.
-func (f *Flow) leaveConcern() {
+// saveChanged saves the concern being edited when it changed since it was
+// entered.
+func (f *Flow) saveChanged() {
 	c, s := f.options.concern, f.Settings
 	changed := false
 	switch c {
@@ -133,8 +133,23 @@ func (f *Flow) leaveConcern() {
 	}
 	if changed {
 		s.Save(c)
+		f.options.gameplay, f.options.audio, f.options.video = s.Gameplay, s.Audio, s.Video
 	}
-	f.Screen, f.options.cursor = ScreenOptions, int(c)
+}
+
+// leaveConcern goes back to the concerns list, saving the concern when it
+// changed since it was entered.
+func (f *Flow) leaveConcern() {
+	f.saveChanged()
+	f.Screen, f.options.cursor = ScreenOptions, int(f.options.concern)
+}
+
+// SaveOpenConcern saves the concern screen being shown, if it changed: the
+// host calls it when the game exits, so a closed window loses no change.
+func (f *Flow) SaveOpenConcern() {
+	if slices.Contains(concernScreens[:], f.Screen) {
+		f.saveChanged()
+	}
 }
 
 func (f *Flow) navConcern(n Nav) {
@@ -195,6 +210,9 @@ func (f *Flow) changeRow(delta int) {
 		}
 		if s.Video != before {
 			s.VideoGen++
+		}
+		if s.Video.WindowWidth != before.WindowWidth || s.Video.WindowHeight != before.WindowHeight {
+			s.WindowGen++
 		}
 	}
 	f.refreshRows()

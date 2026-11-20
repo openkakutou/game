@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done
 ---
 # Options screen and settings split by concern
 
@@ -14,3 +14,6 @@ Roadmap decision `029`: settings live outside any screenpack, in one file per co
 
 ## Notes
 - The main menu (item 034, ADR 022) gets its Options entry with this item.
+
+## Done (2026-11-20)
+Native (ADR 023): config/gameplay.json, audio.json, video.json, options screens from the main and pause menus. Web half: item 069. Controls: item 022; appearance: item 041. Fullscreen switching was not exercised on a real display (Xvfb only).

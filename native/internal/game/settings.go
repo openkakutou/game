@@ -115,6 +115,7 @@ type Settings struct {
 	Audio              Audio
 	Video              Video
 	AudioGen, VideoGen int
+	WindowGen          int
 
 	platform string
 	names    [concernCount]string                     // file names in the game folder
@@ -179,6 +180,9 @@ func (s *Settings) decode(c Concern, data []byte) error {
 	if obj == nil {
 		return errors.New("not a JSON object")
 	}
+	// Kept even when a value is refused below: saving keeps its unknown keys
+	// and other platforms' sections.
+	s.raw[c] = obj
 	switch c {
 	case ConcernGameplay:
 		g := defaultGameplay
@@ -210,7 +214,6 @@ func (s *Settings) decode(c Concern, data []byte) error {
 		}
 		s.Video = v
 	}
-	s.raw[c] = obj
 	return nil
 }
 
@@ -271,9 +274,9 @@ func (s *Settings) encode(c Concern) (map[string]json.RawMessage, error) {
 	}
 	var section map[string]json.RawMessage
 	if old, ok := obj[s.platform]; ok {
-		// Loading refused any section that is not an object, null apart.
+		// A section that is not an object is replaced.
 		if err := json.Unmarshal(old, &section); err != nil {
-			return nil, err
+			section = nil
 		}
 	}
 	if section == nil {

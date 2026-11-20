@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The desktop game has an Options screen, from the main menu and the pause menu, for match rounds and time, sound volumes (master, music, effects) and display (fullscreen, vsync, window size); each kind of setting is saved in its own file in the game folder's config folder, and a broken file only resets its own settings, with a message.
 - The desktop game opens on a title screen, then a main menu listing every game mode found in the modes folder, plus Quit; a broken mode file is left out with a message saying why, and leaving a mode (or its error screen) returns to the main menu.
 - The desktop game reads its Versus mode from the modes folder of the game folder, so its screens and default rules can be changed by editing that file; a missing or broken file falls back to the built-in Versus with a message saying why.
 - The desktop game now shows a VS screen with both chosen fighters before each match, and its screens follow the Versus mode's definition (preselected rounds and time come from it).

@@ -230,3 +230,70 @@ func TestSettingsPlatform_MapsGOOSToTheVideoSectionKey(t *testing.T) {
 		}
 	}
 }
+
+func TestSettings_AnInvalidSectionOfThisPlatformKeepsTheRestOfTheFileOnSave(t *testing.T) {
+	rec := &recorder{}
+	body := `{"theme": "dark", "windows": {"fullscreen": true, "vsync": false, "windowWidth": 1280, "windowHeight": 960}, "linux": {"windowWidth": 100}}`
+	s := LoadSettings(configFS(map[string]string{"video.json": body}), "linux", rec.write, nil)
+	if len(s.Notices()) != 1 || s.Video != (Video{false, true, 960, 720}) {
+		t.Fatalf("notices = %q video = %+v", s.Notices(), s.Video)
+	}
+	s.Video.VSync = false
+	s.Save(ConcernVideo)
+	got := decodeJSON(t, rec.files["config/video.json"])
+	wantWindows := map[string]any{"fullscreen": true, "vsync": false, "windowWidth": 1280.0, "windowHeight": 960.0}
+	if got["theme"] != "dark" || !reflect.DeepEqual(got["windows"], wantWindows) {
+		t.Errorf("video.json = %v, want the windows section and theme kept", got)
+	}
+	want := map[string]any{"fullscreen": false, "vsync": false, "windowWidth": 960.0, "windowHeight": 720.0}
+	if !reflect.DeepEqual(got["linux"], want) {
+		t.Errorf("linux section = %v, want %v", got["linux"], want)
+	}
+}
+
+func TestSettings_AnInvalidValueKeepsUnknownKeysOfTheObjectOnSave(t *testing.T) {
+	rec := &recorder{}
+	s := LoadSettings(configFS(map[string]string{"gameplay.json": `{"rounds": 2, "note": "hi"}`}), "linux", rec.write, nil)
+	s.Save(ConcernGameplay)
+	want := map[string]any{"rounds": 3.0, "timeLimitSeconds": 99.0, "note": "hi"}
+	if got := decodeJSON(t, rec.files["config/gameplay.json"]); !reflect.DeepEqual(got, want) {
+		t.Errorf("gameplay.json = %v, want %v", got, want)
+	}
+}
+
+func TestSettings_WindowGenGrowsOnlyWhenTheWindowSizeChanges(t *testing.T) {
+	f, _ := optionsFlow(t)
+	navAll(f, NavDown, NavConfirm, NavDown, NavDown, NavConfirm) // Options > Video
+	gen := f.Settings.WindowGen
+	navAll(f, NavRight, NavDown, NavLeft) // fullscreen, vsync
+	if f.Settings.WindowGen != gen {
+		t.Errorf("WindowGen = %d, want %d: no size changed", f.Settings.WindowGen, gen)
+	}
+	navAll(f, NavDown, NavRight)
+	if f.Settings.WindowGen == gen {
+		t.Error("WindowGen must grow when the window size changes")
+	}
+}
+
+func TestOptions_SaveOpenConcernSavesAChangedConcernOnce(t *testing.T) {
+	f, rec := optionsFlow(t)
+	toAudio(t, f)
+	navAll(f, NavDown, NavLeft)
+	f.SaveOpenConcern()
+	if len(rec.names) != 1 || rec.names[0] != "config/audio.json" {
+		t.Fatalf("written = %q", rec.names)
+	}
+	if got := decodeJSON(t, rec.files["config/audio.json"]); got["music"] != 90.0 {
+		t.Errorf("audio.json = %v", got)
+	}
+}
+
+func TestOptions_SaveOpenConcernWritesNothingWhenUnchangedOrNotOnAConcernScreen(t *testing.T) {
+	f, rec := optionsFlow(t)
+	f.SaveOpenConcern() // main menu
+	toAudio(t, f)
+	f.SaveOpenConcern() // unchanged
+	if len(rec.names) != 0 {
+		t.Errorf("written = %q, want nothing", rec.names)
+	}
+}

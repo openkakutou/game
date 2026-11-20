@@ -104,6 +104,7 @@ func run() error {
 	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), modes)
 	hud, lifebarNotices := game.SelectLifebar(fsys)
 	flow.Settings = settings
+	defer flow.SaveOpenConcern() // a closed window keeps the changes of the open screen
 	flow.Lifebar = hud
 	for _, n := range lifebarNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
@@ -141,7 +142,7 @@ func run() error {
 	defer aud.Close()
 	fmt.Println("audio:", aud.Driver())
 	aud.SetVolumes(settings.Audio)
-	audioGen, videoGen := settings.AudioGen, settings.VideoGen
+	audioGen, videoGen, windowGen := settings.AudioGen, settings.VideoGen, settings.WindowGen
 
 	pads := gfx.NewGamepads()
 	defer pads.Close()
@@ -162,7 +163,11 @@ func run() error {
 		}
 		if settings.VideoGen != videoGen {
 			videoGen = settings.VideoGen
-			applyVideo(settings.Video.WindowWidth, settings.Video.WindowHeight)
+			if settings.WindowGen != windowGen { // else keep the size, which -width/-height may have set
+				windowGen = settings.WindowGen
+				width, height = settings.Video.WindowWidth, settings.Video.WindowHeight
+			}
+			applyVideo(width, height)
 		}
 		aud.Update(flow)
 		win.BeginFrame()
