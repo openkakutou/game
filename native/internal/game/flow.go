@@ -27,6 +27,8 @@ const (
 	ScreenVersus          // both picked characters, before the match
 	ScreenMatch
 	ScreenResult
+	ScreenContinue        // after a lost ladder fight: a countdown, then retry or game over
+	ScreenVictory         // after the last ladder opponent
 	ScreenOptions         // the settings concerns: Gameplay, Audio, Video, Controls, Appearance, Back
 	ScreenOptionsGameplay // the rows of one concern, in Concern order
 	ScreenOptionsAudio
@@ -66,6 +68,10 @@ const VersusTicks = 2 * TickRateHz
 // RoundEndTicks is how long a finished round stays on screen before the next
 // round starts (or the result screen appears): 2 seconds.
 const RoundEndTicks = 2 * TickRateHz
+
+// ContinueTicks is how long the continue screen counts down before the game
+// is over: 10 seconds.
+const ContinueTicks = 10 * TickRateHz
 
 // Rows of the setup screen.
 const (
@@ -115,6 +121,22 @@ type Flow struct {
 	menuLabels []string // mode names, then "Options" and "Quit"
 	// Step is the index in Mode.Flow of the step being shown.
 	Step int
+	// Rand returns a random number in [0, n) for n > 0: the ladder's draw
+	// and each fight's stage. The host seeds it from the clock.
+	Rand func(n int) int
+	// ladder is the roster indexes of the fights of the ladder being played,
+	// ladderPos the one in progress; ladder is nil until the player's pick has
+	// been made (see ensureLadder).
+	ladder    []int
+	ladderPos int
+	// ContinueCursor is the highlighted ContinueItems entry; continueTicks
+	// counts down the continue screen.
+	ContinueCursor int
+	continueTicks  int
+	// VictoryTicks is how long the victory screen shows (the screenpack's
+	// durationMs), victoryTicks what is left of it.
+	VictoryTicks int
+	victoryTicks int
 
 	Screen Screen
 	// Picking is which player is choosing a character (0 or 1); pickPos is
@@ -228,7 +250,7 @@ func (f *Flow) enterMode(i int) {
 	f.RoundIdx = slices.Index(f.roundOpts, rounds)
 	f.TimeIdx = slices.Index(f.timeOpts, timeLimit)
 	f.Player2CPU = false
-	f.Match, f.Paused = nil, false
+	f.Match, f.Paused, f.ladder = nil, false, nil
 	f.applyRoster()
 	msg := f.emptyRosterMessage()
 	if msg != "" {
@@ -347,6 +369,12 @@ func (f *Flow) navigate(n Nav) {
 		f.navVersus(n)
 	case ScreenResult:
 		f.navResult(n)
+	case ScreenContinue:
+		f.navContinue(n)
+	case ScreenVictory:
+		if n == NavConfirm {
+			f.toMenu()
+		}
 	case ScreenOptions:
 		f.navOptions(n)
 	case ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo, ScreenOptionsControls, ScreenOptionsAppearance:
@@ -403,7 +431,7 @@ func (f *Flow) enter(i int, returning bool) {
 		if returning {
 			pos = len(step.Sides) - 1
 		}
-		f.Screen = ScreenSelect
+		f.Screen, f.ladder = ScreenSelect, nil
 		f.setPicker(pos)
 		f.Cursor = viewPos(f.charView, f.Picks[f.Picking])
 	case mode.ScreenStageSelect:
@@ -411,11 +439,21 @@ func (f *Flow) enter(i int, returning bool) {
 	case mode.ScreenMatchSetup:
 		f.Screen, f.SetupRow = ScreenSetup, SetupRowStart
 	case mode.ScreenVersus:
+		if !f.ensureLadder() {
+			return
+		}
 		f.Screen, f.versusTicks = ScreenVersus, VersusTicks
 	case mode.ScreenMatch:
+		if !f.ensureLadder() {
+			return
+		}
 		f.startMatch()
 	case mode.ScreenResults:
 		f.Screen, f.ResultCursor = ScreenResult, 0
+	case mode.ScreenContinue:
+		f.Screen, f.ContinueCursor, f.continueTicks = ScreenContinue, 0, ContinueTicks
+	case mode.ScreenVictory:
+		f.Screen, f.victoryTicks = ScreenVictory, f.VictoryTicks
 	default:
 		f.fail(fmt.Sprintf("The %s screen is not supported yet.", step.Screen))
 	}
@@ -573,20 +611,31 @@ func (f *Flow) toSelect() {
 
 // finishMatch follows the rules' outcome of the match that just ended:
 // onWin when player 1 won, onLose otherwise (a match always has a winner;
-// player 2 winning is player 1 losing). Only results is supported yet.
+// player 2 winning is player 1 losing).
 func (f *Flow) finishMatch() {
 	f.ResultWinner = f.Match.Winner
 	outcome := f.Mode.Rules.OnLose
 	if f.Match.Winner == match.SideP1 {
 		outcome = f.Mode.Rules.OnWin
 	}
-	if outcome != mode.OutcomeResults {
-		f.fail(fmt.Sprintf("%s is not supported yet.", outcome))
-		return
+	switch outcome {
+	case mode.OutcomeResults:
+		f.enterScreen(mode.ScreenResults, "The game mode ends on results but has no results screen.")
+	case mode.OutcomeNextOpponent:
+		f.nextOpponent()
+	case mode.OutcomeContinue:
+		f.enterScreen(mode.ScreenContinue, "The game mode ends a lost match on continue but has no continue screen.")
+	case mode.OutcomeGameOver:
+		f.toMenu()
 	}
-	i := slices.IndexFunc(f.Mode.Flow, func(s mode.Step) bool { return s.Screen == mode.ScreenResults })
+}
+
+// enterScreen shows the flow's first step of the screen type s, or the error
+// screen with missing when the flow has none.
+func (f *Flow) enterScreen(s mode.Screen, missing string) {
+	i := slices.IndexFunc(f.Mode.Flow, func(step mode.Step) bool { return step.Screen == s })
 	if i < 0 {
-		f.fail("The game mode ends on results but has no results screen.")
+		f.fail(missing)
 		return
 	}
 	f.enter(i, false)
@@ -676,14 +725,21 @@ func (f *Flow) StartQuickVersus(q QuickVersus) (notices []string) {
 }
 
 // Tick advances the match screen by one simulation tick (60 per second) with
-// both players' held inputs, and counts down the VS screen. It does nothing on
-// other screens.
+// both players' held inputs, and counts down the VS, continue and victory
+// screens. It does nothing on other screens.
 func (f *Flow) Tick(in [2]input.TickInput) {
-	if f.Screen == ScreenVersus {
+	switch f.Screen {
+	case ScreenVersus:
 		f.versusTicks--
 		if f.versusTicks <= 0 {
 			f.next()
 		}
+		return
+	case ScreenContinue:
+		f.tickContinue()
+		return
+	case ScreenVictory:
+		f.tickVictory()
 		return
 	}
 	if f.Screen != ScreenMatch || f.Match == nil || f.Paused {

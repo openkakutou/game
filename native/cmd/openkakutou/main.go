@@ -9,6 +9,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -126,7 +127,8 @@ func run() error {
 	}
 	hud, lifebarNotices := game.SelectLifebar(fsys, lifebars, settings.Appearance.Lifebar)
 	flow.Settings = settings
-	defer flow.SaveOpenConcern() // a closed window keeps the changes of the open screen
+	flow.Rand = rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0)).IntN // the arcade ladder and stages
+	defer flow.SaveOpenConcern()                                             // a closed window keeps the changes of the open screen
 	settings.NoteScreenpack(packNotices)
 	settings.NoteLifebar(lifebarNotices)
 	flow.Packs, flow.Lifebars, flow.Lifebar = packNames, lifebars, hud

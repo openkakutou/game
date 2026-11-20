@@ -149,10 +149,12 @@ type Side struct {
 	Characters int     `json:"characters"`
 }
 
-// Opponents is the opponents rule; Count is set for a ladder.
+// Opponents is the opponents rule; Count is set for a ladder, and Final, the
+// folder name of a character fought after the Count ladder opponents, may be.
 type Opponents struct {
 	Kind  OpponentsKind `json:"kind"`
 	Count int           `json:"count,omitempty"`
+	Final string        `json:"final,omitempty"`
 }
 
 // Error is a mode that cannot be used: File, the JSON path of the Field
@@ -450,7 +452,7 @@ func (v *validator) names(path string, x any) []string {
 }
 
 func (v *validator) opponents(x any) Opponents {
-	obj := v.object("rules.opponents", x, []string{"kind"}, "count")
+	obj := v.object("rules.opponents", x, []string{"kind"}, "count", "final")
 	if obj == nil {
 		return Opponents{}
 	}
@@ -463,6 +465,13 @@ func (v *validator) opponents(x any) Opponents {
 		o.Count = v.integer("rules.opponents.count", count, 1)
 	case hasCount:
 		v.fail("rules.opponents.count", `only a "ladder" takes a count`)
+	}
+	final, hasFinal := obj["final"]
+	switch {
+	case hasFinal && o.Kind != OpponentsLadder:
+		v.fail("rules.opponents.final", `only a "ladder" takes a final`)
+	case hasFinal:
+		o.Final = v.str("rules.opponents.final", final)
 	}
 	return o
 }

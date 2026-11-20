@@ -10,6 +10,10 @@ const (
 	SoundConfirm MenuSound = "confirm"
 	SoundCancel  MenuSound = "cancel"
 	SoundError   MenuSound = "error"
+	// SoundTick and SoundGameOver are the continue screen's: a tick each
+	// countdown second, the game over when it ends.
+	SoundTick     MenuSound = "tick"
+	SoundGameOver MenuSound = "gameOver"
 )
 
 // MenuCue is a menu sound the player should hear, and the screenpack screen
@@ -56,6 +60,10 @@ func (f *Flow) PackScreen() string {
 		return "versus"
 	case ScreenResult:
 		return "results"
+	case ScreenContinue:
+		return "continue"
+	case ScreenVictory:
+		return "victory"
 	case ScreenError:
 		return "error"
 	case ScreenOptions, ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo,
@@ -78,6 +86,7 @@ type navState struct {
 	screen                                                    Screen
 	step, cursor, menuCursor, setupRow, roundIdx, timeIdx     int
 	pauseCursor, resultCursor, optionsCursor, picking, pickAt int
+	continueCursor                                            int
 	picks                                                     [2]int
 	stageNo, moveSide, moveTop                                int
 	moveOpen                                                  bool
@@ -94,7 +103,7 @@ func (f *Flow) navState() navState {
 	s := f.Settings
 	return navState{
 		screen: f.Screen, step: f.Step, cursor: f.Cursor, menuCursor: f.MenuCursor, setupRow: f.SetupRow,
-		roundIdx: f.RoundIdx, timeIdx: f.TimeIdx, pauseCursor: f.PauseCursor, resultCursor: f.ResultCursor,
+		roundIdx: f.RoundIdx, timeIdx: f.TimeIdx, pauseCursor: f.PauseCursor, resultCursor: f.ResultCursor, continueCursor: f.ContinueCursor,
 		optionsCursor: f.options.cursor, picking: f.Picking, pickAt: f.pickPos, picks: f.Picks, stageNo: f.StageNo,
 		moveOpen: f.moveList.open, moveSide: f.moveList.side, moveTop: f.MoveListTop(),
 		player2CPU: f.Player2CPU, paused: f.Paused, quit: f.Quit,

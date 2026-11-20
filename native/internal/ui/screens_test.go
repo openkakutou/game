@@ -243,6 +243,7 @@ func TestScreens_AFrameAllocatesNothingOnceWarm(t *testing.T) {
 	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	rows := []ui.Row{{Label: "A", Values: [2]string{"F", "a"}, Flagged: true}, {Label: "Back"}}
+	yesNo := []string{"Yes", "No"}
 	entries := []string{"Rematch", "Back"} // built once: a literal in the closure would be heap allocated by the test itself
 	frames := map[string]func(*ui.DrawList){
 		"options": func(d *ui.DrawList) {
@@ -259,6 +260,12 @@ func TestScreens_AFrameAllocatesNothingOnceWarm(t *testing.T) {
 		},
 		"results": func(d *ui.DrawList) {
 			l.Results(d, view720, ui.ResultsState{Message: "m", Score: "s", Winner: "w", Entries: entries})
+		},
+		"continue": func(d *ui.DrawList) {
+			l.Continue(d, view720, ui.ContinueState{Message: "Continue?", Countdown: "10", Entries: yesNo, Cursor: 1})
+		},
+		"victory": func(d *ui.DrawList) {
+			l.Victory(d, view720, ui.VictoryState{Name: "Alice", Message: "Congratulations!"})
 		},
 	}
 	for name, frame := range frames {

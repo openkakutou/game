@@ -53,7 +53,7 @@ func matchFlow(t *testing.T) *game.Flow {
 	if err != nil {
 		t.Fatal(err)
 	}
-	versus := builtins[0] // versus.jsonc, first in file-name order
+	versus := builtins[1] // versus.jsonc, second in file-name order after arcade.jsonc
 	f := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys), []mode.Mode{versus})
 	f.Navigate(game.NavConfirm) // title -> main menu
 	f.Navigate(game.NavConfirm) // Versus

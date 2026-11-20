@@ -137,11 +137,16 @@
           "required": ["kind"],
           "properties": {
             "kind": { "enum": ["chosen", "ladder"] },
-            "count": { "type": "integer", "minimum": 1 }
+            "count": { "type": "integer", "minimum": 1 },
+            "final": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Folder name of the character fought after the count ladder opponents (a boss). Ladder only; a name that is not installed is skipped."
+            }
           },
           "if": { "properties": { "kind": { "const": "ladder" } } },
           "then": { "required": ["count"] },
-          "else": { "not": { "required": ["count"] } }
+          "else": { "not": { "anyOf": [{ "required": ["count"] }, { "required": ["final"] }] } }
         },
         "onWin": {
           "enum": ["results", "nextOpponent", "continue", "gameOver"]

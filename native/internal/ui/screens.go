@@ -191,3 +191,62 @@ func (l *Layout) Results(dst *DrawList, view View, s ResultsState) {
 	l.elements(dst, view, l.pack.scope("results", ""), r.Foreground, screen, s.ElapsedMs)
 	fadeIn(dst, from, &r.Screen, s.ElapsedMs)
 }
+
+// ContinueState is what the game shows on the continue screen.
+type ContinueState struct {
+	Message, Countdown string
+	// Char is the roster index of the player's character, whose large
+	// portrait Portraits sizes.
+	Char      int
+	Portraits PortraitSizes
+	Entries   []string
+	Cursor    int
+	ElapsedMs int
+}
+
+// Continue adds the continue screen to dst: the player's portrait, the
+// message, the countdown and the menu.
+func (l *Layout) Continue(dst *DrawList, view View, s ContinueState) {
+	c := l.pack.resolved.Screens.Continue
+	screen, from := view.rect(), len(dst.Ops)
+	l.elements(dst, view, l.pack.scope("continue", ""), c.Background, screen, s.ElapsedMs)
+	l.portrait(dst, view, c.Portrait, s.Portraits, s.Char, false, screen)
+	if c.Message != nil {
+		l.text(dst, view, l.pack.scope("continue", "message"), &c.Message.Layout, c.Message.Style, s.Message, screen, 1, "")
+	}
+	if c.Countdown != nil {
+		l.text(dst, view, l.pack.scope("continue", "countdown"), &c.Countdown.Layout, c.Countdown.Style, s.Countdown, screen, 1, "")
+	}
+	if c.Menu != nil {
+		l.menu(dst, view, l.pack.scope("continue", "menu"), c.Menu, l.labels(s.Entries), s.Cursor, screen, s.ElapsedMs, noSlots)
+	}
+	l.elements(dst, view, l.pack.scope("continue", ""), c.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &c.Screen, s.ElapsedMs)
+}
+
+// VictoryState is what the game shows on the victory screen.
+type VictoryState struct {
+	Name, Message string
+	// Char is the roster index of the winning character, whose large
+	// portrait Portraits sizes.
+	Char      int
+	Portraits PortraitSizes
+	ElapsedMs int
+}
+
+// Victory adds the victory screen to dst: the winner's portrait and name and
+// the message.
+func (l *Layout) Victory(dst *DrawList, view View, s VictoryState) {
+	v := l.pack.resolved.Screens.Victory
+	screen, from := view.rect(), len(dst.Ops)
+	l.elements(dst, view, l.pack.scope("victory", ""), v.Background, screen, s.ElapsedMs)
+	l.portrait(dst, view, v.Portrait, s.Portraits, s.Char, false, screen)
+	if v.Name != nil {
+		l.text(dst, view, l.pack.scope("victory", "name"), &v.Name.Layout, v.Name.Style, s.Name, screen, 1, "")
+	}
+	if v.Message != nil {
+		l.text(dst, view, l.pack.scope("victory", "message"), &v.Message.Layout, v.Message.Style, s.Message, screen, 1, "")
+	}
+	l.elements(dst, view, l.pack.scope("victory", ""), v.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &v.Screen, s.ElapsedMs)
+}

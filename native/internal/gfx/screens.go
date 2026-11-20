@@ -81,6 +81,7 @@ type Renderer struct {
 	labels    []string
 	setup     setupRows
 	result    resultTexts
+	countdown countdownText
 }
 
 // NewRenderer builds a renderer for win drawing the screens of pack; load

@@ -2,6 +2,7 @@ package gfx
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/openkakutou/engine/v2/match"
@@ -23,6 +24,8 @@ const (
 	packSetup
 	packVersus
 	packResult
+	packContinue
+	packVictory
 	packError
 )
 
@@ -45,6 +48,10 @@ func packScreenOf(f *game.Flow) packScreen {
 		return packVersus
 	case game.ScreenResult:
 		return packResult
+	case game.ScreenContinue:
+		return packContinue
+	case game.ScreenVictory:
+		return packVictory
 	case game.ScreenError:
 		return packError
 	case game.ScreenMatch:
@@ -85,6 +92,10 @@ func (r *Renderer) drawPack(f *game.Flow, kind packScreen) {
 		r.layoutVersus(f, view, ms)
 	case packResult:
 		r.layoutResult(f, view, ms)
+	case packContinue:
+		r.layoutContinue(f, view, ms)
+	case packVictory:
+		r.layoutVictory(f, view, ms)
 	case packError:
 		r.layoutError(f, view, ms)
 	}
@@ -240,6 +251,37 @@ func (r *Renderer) layoutResult(f *game.Flow, view ui.View, ms int) {
 		Message: r.result.message, Score: r.result.score, Winner: charName(f, int(f.ResultWinner)),
 		WinnerChar: f.Picks[f.ResultWinner], Portraits: r.portraits,
 		Entries: f.ResultItems(), Cursor: f.ResultCursor, ElapsedMs: ms,
+	})
+}
+
+// countdownText is the continue screen's seconds as text, built again only
+// when the second changes.
+type countdownText struct {
+	seconds int
+	text    string
+}
+
+func (c *countdownText) update(seconds int) {
+	if c.text != "" && c.seconds == seconds {
+		return
+	}
+	c.seconds, c.text = seconds, strconv.Itoa(seconds)
+}
+
+// layoutContinue shows the player's character, the question, the seconds left
+// and Yes and No.
+func (r *Renderer) layoutContinue(f *game.Flow, view ui.View, ms int) {
+	r.countdown.update(f.ContinueSeconds())
+	r.layout.Continue(&r.list, view, ui.ContinueState{
+		Message: "Continue?", Countdown: r.countdown.text, Char: f.Picks[0], Portraits: r.portraits,
+		Entries: f.ContinueItems(), Cursor: f.ContinueCursor, ElapsedMs: ms,
+	})
+}
+
+// layoutVictory shows the player's character, who beat the whole ladder.
+func (r *Renderer) layoutVictory(f *game.Flow, view ui.View, ms int) {
+	r.layout.Victory(&r.list, view, ui.VictoryState{
+		Name: charName(f, 0), Message: "Congratulations!", Char: f.Picks[0], Portraits: r.portraits, ElapsedMs: ms,
 	})
 }
 

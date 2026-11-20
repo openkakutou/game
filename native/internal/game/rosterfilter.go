@@ -67,8 +67,16 @@ func (f *Flow) emptyRosterMessage() string {
 	return ""
 }
 
-// RosterNotices lists, for each mode, the names its roster filters give that
-// no installed character or stage has: not fatal, the name just matches
+// finalNames is the ladder's final character of m as a list of at most one name.
+func finalNames(m mode.Mode) []string {
+	if m.Rules.Opponents.Final == "" {
+		return nil
+	}
+	return []string{m.Rules.Opponents.Final}
+}
+
+// RosterNotices lists, for each mode, the names its roster filters and its
+// ladder's final give that no installed character or stage has: not fatal, the name just matches
 // nothing. The host prints them once at startup.
 func RosterNotices(modes []mode.Mode, chars, stages []Entry) []string {
 	var notices []string
@@ -84,6 +92,7 @@ func RosterNotices(modes []mode.Mode, chars, stages []Entry) []string {
 			{"rules.roster.characters.select.exclude", r.Characters.Select.Exclude, "character", chars},
 			{"rules.roster.characters.opponents.include", r.Characters.Opponents.Include, "character", chars},
 			{"rules.roster.characters.opponents.exclude", r.Characters.Opponents.Exclude, "character", chars},
+			{"rules.opponents.final", finalNames(m), "character", chars},
 			{"rules.roster.stages.select.include", r.Stages.Select.Include, "stage", stages},
 			{"rules.roster.stages.select.exclude", r.Stages.Select.Exclude, "stage", stages},
 		}

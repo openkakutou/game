@@ -70,6 +70,20 @@ func TestParse_LadderOpponents_ReadsTheCount(t *testing.T) {
 	}
 }
 
+func TestParse_LadderFinal_ReadsTheBossFolderName(t *testing.T) {
+	m, err := Parse("arcade.jsonc", []byte(strings.Replace(valid, `"count": 8`, `"count": 8, "final": "Boss"`, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Rules.Opponents.Final != "Boss" || m.Rules.Opponents.Count != 8 {
+		t.Errorf("opponents = %+v, want count 8 and final Boss", m.Rules.Opponents)
+	}
+	plain, err := Parse("arcade.jsonc", []byte(valid))
+	if err != nil || plain.Rules.Opponents.Final != "" {
+		t.Errorf("opponents = %+v (%v), want no final when the file has none", plain.Rules.Opponents, err)
+	}
+}
+
 func TestParse_InvalidMode_ReturnsAnErrorNamingFileFieldAndReason(t *testing.T) {
 	cases := []struct {
 		name, from, to, field, reason string
@@ -83,6 +97,9 @@ func TestParse_InvalidMode_ReturnsAnErrorNamingFileFieldAndReason(t *testing.T) 
 		{"one side", `, {"control": "cpu", "characters": 1}`, ``, "rules.sides", "2"},
 		{"bad control", `"control": "cpu"`, `"control": "robot"`, "rules.sides[1].control", "robot"},
 		{"ladder without count", `"kind": "ladder", "count": 8`, `"kind": "ladder"`, "rules.opponents.count", "required"},
+		{"final that is not a string", `"count": 8`, `"count": 8, "final": 3`, "rules.opponents.final", "non-empty string"},
+		{"empty final", `"count": 8`, `"count": 8, "final": ""`, "rules.opponents.final", "non-empty string"},
+		{"final on chosen opponents", `"kind": "ladder", "count": 8`, `"kind": "chosen", "final": "boss"`, "rules.opponents.final", "ladder"},
 		{"future format", `"formatVersion": 1`, `"formatVersion": 2`, "formatVersion", "1"},
 		{"bad side param", `"sides": ["p1"]}`, `"sides": ["p3"]}`, "flow[0].params.sides[0]", "p3"},
 		{"results before the match", `{"screen": "match"}]`, `{"screen": "results"}, {"screen": "match"}]`, "flow[1].screen", "after"},
@@ -141,17 +158,41 @@ func TestParse_JSONCTrailingCommas_AreAccepted(t *testing.T) {
 	}
 }
 
-func TestBuiltIn_ListsVersusThenWatchParsed(t *testing.T) {
+func TestBuiltIn_ListsArcadeVersusThenWatchParsed(t *testing.T) {
 	modes, err := BuiltIn()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(modes) != 2 || modes[0].ID != "versus" || modes[1].ID != "watch" || modes[1].Name != "Watch" {
-		t.Fatalf("modes = %+v, want versus then watch", modes)
+	if len(modes) != 3 || modes[0].ID != "arcade" || modes[1].ID != "versus" || modes[2].ID != "watch" || modes[2].Name != "Watch" {
+		t.Fatalf("modes = %+v, want arcade, versus then watch", modes)
 	}
-	w := modes[1]
+	w := modes[2]
 	if w.Rules.Sides[0].Control != ControlCPU || w.Rules.Sides[1].Control != ControlCPU || len(w.Flow) != 6 || w.Flow[0].Screen != ScreenCharacterSelect {
 		t.Errorf("watch = %+v, want two cpu sides and a 6-step flow starting with character select", w)
+	}
+}
+
+func TestBuiltIn_ArcadeIsALadderOfSixAgainstTheCPUWithContinueAndVictory(t *testing.T) {
+	modes, err := BuiltIn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := modes[0]
+	want := []Step{
+		{Screen: ScreenCharacterSelect, Sides: []string{"p1"}}, {Screen: ScreenVersus}, {Screen: ScreenMatch},
+		{Screen: ScreenContinue}, {Screen: ScreenVictory},
+	}
+	if a.Name != "Arcade" || !reflect.DeepEqual(a.Flow, want) {
+		t.Errorf("arcade = %q, flow %+v, want Arcade and %+v", a.Name, a.Flow, want)
+	}
+	wantRules := Rules{
+		Sides:  [2]Side{{Control: ControlHuman, Characters: 1}, {Control: ControlCPU, Characters: 1}},
+		Rounds: 3, TimeLimitSeconds: 99,
+		Opponents: Opponents{Kind: OpponentsLadder, Count: 6},
+		OnWin:     OutcomeNextOpponent, OnLose: OutcomeContinue,
+	}
+	if !reflect.DeepEqual(a.Rules, wantRules) {
+		t.Errorf("rules = %+v, want %+v", a.Rules, wantRules)
 	}
 }
 

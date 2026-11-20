@@ -1,11 +1,11 @@
 # Game modes
 
-A **mode** is a data file, not code: the sequence of built-in screens a player goes through, and the rules of the matches (roadmap decision `030`). The game ships Versus and Watch (two CPUs fight, the player picks both fighters) built in; further modes (arcade, survival, training) are new files in the same format. A mode cannot script anything: it only combines what the game offers.
+A **mode** is a data file, not code: the sequence of built-in screens a player goes through, and the rules of the matches (roadmap decision `030`). The game ships Arcade (a ladder of CPU opponents), Versus and Watch (two CPUs fight, the player picks both fighters) built in; further modes (survival, training) are new files in the same format. A mode cannot script anything: it only combines what the game offers.
 
 Versus (a mode) is not quick versus: quick versus starts one match straight from the command line, without any menu, as MUGEN and Ikemen GO do (see [command-line.md](command-line.md)).
 
-- Examples: [`native/internal/mode/versus.jsonc`](../native/internal/mode/versus.jsonc), [`native/internal/mode/watch.jsonc`](../native/internal/mode/watch.jsonc)
-- Where the game reads it: the desktop game reads every `.json` or `.jsonc` file of the `modes/` folder in its game folder (folder and extension in any case). It lists them in the main menu, in file-name order ignoring case, then Quit. A file that is not a valid mode is left out and its error (file, field, reason) is printed on stderr, as is a second file with the id of an earlier one. The built-in modes are Versus and Watch: for each one, when no valid mode has its id (`versus`, `watch`), the built-in (the same file as the shipped `modes/versus.jsonc` or `modes/watch.jsonc`) is added after the others, with a notice on stderr, e.g. `modes/watch.jsonc not found or invalid, using the built-in Watch mode`.
+- Examples: [`native/internal/mode/arcade.jsonc`](../native/internal/mode/arcade.jsonc), [`native/internal/mode/versus.jsonc`](../native/internal/mode/versus.jsonc), [`native/internal/mode/watch.jsonc`](../native/internal/mode/watch.jsonc)
+- Where the game reads it: the desktop game reads every `.json` or `.jsonc` file of the `modes/` folder in its game folder (folder and extension in any case). It lists them in the main menu, in file-name order ignoring case, then Quit. A file that is not a valid mode is left out and its error (file, field, reason) is printed on stderr, as is a second file with the id of an earlier one. The built-in modes are Arcade, Versus and Watch: for each one, when no valid mode has its id (`arcade`, `versus`, `watch`), the built-in (the same file as the shipped `modes/arcade.jsonc`, `modes/versus.jsonc` or `modes/watch.jsonc`) is added after the others, with a notice on stderr, e.g. `modes/watch.jsonc not found or invalid, using the built-in Watch mode`.
 - JSON Schema: [`native/internal/mode/mode.schema.json`](../native/internal/mode/mode.schema.json)
 - Loader: `native/internal/mode` (Go, imported by the native game) and `native/cmd/mode-wasm` (the same loader built to WebAssembly for the web game)
 
@@ -19,7 +19,19 @@ flowchart LR
   r -- back --> cs
 ```
 
-The diagram shows Versus: the flow's screens in order, then what follows a match. A ladder mode (arcade) would set `onWin: nextOpponent` to fight the next CPU opponent, and `onLose: continue` to show the continue screen.
+The diagram shows Versus: the flow's screens in order, then what follows a match. Arcade, a ladder, sets `onWin: nextOpponent` and `onLose: continue`:
+
+```mermaid
+flowchart LR
+  cs[characterSelect<br/>side p1] --> vs[versus] --> m[match]
+  m -- "onWin = nextOpponent,<br/>opponents left" --> vs
+  m -- "onWin = nextOpponent,<br/>last opponent" --> v[victory] --> menu[main menu]
+  m -- "onLose = continue" --> c[continue]
+  c -- "Yes" --> m
+  c -- "No or 10 s" --> menu
+```
+
+The diagram shows what follows a match in a ladder mode: the next opponent's VS screen, the victory screen after the last one, the continue screen after a loss, and where each ends. The outcome `gameOver` goes straight to the main menu.
 
 ## File
 
@@ -64,10 +76,20 @@ Title, main menu, options, pause and move list belong to the game itself, not to
 | `timeLimitSeconds` | integer ≥ 0 | Round time limit; `0` means no limit. |
 | `opponents.kind` | `chosen` or `ladder` | Opponents picked on the select screen, or a ladder of CPU opponents. |
 | `opponents.count` | integer ≥ 1 | Ladder length. Required for `ladder`, refused otherwise. |
+| `opponents.final` | non-empty string, optional | Folder name of a character fought after the `count` ladder opponents (a boss). `ladder` only. |
 | `onWin`, `onLose` | `results`, `nextOpponent`, `continue` or `gameOver` | What follows a won or a lost match. |
 | `roster` | object, optional | Which characters and stages the mode shows, see below. Absent: everything. |
 
-The native game does not run the `continue` and `victory` screens, nor the outcomes other than `results`, yet: they show an error screen naming them.
+### Ladder
+
+A mode whose `opponents.kind` is `ladder` draws its ladder once the player has picked (the first `versus` or `match` screen after the `characterSelect`; going back to the select draws it again): `count` characters at random, without repeats, from the opponent pool (`roster.characters.opponents`) less the `final` and less the player's own character, which is fought only when nothing else is left; then the `final`, when it is installed (a `final` that is not is reported on stderr at startup and skipped). A pool with fewer candidates than `count` gives a shorter ladder, and a ladder with nobody to fight shows an error screen. Every fight is on a stage drawn at random among the visible stages (`roster.stages.select`). The game seeds its random source from the clock.
+
+- `onWin: nextOpponent`: the `versus` screen of the next opponent (the `match` screen when the flow has no `versus`), and after the last one the `victory` screen, then the main menu. Without a `victory` step in the flow the mode shows an error screen.
+- `onLose: continue`: the `continue` screen shows the player's character, "Continue?", a 10 second countdown (one `tick` sound each second) and Yes / No, laid out as the screenpack's `continue.json` says (horizontal menus follow `direction: "horizontal"`; left and right choose). Yes fights the same opponent again, on the same stage; No, or the end of the countdown, plays the `gameOver` sound and shows the main menu. Without a `continue` step the mode shows an error screen.
+- `gameOver`: straight to the main menu.
+- The `victory` screen shows the player's character and name and a message for the screenpack's `durationMs` (default 8000), then the main menu; confirm skips it.
+
+The screenpack draws both screens and decides their music (`continue.json` is silent by default) and the `tick` and `gameOver` sounds. The Arcade mode is `onWin: nextOpponent`, `onLose: continue`, a ladder of 6, 3 rounds, 99 seconds and no roster filter; to add a boss, edit the file: set `opponents.final` and hide the boss from the select screen with `roster.characters.select.exclude`.
 
 ### Roster filter
 
@@ -96,7 +118,7 @@ In a list, `include` absent means every name, an `include` that is an empty arra
 }
 ```
 
-A mode that leaves no character (or no stage) on a select list shows an error screen naming the mode and the list, and Enter goes back to the main menu. A name that matches no installed character or stage is not an error: the game prints a notice on stderr once at startup, and the name matches nothing. The native game uses `opponents` through the opponent pool, which the arcade ladder (`opponents.kind: "ladder"`) will draw from; `chosen` modes ignore it.
+A mode that leaves no character (or no stage) on a select list shows an error screen naming the mode and the list, and Enter goes back to the main menu. A name that matches no installed character or stage is not an error: the game prints a notice on stderr once at startup, and the name matches nothing. The native game uses `opponents` through the opponent pool, which a ladder (`opponents.kind: "ladder"`) draws from; `chosen` modes ignore it.
 
 ## Errors
 

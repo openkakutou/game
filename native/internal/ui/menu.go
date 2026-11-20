@@ -23,15 +23,16 @@ type slots struct {
 // noSlots is for a menu whose values all take the menu's valueStyle.
 var noSlots = slots{column: -1}
 
-// menu draws a vertical menu: its first entry is placed by the menu's layout
-// (the pivot of a row as wide as the widest label, on the anchor), and each
-// next one is spacing units below. Labels are aligned inside that width by
-// their style's align, a value is aligned against the point valueOffset away
-// from the reference point of the labels (their normal style's align, so
-// columns do not move with the cursor), and the cursor element is placed
-// inside the active row, behind its text. With visibleEntries, the window of
-// rows moves to keep the cursor in view, centered on it when it can be.
-// shortcut: only the vertical direction; upgrade with the first horizontal menu (options tabs).
+// menu draws a menu: its first entry is placed by the menu's layout (the
+// pivot of a cell as wide as the widest label, on the anchor), and each next
+// one is spacing units further, down for a vertical menu (a cell as high as
+// the spacing) and right for a horizontal one (a cell one line high). Labels
+// are aligned inside that width by their style's align, a value is aligned
+// against the point valueOffset away from the reference point of the labels
+// (their normal style's align, so columns do not move with the cursor), and
+// the cursor element is placed inside the active cell, behind its text. With
+// visibleEntries, the window of entries moves to keep the cursor in view,
+// centered on it when it can be.
 func (l *Layout) menu(dst *DrawList, view View, sc scope, m *screenpack.Menu, rows []Row, cursor int, parent rect, elapsedMs int, sl slots) {
 	normal, ok := l.styled(sc, m.Style, view)
 	if !ok {
@@ -55,9 +56,15 @@ func (l *Layout) menu(dst *DrawList, view View, sc scope, m *screenpack.Menu, ro
 	first := max(0, min(cursor-visible/2, len(rows)-visible))
 	unit := view.unit()
 	pitch := float32(m.Spacing) * unit
-	top := place(parent, &m.Layout, widest, pitch, unit)
+	cellH := pitch
+	stepX, stepY := float32(0), pitch
+	if m.Direction == "horizontal" {
+		cellH = float32(normal.style.Size) * unit
+		stepX, stepY = pitch, 0
+	}
+	top := place(parent, &m.Layout, widest, cellH, unit)
 	for i := first; i < first+visible; i++ {
-		line := rect{top.x, top.y + float32(i-first)*pitch, top.w, pitch}
+		line := rect{top.x + float32(i-first)*stepX, top.y + float32(i-first)*stepY, top.w, top.h}
 		style := normal
 		if i == cursor {
 			style = active
@@ -69,8 +76,8 @@ func (l *Layout) menu(dst *DrawList, view View, sc scope, m *screenpack.Menu, ro
 			style = l.flagged(sc, m, style, view)
 		}
 		af := alignFactor(style.style.Align)
-		style.emit(dst, rows[i].Label, line.x+(line.w-style.width(rows[i].Label))*af, line.y+pitch/2, 1)
-		l.values(dst, view, sc, m, rows[i], i == cursor, line.x+line.w*alignFactor(normal.style.Align), line.y+pitch/2, sl)
+		style.emit(dst, rows[i].Label, line.x+(line.w-style.width(rows[i].Label))*af, line.y+line.h/2, 1)
+		l.values(dst, view, sc, m, rows[i], i == cursor, line.x+line.w*alignFactor(normal.style.Align), line.y+line.h/2, sl)
 	}
 }
 

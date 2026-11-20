@@ -90,3 +90,20 @@ func TestSchema_RosterKeysMatchThePackage(t *testing.T) {
 		t.Errorf("filter keys = %v", got)
 	}
 }
+
+// The opponents rule's keys, stated in the schema and in this package.
+func TestSchema_OpponentsKeysMatchThePackage(t *testing.T) {
+	var s map[string]any
+	if err := json.Unmarshal(mustRead(t, "mode.schema.json"), &s); err != nil {
+		t.Fatal(err)
+	}
+	opponents := s["properties"].(map[string]any)["rules"].(map[string]any)["properties"].(map[string]any)["opponents"].(map[string]any)
+	var got []string
+	for k := range opponents["properties"].(map[string]any) {
+		got = append(got, k)
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, []string{"count", "final", "kind"}) {
+		t.Errorf("opponents keys = %v", got)
+	}
+}

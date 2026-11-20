@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-//go:embed versus.jsonc watch.jsonc
+//go:embed arcade.jsonc versus.jsonc watch.jsonc
 var builtinFiles embed.FS
 
 // builtinNames are the built-in mode files, in file-name order.
-var builtinNames = []string{"versus.jsonc", "watch.jsonc"}
+var builtinNames = []string{"arcade.jsonc", "versus.jsonc", "watch.jsonc"}
 
 // BuiltIn returns the built-in modes, the embedded files, in file-name order.
 func BuiltIn() ([]Mode, error) {

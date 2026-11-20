@@ -270,28 +270,6 @@ func TestMatchSetup_RulesTimeMissingFromOptionsIsOfferedSortedAndPreselected(t *
 	}
 }
 
-func TestMatchEnd_UnsupportedOutcomeLandsOnErrorScreenNamingIt(t *testing.T) {
-	f := flowFromSrc(t, modeSrc(steps(stepSelect, stepStage, stepMatch, stepResult), "human", "human", 1, 99, "nextOpponent", "results"))
-	for range 3 {
-		f.Navigate(NavConfirm)
-	}
-	finishMatch(t, f, match.SideP1)
-	if f.Screen != ScreenError || !strings.Contains(f.Message, "nextOpponent is not supported yet") {
-		t.Errorf("screen=%v message=%q", f.Screen, f.Message)
-	}
-}
-
-func TestMatchEnd_LostMatchFollowsOnLose(t *testing.T) {
-	f := flowFromSrc(t, modeSrc(steps(stepSelect, stepStage, stepMatch, stepResult), "human", "human", 1, 99, "results", "gameOver"))
-	for range 3 {
-		f.Navigate(NavConfirm)
-	}
-	finishMatch(t, f, match.SideP2)
-	if f.Screen != ScreenError || !strings.Contains(f.Message, "gameOver is not supported yet") {
-		t.Errorf("screen=%v message=%q, want the onLose outcome", f.Screen, f.Message)
-	}
-}
-
 func TestMatchEnd_ResultsOutcomeWithoutAResultsStepIsAnError(t *testing.T) {
 	f := flowFromSrc(t, modeSrc(steps(stepSelect, stepStage, stepMatch), "human", "human", 1, 99, "results", "results"))
 	for range 3 {
@@ -304,7 +282,7 @@ func TestMatchEnd_ResultsOutcomeWithoutAResultsStepIsAnError(t *testing.T) {
 }
 
 func TestErrorInsideAMode_ConfirmReturnsToTheMainMenuInsteadOfQuitting(t *testing.T) {
-	f := flowFromSrc(t, modeSrc(steps(stepSelect, stepStage, stepMatch, stepResult), "human", "human", 1, 99, "nextOpponent", "results"))
+	f := flowFromSrc(t, modeSrc(steps(stepSelect, stepStage, stepMatch), "human", "human", 1, 99, "results", "results"))
 	for range 3 {
 		f.Navigate(NavConfirm)
 	}
@@ -337,7 +315,7 @@ func TestWatchMode_BothSidesCPUDrivenWithoutAPlayer2RowAndPreselectedFromTheRule
 	fsys := os.DirFS(content)
 	chars, _ := DiscoverCharacters(fsys, "chars")
 	stages, _ := DiscoverStages(fsys, "stages")
-	f := inMode(t, NewFlow(fsys, chars, stages, DefaultLoader(fsys), builtIns[1:]))
+	f := inMode(t, NewFlow(fsys, chars, stages, DefaultLoader(fsys), builtIns[2:]))
 	for range 3 {
 		f.Navigate(NavConfirm) // P1 pick, P2 pick, stage
 	}

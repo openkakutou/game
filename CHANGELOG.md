@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The desktop game has an Arcade mode: pick a character and fight a ladder of random CPU opponents on random stages, with a continue countdown after a loss (Yes fights the same opponent again) and a victory screen after the last one; a mode can name a final boss with `opponents.final`.
 - Game modes can choose which characters and stages their select screens show, and which characters a CPU opponent can be (for example a boss hidden from selection); a name that matches no installed folder is reported without stopping the game.
 - The desktop game's pause menu has a Move List: the paused player's character's Ikemen GO move list with button icons, or its commands when it has none; left and right switch to the other character.
 - The desktop game has a Watch mode: pick two characters and a stage, and watch them fight each other under CPU control.

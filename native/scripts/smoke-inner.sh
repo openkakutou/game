@@ -20,7 +20,7 @@ shot() { import -window root "$out/$1.png"; }
 key() { xdotool key --clearmodifiers "$@"; sleep 0.4; }
 shot 0a-title
 key Return; shot 0b-main-menu    # title -> main menu
-key Return                       # Versus, the first mode of the fixture
+key Down Return                  # Versus: Arcade, Versus, Watch in file-name order
 shot 1-select-p1
 key Return; shot 2-select-p2
 key Right Return; shot 3-stage
@@ -69,7 +69,7 @@ done
 ./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 &
 pid=$!
 sleep 2
-key Return; key Return                     # title, Versus
+key Return; key Down Return                # title, Versus (after Arcade)
 key Return; key Right Return; key Return   # P1, P2, stage
 key Up Right; shot 9-setup-cpu             # Player 2 row -> CPU
 key Down Return                            # Start
@@ -88,7 +88,7 @@ cmp -s "$out/5-match.png" "$out/10-match-cpu.png" && { echo "CPU did not move"; 
 ./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/watch.log" 2>&1 &
 pid=$!
 sleep 2
-key Return; key Down; key Return           # title, Watch
+key Return; key Down Down Return           # title, Watch
 key Return; key Right Return; key Return   # P1, P2, stage
 key Return                                 # Start (no Player 2 row)
 key Return                                 # skip the VS screen
@@ -98,6 +98,24 @@ kill -0 $pid
 kill $pid; wait $pid 2>/dev/null || true
 cmp -s "$out/28-watch-match-a.png" "$out/29-watch-match-b.png" && { echo "the two CPUs did not move in Watch"; exit 1; }
 ! grep -q "built-in Watch mode" "$out/watch.log" || { echo "Watch was not read from modes/:"; cat "$out/watch.log"; exit 1; }
+
+# 1b3. Arcade: the first mode of the main menu (Arcade, Versus, Watch in
+# file-name order). The player picks, the VS screen shows the first opponent
+# (the fixture has two characters, so the ladder is the rival alone), a key
+# skips it and the match starts.
+./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/arcade.log" 2>&1 &
+pid=$!
+sleep 2
+key Return; key Return                     # title, Arcade
+shot 30-arcade-select
+key Return; shot 31-arcade-versus          # fighter picked: no stage select, no setup, the VS screen
+key Return                                 # skip the VS screen
+sleep 2; shot 32-arcade-match
+kill -0 $pid
+kill $pid; wait $pid 2>/dev/null || true
+! grep -q "built-in Arcade mode" "$out/arcade.log" || { echo "the Arcade mode was not read from modes/:"; cat "$out/arcade.log"; exit 1; }
+sky=$(convert "$out/32-arcade-match.png" -format '%[hex:u.p{200,300}]' info:)
+[ "$sky" = "5A96E6" ] || { echo "the arcade match did not start on the stage: top-left pixel is $sky, want 5A96E6"; exit 1; }
 
 # 1c. Options: the first launch wrote the default settings files; Options >
 # Audio, Music one step down, Back, Quit must save config/audio.json with it.
@@ -109,7 +127,7 @@ grep -q '"music": 100' "$content/config/audio.json" || { echo "default audio.jso
 pid=$!
 sleep 2
 key Return                       # title -> main menu
-key Down Down Return; shot 13-options # Options (after Versus, Watch)
+key Down Down Down Return; shot 13-options # Options (after Arcade, Versus, Watch)
 key Down Return; shot 14-options-audio
 key Down Left; shot 15-options-audio-music
 key Escape Escape                # leave Audio (saves), leave Options
@@ -128,7 +146,7 @@ grep -q '"a": "F"' "$content/config/controls.json" || { echo "default controls.j
 pid=$!
 sleep 2
 key Return                       # title -> main menu
-key Down Down Return             # Options (after Versus, Watch)
+key Down Down Down Return           # Options (after Arcade, Versus, Watch)
 key Down Down Down Return; shot 16-options-controls
 key Return; shot 17-controls-player1
 key Down Down Down Down Return; shot 18-controls-waiting   # the row of "a"
@@ -143,7 +161,7 @@ sed -n '/"linux"/,/"p2"/p' "$content/config/controls.json" | grep -q '"a": "U"' 
 ./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/rebound.log" 2>&1 &
 pid=$!
 sleep 2
-key Return; key Return                     # title, Versus
+key Return; key Down Return                # title, Versus (after Arcade)
 key Return; key Right Return; key Return   # P1, P2, stage
 key Return                                 # start
 key Return                                 # skip the VS screen
@@ -166,7 +184,7 @@ cp -r testdata/reference/common "$portraits/common"   # his states need common1.
 ./dist/openkakutou-linux-amd64 -content "$portraits" -width 960 -height 720 >"$out/portraits.log" 2>&1 &
 pid=$!
 sleep 2
-key Return; key Return                     # title, Versus: the select, on the fighter
+key Return; key Down Return                # title, Versus: the select, on the fighter
 shot 21-select-no-portrait
 key Right; shot 22-select-portrait         # Kung Fu Man
 # 1e2. Move list: Kung Fu Man (no movelist file) on both sides; the pause menu's
@@ -204,7 +222,7 @@ convert -size 8x8 xc:'#204060' "$alt/screenpacks/alt/images/background.png"
 pid=$!
 sleep 2
 key Return                       # title -> main menu
-key Down Down Return             # Options (after Versus, Watch)
+key Down Down Down Return           # Options (after Arcade, Versus, Watch)
 key Down Down Down Down Return; shot 23-appearance-default   # Appearance, drawn with the default pack
 key Right; shot 24-appearance-preview-alt                    # Screenpack: alt
 key Down; shot 25-appearance-lifebar-sample                  # Lifebar row: the sample
@@ -252,7 +270,7 @@ bar=$(convert "$out/12-lifebar.png" -format '%[hex:u.p{150,40}]' info:)
 # gradient background (#1A1826 at 200x100, not the old flat #121420) and the
 # hundreds of colours of anti-aliased text; the pause menu, drawn over the
 # frozen match, has the same colour count (the old one had about 26).
-for shot_name in 1-select-p1 2-select-p2 3-stage 13-options 14-options-audio 15-options-audio-music 16-options-controls 17-controls-player1 18-controls-waiting 19-controls-bound 4-setup 4b-versus 9-setup-cpu; do
+for shot_name in 1-select-p1 2-select-p2 3-stage 13-options 14-options-audio 15-options-audio-music 16-options-controls 17-controls-player1 18-controls-waiting 19-controls-bound 4-setup 4b-versus 9-setup-cpu 31-arcade-versus; do
   bg=$(convert "$out/$shot_name.png" -format '%[hex:u.p{200,100}]' info:)
   [ "$bg" = "1A1826" ] || { echo "$shot_name: the screenpack background is missing: pixel is $bg, want 1A1826"; exit 1; }
   [ "$(identify -format %k "$out/$shot_name.png")" -gt 200 ] || { echo "$shot_name: too few colours for a screenpack screen"; exit 1; }

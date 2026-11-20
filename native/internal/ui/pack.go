@@ -314,6 +314,10 @@ func screenBase(s *screenpack.Screens, screen string) *screenpack.Screen {
 		return &s.CharacterSelect.Screen
 	case "stageSelect":
 		return &s.StageSelect.Screen
+	case "continue":
+		return &s.Continue.Screen
+	case "victory":
+		return &s.Victory.Screen
 	case "error":
 		return &s.Error.Screen
 	}
@@ -341,6 +345,8 @@ func screenMenu(s *screenpack.Screens, screen string) *screenpack.Menu {
 		return s.MatchSetup.Menu
 	case "results":
 		return s.Results.Menu
+	case "continue":
+		return s.Continue.Menu
 	}
 	return nil
 }
@@ -360,6 +366,19 @@ func (p *Pack) MoveListWindow() int {
 		return 0
 	}
 	return list.VisibleLines
+}
+
+// defaultVictoryMs is the format's own default for the victory screen's
+// durationMs, which the library leaves unset when the file omits it.
+const defaultVictoryMs = 8000
+
+// VictoryDurationMs is how long the victory screen shows before the game
+// returns to the main menu.
+func (p *Pack) VictoryDurationMs() int {
+	if ms := p.resolved.Screens.Victory.DurationMs; ms != nil {
+		return *ms
+	}
+	return defaultVictoryMs
 }
 
 // SelectColumns is how many cells a row of the character select grid has.

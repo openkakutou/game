@@ -25,7 +25,7 @@ func titleFlow(t *testing.T) *game.Flow {
 	if err != nil {
 		t.Fatal(err)
 	}
-	versus := builtins[0] // versus.jsonc, first in file-name order
+	versus := builtins[1] // versus.jsonc, second in file-name order after arcade.jsonc
 	return game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys), []mode.Mode{versus})
 }
 

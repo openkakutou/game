@@ -1,0 +1,33 @@
+// Arcade: one fighter against a ladder of CPU opponents (item 044, decision
+// 027). The player picks a character; the game draws `count` opponents at
+// random, without repeats, from the opponent pool (roster.characters.opponents)
+// less the player's own character, and a random stage for each fight. A win
+// leads to the next opponent and, after the last, the victory screen; a loss
+// shows the continue countdown, whose Yes fights the same opponent again.
+// To add a boss, name it in opponents.final and hide it from the select screen:
+//   "opponents": { "kind": "ladder", "count": 6, "final": "boss" }
+//   "roster": { "characters": { "select": { "exclude": ["boss"] } } }
+{
+  "$schema": "mode.schema.json",
+  "formatVersion": 1,
+  "id": "arcade",
+  "name": "Arcade",
+  "flow": [
+    { "screen": "characterSelect", "params": { "sides": ["p1"] } },
+    { "screen": "versus" },
+    { "screen": "match" },
+    { "screen": "continue" }, // after a loss
+    { "screen": "victory" } // after the last opponent
+  ],
+  "rules": {
+    "sides": [
+      { "control": "human", "characters": 1 },
+      { "control": "cpu", "characters": 1 }
+    ],
+    "rounds": 3,
+    "timeLimitSeconds": 99,
+    "opponents": { "kind": "ladder", "count": 6 },
+    "onWin": "nextOpponent",
+    "onLose": "continue"
+  }
+}
