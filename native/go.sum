@@ -20,6 +20,10 @@ github.com/openkakutou/engine/v2 v2.29.0 h1:XtzMvgpwpCdqSQG4GH1W+1FrJ5/a6WYdQjqQ
 github.com/openkakutou/engine/v2 v2.29.0/go.mod h1:Gj1EFQyI3dEvV2dZ8hYIxelKCKOYUfN6E9oyIJ4I2rw=
 github.com/openkakutou/engine/v2 v2.31.0 h1:rfaA7jqX6QAWfYosGUSlqcSCYlE7eZxaNNgE1kEHD2Q=
 github.com/openkakutou/engine/v2 v2.31.0/go.mod h1:AuBpF/y3xnM5TrV4g/DxpUyGbUwIMri5j5hPiVgX7is=
+github.com/openkakutou/engine/v2 v2.33.0 h1:t/+4dnHR6x3sDhWPruTLgY+Evq8wNYuaa3jL+OT6f9k=
+github.com/openkakutou/engine/v2 v2.33.0/go.mod h1:AuBpF/y3xnM5TrV4g/DxpUyGbUwIMri5j5hPiVgX7is=
+github.com/openkakutou/engine/v2 v2.34.0 h1:rrwuwOAhJfXkOTYNXCC9KeK3pRMZzcxmu5MhYGGQ+nE=
+github.com/openkakutou/engine/v2 v2.34.0/go.mod h1:AuBpF/y3xnM5TrV4g/DxpUyGbUwIMri5j5hPiVgX7is=
 github.com/openkakutou/fnt v0.2.0 h1:ZLMWv1eX8vSGkSOEz+634l9sCxPCCak3n5dihrJVP0A=
 github.com/openkakutou/fnt v0.2.0/go.mod h1:3Doe0iB5tRXZDPA6/q02zWDiL4caJ70qK7vBj+HAITM=
 github.com/openkakutou/screenpack v0.7.0 h1:+AUoBS1hR6ldMlHCKLSwkp+YM8DSgGelhTBia8OSdcs=

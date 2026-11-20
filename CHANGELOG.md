@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- In the desktop game, attacks that start before they reach (sweeps, long-reaching moves) now hit, knocked-down fighters fall, lie down and get up by themselves, as in Ikemen GO (engine v2.34.0).
 - In the desktop game, fighters turn to face an opponent who gets behind them, hits push the opponent back and drive their falls, and characters' common states can make them unhittable, change the damage they take or block walking and jumping, as in Ikemen GO (engine v2.31.0).
 - In the desktop game, each character uses its own life, gravity and ground friction from its files, as in Ikemen GO; the life bars measure its own life, and -p1.life/-p2.life are capped by it.
 - Fighters can no longer walk off screen: as in Ikemen GO, the camera is part of the match and keeps them between the screen edges, with the stage's own margins.
