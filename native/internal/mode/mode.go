@@ -277,6 +277,13 @@ func (v *validator) flow(x any) []Step {
 		if params, ok := obj["params"]; ok {
 			step.Sides = v.params(join(path, "params"), step.Screen, params)
 		}
+		if step.Screen == ScreenCharacterSelect && step.Sides == nil {
+			v.fail(join(path, "params.sides"), "is required on a characterSelect screen")
+		}
+		// The results screen shows the match just played.
+		if step.Screen == ScreenResults && !slices.ContainsFunc(steps, func(s Step) bool { return s.Screen == ScreenMatch }) {
+			v.fail(join(path, "screen"), `"results" must come after a "match" screen`)
+		}
 		steps = append(steps, step)
 	}
 	if !slices.ContainsFunc(steps, func(s Step) bool { return s.Screen == ScreenMatch }) {

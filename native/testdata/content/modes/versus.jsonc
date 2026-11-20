@@ -1,0 +1,30 @@
+// Versus: the first built-in mode (roadmap decision 030). Not to be
+// confused with quick versus, which starts a match straight from the
+// command line (docs/command-line.md).
+// Two players pick one character each, a stage and the match settings,
+// fight a best-of-N match, then see the results and may rematch.
+{
+  "$schema": "mode.schema.json",
+  "formatVersion": 1,
+  "id": "versus",
+  "name": "Versus",
+  "flow": [
+    { "screen": "characterSelect", "params": { "sides": ["p1", "p2"] } },
+    { "screen": "stageSelect" },
+    { "screen": "matchSetup" },
+    { "screen": "versus" },
+    { "screen": "match" },
+    { "screen": "results" } // rematch or back to selection
+  ],
+  "rules": {
+    "sides": [
+      { "control": "human", "characters": 1 },
+      { "control": "humanOrCpu", "characters": 1 }
+    ],
+    "rounds": 3,
+    "timeLimitSeconds": 99,
+    "opponents": { "kind": "chosen" },
+    "onWin": "results",
+    "onLose": "results"
+  }
+}

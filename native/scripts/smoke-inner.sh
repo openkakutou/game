@@ -34,6 +34,7 @@ kill $pid; wait $pid 2>/dev/null || true
 grep -q '^audio: dummy$' "$out/run.log" || { echo "mixer did not open on the dummy driver:"; cat "$out/run.log"; exit 1; }
 ! grep -qE 'audio: (cannot|some|music|could not)' "$out/run.log" || { echo "audio warning during the match:"; cat "$out/run.log"; exit 1; }
 grep -q 'audio: skipping sound 5,0' "$out/run.log" || { echo "PlaySnd never reached the audio player:"; cat "$out/run.log"; exit 1; }
+! grep -q "built-in Versus mode" "$out/run.log" || { echo "the Versus mode was not read from modes/:"; cat "$out/run.log"; exit 1; }
 
 # The stage's own sky sprite (#5A96E6) must be drawn, not the flat fallback backdrop.
 sky=$(convert "$out/5-match.png" -format '%[hex:u.p{200,300}]' info:)

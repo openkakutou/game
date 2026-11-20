@@ -5,6 +5,7 @@ A **mode** is a data file, not code: the sequence of built-in screens a player g
 Versus (a mode) is not quick versus: quick versus starts one match straight from the command line, without any menu, as MUGEN and Ikemen GO do (see [command-line.md](command-line.md)).
 
 - Example: [`native/internal/mode/versus.jsonc`](../native/internal/mode/versus.jsonc)
+- Where the game reads it: the desktop game plays Versus from `modes/versus.jsonc` in its game folder; when that file is missing or invalid it prints why on stderr and uses its built-in copy (the same file).
 - JSON Schema: [`native/internal/mode/mode.schema.json`](../native/internal/mode/mode.schema.json)
 - Loader: `native/internal/mode` (Go, imported by the native game) and `native/cmd/mode-wasm` (the same loader built to WebAssembly for the web game)
 
@@ -41,12 +42,12 @@ Each step is `{ "screen": <type>, "params": { ... } }`; `params` is optional.
 
 | `screen` | Shows | `params` |
 |---|---|---|
-| `characterSelect` | The character select screen. | `sides`: the sides that pick here, `["p1"]`, `["p2"]` or `["p1", "p2"]`. |
+| `characterSelect` | The character select screen. | `sides` (required): the sides that pick here, `["p1"]`, `["p2"]` or `["p1", "p2"]`. |
 | `stageSelect` | The stage select screen. | none |
 | `matchSetup` | Rounds, time limit and who controls player 2, when the rules leave it open. | none |
 | `versus` | The VS screen before a match. | none |
 | `match` | The fight. | none |
-| `results` | The match result, with rematch or back to selection. | none |
+| `results` | The match result, with rematch or back to selection. Must come after a `match`. | none |
 | `continue` | The continue countdown after a loss. | none |
 | `victory` | The ending after the last ladder opponent. | none |
 

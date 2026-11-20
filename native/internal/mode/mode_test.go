@@ -82,6 +82,8 @@ func TestParse_InvalidMode_ReturnsAnErrorNamingFileFieldAndReason(t *testing.T) 
 		{"ladder without count", `"kind": "ladder", "count": 8`, `"kind": "ladder"`, "rules.opponents.count", "required"},
 		{"future format", `"formatVersion": 1`, `"formatVersion": 2`, "formatVersion", "1"},
 		{"bad side param", `"sides": ["p1"]}`, `"sides": ["p3"]}`, "flow[0].params.sides[0]", "p3"},
+		{"results before the match", `{"screen": "match"}]`, `{"screen": "results"}, {"screen": "match"}]`, "flow[1].screen", "after"},
+		{"character select without sides", `{"screen": "characterSelect", "params": {"sides": ["p1"]}}`, `{"screen": "characterSelect"}`, "flow[0].params.sides", "required"},
 		{"param on a screen without params", `{"screen": "match"}`, `{"screen": "match", "params": {"x": 1}}`, "flow[1].params.x", "unknown"},
 	}
 	for _, c := range cases {
