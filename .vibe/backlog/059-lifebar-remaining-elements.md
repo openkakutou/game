@@ -6,7 +6,7 @@ depends_on: [039]
 
 ## Description
 Item 039 draws a lifebar's `[Lifebar]` and `[Powerbar]` bars (bg0-2, mid, front, top, range, layerno, facing, scale), places `[Name]` and `[Time]` in the built-in font, and steps the trailing fill like Ikemen GO. Still missing, each checked against Ikemen GO's `fightscreen.go` (commit 54d4148a):
-- `[Face]`, `[Round]` (round and KO announcements, sounds), `[WinIcon]`, `[Combo]`, `[Action]`: the built-in round banner stands in, and win counts are not shown with a lifebar.
+- `[Face]`, `[Round]` (round and KO announcements, sounds), `[WinIcon]`, `[Combo]` (its counter in the lifebar fonts, from item 049), `[Action]`: the built-in round banner stands in, and win counts are not shown with a lifebar.
 - Per-value element variants (`front.<n>`, `bg0.<n>`, `red`, `value`, `warn`, `shift`, `scalefill`, `palfx`), `vfacing`, `window`, `doubleres`.
 - Team layouts (`[Simul Lifebar]`, `[Turns Lifebar]`, `[Tag …]`), guard and stun bars, the lifebar's own `.snd` and fightfx.
 - Ikemen GO's `-fight <def>` command-line option (backlog 058).
