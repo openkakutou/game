@@ -12,7 +12,6 @@ Left out of item 030 (ADR 025), each marked `shortcut:` in `native/internal/ui`:
 - character select `random` cell and palette text not drawn — need a random pick and a palette choice in the flow (`select.go`)
 - stage preview is a plain panel (`select.go`)
 - wrapped error message line spacing is OpenKakutou's (format has none) (`error.go`)
-- the Appearance page's sample lifebar is drawn at the lifebar's own HUD position and overlaps the page heading
 - first select frame decodes up to a screenful of portraits at once (big rosters: spread over frames)
 
 ## Acceptance Criteria
@@ -20,3 +19,4 @@ Left out of item 030 (ADR 025), each marked `shortcut:` in `native/internal/ui`:
 
 ## Notes
 - 2026-11-20: done — rect `radius` (rounded corners, capped at half the short side), tiled image `scroll`, menu music `loopStartMs` (the track plays once, then restarts from the loop point).
+- 2026-11-20: the Appearance page's sample lifebar is drawn in the page's lower half, no longer over the heading.

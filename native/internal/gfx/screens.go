@@ -127,6 +127,9 @@ func (r *Renderer) Draw(f *game.Flow) {
 	}
 }
 
+// sampleShift moves the sample lifebar below the appearance page's menu.
+const sampleShift = VH / 2
+
 // drawSample draws the candidate lifebar over the appearance screen, its
 // sprites uploaded on first use.
 func (r *Renderer) drawSample(f *game.Flow, hud *game.HUDLifebar) {
@@ -135,7 +138,11 @@ func (r *Renderer) drawSample(f *game.Flow, hud *game.HUDLifebar) {
 		r.sample = newLifebarHUD(hud, f.FS)
 	}
 	ticks := int(time.Since(r.packSince).Milliseconds()) * game.TickRateHz / 1000
+	// The lifebar sits at the top in a match; on the page it would cover the
+	// heading, so it is shown in the empty lower half.
+	r.win.BeginShift(sampleShift)
 	r.sample.drawSample(r.win, ticks)
+	r.win.EndShift()
 }
 
 func (r *Renderer) releaseSample() {

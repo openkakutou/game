@@ -46,6 +46,8 @@ type Window struct {
 	// view is the letterboxed VWxVH viewport in window pixels (x, y, w, h).
 	view  [4]int32
 	verts []float32
+	// shiftY is the vertical offset BeginShift applies, which Clip follows.
+	shiftY float32
 	// round is RoundRect's reused triangle buffer.
 	round  []float32
 	nverts int
@@ -275,6 +277,7 @@ func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 // Clip limits drawing to the virtual rectangle x, y, wd, ht until NoClip.
 func (w *Window) Clip(x, y, wd, ht float32) {
 	w.Flush()
+	y += w.shiftY
 	sx := float32(w.view[2]) / VW
 	sy := float32(w.view[3]) / VH
 	px := w.view[0] + int32(x*sx)
@@ -309,4 +312,20 @@ func (w *Window) SavePNG(path string) error {
 		return fmt.Errorf("capture path must end in .png")
 	}
 	return png.Encode(f, img)
+}
+
+// BeginShift moves everything drawn until EndShift down by dy virtual
+// pixels, clips included.
+func (w *Window) BeginShift(dy float32) {
+	w.Flush()
+	gl.PushMatrix()
+	gl.Translatef(0, dy, 0)
+	w.shiftY = dy
+}
+
+// EndShift ends BeginShift.
+func (w *Window) EndShift() {
+	w.Flush()
+	gl.PopMatrix()
+	w.shiftY = 0
 }

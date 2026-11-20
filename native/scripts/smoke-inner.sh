@@ -262,8 +262,12 @@ before=$(convert "$out/23-appearance-default.png" -format '%[hex:u.p{200,100}]' 
 preview=$(convert "$out/24-appearance-preview-alt.png" -format '%[hex:u.p{200,100}]' info:)
 [ "$before" = "1A1826" ] || { echo "23-appearance-default: the default pack's background is missing: pixel is $before, want 1A1826"; exit 1; }
 [ "$preview" != "$before" ] || { echo "the preview did not draw the alt screenpack: pixel is still $preview"; exit 1; }
-sample=$(convert "$out/25-appearance-lifebar-sample.png" -format '%[hex:u.p{310,80}]' info:)
+# The sample is drawn in the page's lower half (half the screen lower than
+# in a match: 360 px at 720), not over the page heading.
+sample=$(convert "$out/25-appearance-lifebar-sample.png" -format '%[hex:u.p{310,440}]' info:)
 [ "$sample" = "FAD23C" ] || { echo "the sample lifebar is not drawn: pixel is $sample, want FAD23C"; exit 1; }
+heading=$(convert "$out/25-appearance-lifebar-sample.png" -format '%[hex:u.p{310,80}]' info:)
+[ "$heading" != "FAD23C" ] || { echo "the sample lifebar still covers the page heading"; exit 1; }
 applied=$(convert "$out/26-options-after-alt.png" -format '%[hex:u.p{200,100}]' info:)
 [ "$applied" = "$preview" ] || { echo "the applied pack does not look like its preview: $applied vs $preview"; exit 1; }
 ! grep -q 'alt' "$out/appearance.log" || { echo "the alt screenpack raised a notice:"; cat "$out/appearance.log"; exit 1; }
