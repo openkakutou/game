@@ -98,14 +98,14 @@ func tickUntil(t *testing.T, f *game.Flow, done func() bool) {
 	}
 }
 
-func TestNew_OpensMixerWithStereo44kAnd16Channels(t *testing.T) {
+func TestNew_OpensMixerWithStereo44kAnd32FighterChannels(t *testing.T) {
 	p, warns := newPlayer(t)
 	freq, _, ch, _, err := mix.QuerySpec()
 	if err != nil || freq != 44100 || ch != 2 {
 		t.Errorf("spec = %d Hz, %d ch, err %v; want 44100 Hz, 2 ch", freq, ch, err)
 	}
-	if n := mix.AllocateChannels(-1); n != 20 { // 16 for the fighters, 4 for the menu sounds
-		t.Errorf("channels = %d, want 20", n)
+	if n := mix.AllocateChannels(-1); n != 36 { // 32 for the fighters (Ikemen GO WavChannels), 4 for the menu sounds
+		t.Errorf("channels = %d, want 36", n)
 	}
 	if len(*warns) != 0 {
 		t.Errorf("warnings on a healthy open: %v", *warns)
@@ -351,19 +351,44 @@ func TestUpdate_RematchWithAnotherSampleBankPlaysTheNewSampleNotTheCachedOne(t *
 	}
 }
 
-func TestUpdate_EffectsBeyondSixteenChannelsAreDroppedSilently(t *testing.T) {
+func TestUpdate_EffectsBeyondThePoolCutTheOldestSilently(t *testing.T) {
 	p, warns := newPlayer(t)
 	f := matchFlow(t)
 	withSample(f, 0)
-	attackFrames(p, f, 150) // one cue per attack, the 1 s sample outlives them all
-	if n := mix.Playing(-1); n != 16 {
-		t.Errorf("playing channels = %d, want 16", n)
+	attackFrames(p, f, 300) // one cue per attack, the 1 s sample outlives them all
+	if n := mix.Playing(-1); n > mixChannels {
+		t.Errorf("playing channels = %d, want at most %d", n, mixChannels)
 	}
-	if p.dropped < 1 {
-		t.Errorf("dropped = %d, want at least one cue refused for lack of a channel", p.dropped)
+	if p.started <= mixChannels {
+		t.Fatalf("test setup: %d effects started, want more than the %d channels", p.started, mixChannels)
+	}
+	if p.dropped != 0 {
+		t.Errorf("dropped = %d, want 0: as Ikemen GO, a new effect cuts the oldest one", p.dropped)
 	}
 	if len(*warns) != 0 {
-		t.Errorf("dropping an effect must be silent, got %v", *warns)
+		t.Errorf("cutting an effect must be silent, got %v", *warns)
+	}
+}
+
+func TestUpdate_SameChannelCutsTheFightersPreviousSound(t *testing.T) {
+	p, _ := newPlayer(t)
+	f := matchFlow(t)
+	withSample(f, 0)
+	c := game.Cue{Side: 0, Group: 5, Sample: 0, Channel: 0}
+	p.playCue(f, c)
+	p.playCue(f, c)
+	if n := mix.Playing(-1); n != 1 {
+		t.Errorf("playing channels = %d, want 1: channel 0 is cut, not doubled", n)
+	}
+	c.LowPriority = true
+	p.playCue(f, c)
+	if p.dropped != 1 {
+		t.Errorf("dropped = %d, want 1: lowpriority waits for the busy channel", p.dropped)
+	}
+	c.Channel, c.LowPriority = -1, false
+	p.playCue(f, c)
+	if n := mix.Playing(-1); n != 2 {
+		t.Errorf("playing channels = %d, want 2: channel -1 never cuts", n)
 	}
 }
 

@@ -15,13 +15,17 @@ type Cue struct {
 	// Common is true for an F-prefixed PlaySnd: the sample is read from
 	// common/common.snd, not from the character's own sounds.
 	Common bool
+	// Channel is PlaySnd's channel, -1 when absent; LowPriority keeps a busy
+	// channel playing instead of cutting it (see RequestSlot).
+	Channel     int
+	LowPriority bool
 }
 
 // queueCues appends one tick's PlaySnd events, side 0 first.
 func (m *Match) queueCues(sounds [2][]evaluator.SoundEvent) {
 	for side, evs := range sounds {
 		for _, e := range evs {
-			m.cues = append(m.cues, Cue{Side: match.Side(side), Group: e.Group, Sample: e.Sample, Common: e.Common})
+			m.cues = append(m.cues, Cue{Side: match.Side(side), Group: e.Group, Sample: e.Sample, Common: e.Common, Channel: e.Channel, LowPriority: e.LowPriority})
 		}
 	}
 }

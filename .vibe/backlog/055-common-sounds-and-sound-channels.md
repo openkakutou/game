@@ -11,9 +11,10 @@ engine v2.18.0 sound events say where a sound comes from and how it uses channel
 🔒 MUST: as in Ikemen GO (roadmap decision `038`).
 
 ## Acceptance Criteria
-- [ ] A common sound plays from `common/`. A missing common file is silence plus one warning, not a crash
+- [x] A common sound plays from `common/`. A missing common file is silence plus one warning, not a crash
 - [ ] Channel interruption and `lowPriority` behave as above, in the native and web builds
 - [ ] Checked in the real game with the fidelity video
 
 ## Notes
 Shipping a common sound file is still game#038 (licence). Found by engine#040 (2026-11-19).
+- 2026-11-20: native done — common sounds (with game#038) and channel/`lowPriority` rules (decision 029, 32-channel pool). Left: the web build (its audio module still ignores `common`, `channel` and `lowPriority`) and the fidelity-video check.

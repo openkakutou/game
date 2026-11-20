@@ -20,8 +20,8 @@ import (
 
 const (
 	sampleRate   = 44100
-	mixChannels  = 16 // maximum simultaneous fighter effects
-	menuChannels = 4  // maximum simultaneous menu sounds
+	mixChannels  = game.WavChannels // maximum simultaneous fighter effects, Ikemen GO's default
+	menuChannels = 4                // maximum simultaneous menu sounds
 	// The two channel groups: a match ending or starting halts the fighters'
 	// effects only, so the menu sound that caused it is heard.
 	fighterGroup = 1
@@ -65,6 +65,10 @@ type Player struct {
 	chunks    map[chunkKey]*mix.Chunk // a nil chunk records a failed load (warned once)
 	cues      []game.Cue
 	dropped   int // cues refused for lack of a free channel
+	// slots mirrors the fighter channels 0..mixChannels-1 for RequestSlot;
+	// started numbers the effects in play order.
+	slots   []game.SoundSlot
+	started int64
 	// paused is set while the music and effects are held for the pause menu.
 	paused bool
 	// NoMusic keeps the stage music off (-nomusic); effects still play.
@@ -376,14 +380,33 @@ func (p *Player) playCue(f *game.Flow, c game.Cue) {
 	if chunk == nil {
 		return
 	}
-	channel := mix.GroupAvailable(fighterGroup)
+	channel := p.requestChannel(c)
 	if channel < 0 {
-		p.dropped++ // every fighter channel is busy: drop the effect silently
+		p.dropped++ // lowpriority on a busy channel, or nothing to cut
 		return
 	}
+	mix.HaltChannel(channel)
 	if _, err := chunk.Play(channel, 0); err != nil {
 		p.dropped++
+		return
 	}
+	p.started++
+	p.slots[channel] = game.SoundSlot{Side: c.Side, ChannelNo: c.Channel, Playing: true, Started: p.started}
+}
+
+// requestChannel returns the fighter channel the cue plays on, -1 to drop it
+// (game.RequestSlot), reading which channels still play from the mixer.
+func (p *Player) requestChannel(c game.Cue) int {
+	if p.slots == nil {
+		p.slots = make([]game.SoundSlot, mixChannels)
+		for i := range p.slots {
+			p.slots[i].ChannelNo = -1
+		}
+	}
+	for i := range p.slots {
+		p.slots[i].Playing = mix.Playing(i) != 0
+	}
+	return game.RequestSlot(p.slots, c.Side, c.Channel, c.LowPriority)
 }
 
 func loadChunk(f *game.Flow, c game.Cue) (*mix.Chunk, error) {
