@@ -166,7 +166,7 @@ func (p *listPainter) draw(list *ui.DrawList) {
 		switch op.Kind {
 		case ui.OpRect:
 			p.flushBatch()
-			p.win.Rect(op.X, op.Y, op.W, op.H, Color(op.Color))
+			p.win.RoundRect(op.X, op.Y, op.W, op.H, op.Radius, Color(op.Color))
 		case ui.OpImage:
 			if tex := p.texture(op.Asset); tex != nil {
 				repeat := [2]bool{op.U1 > 1, op.V1 > 1}

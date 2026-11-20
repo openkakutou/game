@@ -44,8 +44,10 @@ type Window struct {
 	ctx  sdl.GLContext
 	W, H int32
 	// view is the letterboxed VWxVH viewport in window pixels (x, y, w, h).
-	view   [4]int32
-	verts  []float32
+	view  [4]int32
+	verts []float32
+	// round is RoundRect's reused triangle buffer.
+	round  []float32
 	nverts int
 }
 

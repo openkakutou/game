@@ -69,6 +69,8 @@ type Player struct {
 	// started numbers the effects in play order.
 	slots   []game.SoundSlot
 	started int64
+	// loopRestarts counts the menu track's restarts from its loopStartMs.
+	loopRestarts int
 	// paused is set while the music and effects are held for the pause menu.
 	paused bool
 	// NoMusic keeps the stage music off (-nomusic); effects still play.
@@ -233,12 +235,12 @@ func (p *Player) startMusic(fsys fs.FS, path string) {
 		p.warnf("audio: cannot load music %q: %v", path, err)
 		return
 	}
-	p.playMusic(path, data)
+	p.playMusic(path, data, -1)
 }
 
-// playMusic loads a music file's bytes and plays it in a loop; any failure is
-// one warning and silence.
-func (p *Player) playMusic(path string, data []byte) {
+// playMusic loads a music file's bytes and plays it loops times (-1 for
+// ever); any failure is one warning and silence.
+func (p *Player) playMusic(path string, data []byte, loops int) {
 	rw, err := sdl.RWFromMem(data)
 	if err != nil {
 		p.warnf("audio: cannot load music %q: %v", path, err)
@@ -249,7 +251,7 @@ func (p *Player) playMusic(path string, data []byte) {
 		p.warnf("audio: cannot load music %q: %v", path, err)
 		return
 	}
-	if err := m.Play(-1); err != nil {
+	if err := m.Play(loops); err != nil {
 		m.Free()
 		p.warnf("audio: cannot play music %q: %v", path, err)
 		return
@@ -262,9 +264,8 @@ func (p *Player) playMusic(path string, data []byte) {
 // starts a track when none plays or the screen names another file, lets a
 // track go on when the new screen names the same file, and stops it when the
 // screen has no music (music null) or there is no screen.
-// shortcut: loopStartMs is ignored, the track loops from its start (SDL_mixer
-// loops from the LOOPSTART tag of the Ogg file itself when it has one);
-// upgrade by restarting the track at the position on its finished hook.
+// A track with loopStartMs plays once, and restartLoop starts it again from
+// that position each time it ends.
 func (p *Player) syncMenuMusic(screen string) {
 	want, ok := ui.MenuMusic{}, false
 	if p.pack != nil && screen != "" && !p.NoMusic {
@@ -284,6 +285,7 @@ func (p *Player) syncMenuMusic(screen string) {
 			p.menuMusic = want
 			p.applyMusicVolume()
 		}
+		p.restartLoop()
 		return
 	}
 	p.stopMusic()
@@ -293,7 +295,11 @@ func (p *Player) syncMenuMusic(screen string) {
 		p.menuFailed, p.menuFailedOK = want.Asset, true
 		return
 	}
-	p.playMusic(want.Asset.Path, data)
+	loops := -1
+	if want.LoopStartMs > 0 {
+		loops = 1 // restartLoop plays it again from loopStartMs
+	}
+	p.playMusic(want.Asset.Path, data, loops)
 	if p.music == nil {
 		p.menuFailed, p.menuFailedOK = want.Asset, true
 		return
@@ -301,6 +307,20 @@ func (p *Player) syncMenuMusic(screen string) {
 	p.menuPlaying, p.menuMusic = true, want
 	p.applyMusicVolume()
 	p.infof("audio: menu music loaded: %s", want.Asset.Path)
+}
+
+// restartLoop plays the menu track again from its loopStartMs once it has
+// ended (the format's loop point, screenpack docs/format.md "music").
+func (p *Player) restartLoop() {
+	if p.menuMusic.LoopStartMs <= 0 || p.music == nil || mix.PlayingMusic() {
+		return
+	}
+	if err := p.music.FadeInPos(1, 0, float64(p.menuMusic.LoopStartMs)/1000); err != nil {
+		p.warnf("audio: cannot loop music %q: %v", p.menuMusic.Asset.Path, err)
+		p.menuMusic.LoopStartMs = 0 // warned once; the track stays silent
+		return
+	}
+	p.loopRestarts++
 }
 
 // readAsset reads a pack file.

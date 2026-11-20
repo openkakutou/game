@@ -415,3 +415,40 @@ func TestTitle_TheFirstEntryIsAtThePivotWhateverThePivot(t *testing.T) {
 		near(t, c.pivot+" third row", third[0].Y, c.want+2*43.2)
 	}
 }
+
+func TestTitle_ScrollMovesATiledImageOverTime(t *testing.T) {
+	// 100 units = 720 px, so 7.2 px a unit; the cell is 192 px. scroll -6
+	// units/s for 10 s moves the image 432 px left: 432/192 = 2.25 cells, so
+	// the texture starts a quarter of a cell in. The y scroll is on an axis
+	// that does not tile and is ignored.
+	part := `"background": [{ "type": "image", "image": "images/logo.png", "anchor": "topLeft", "size": [100, 50], "tile": "x", "scroll": [-6, 5] }]`
+	q := imageOps(draw(imagePack(t, part, 64, 64), menuState(nil, 0)), "images/logo.png")[0]
+	near(t, "u0", q.U0, 0.25)
+	near(t, "u1", q.U1, 4)
+	near(t, "v0", q.V0, 0)
+	near(t, "v1", q.V1, 1)
+	later := menuState(nil, 0)
+	later.ElapsedMs = 10500 // 453.6 px: 2.3625 cells
+	q = imageOps(draw(imagePack(t, part, 64, 64), later), "images/logo.png")[0]
+	near(t, "u0 later", q.U0, 0.3625)
+}
+
+func TestTitle_ScrollRightMovesTheTextureBackwards(t *testing.T) {
+	// +6 units/s for 10 s: 432 px right, -2.25 cells, the texture starts 0.75 in.
+	part := `"background": [{ "type": "image", "image": "images/logo.png", "anchor": "topLeft", "size": [100, 50], "tile": "both", "scroll": [6, 0] }]`
+	q := imageOps(draw(imagePack(t, part, 64, 64), menuState(nil, 0)), "images/logo.png")[0]
+	near(t, "u0", q.U0, 0.75)
+	near(t, "u1", q.U1, 4.5)
+}
+
+func TestTitle_RectRadiusIsInPixelsAndCappedAtHalfTheShortSide(t *testing.T) {
+	// 7.2 px a unit: radius 1 is 7.2 px; radius 20 on a 10x10 unit rect (72 px)
+	// is capped at 36 px, a circle.
+	red := ui.Color{R: 1, A: 1}
+	list := draw(layoutOf(t, gameWith(t, `"background": [{ "type": "rect", "size": [10, 10], "color": "#ff0000", "radius": 1 }]`, nil)), menuState(nil, 0))
+	near(t, "radius", rectOps(list, red)[0].Radius, 7.2)
+	list = draw(layoutOf(t, gameWith(t, `"background": [{ "type": "rect", "size": [10, 10], "color": "#ff0000", "radius": 20 }]`, nil)), menuState(nil, 0))
+	near(t, "capped radius", rectOps(list, red)[0].Radius, 36)
+	list = draw(layoutOf(t, gameWith(t, `"background": [{ "type": "rect", "size": [10, 10], "color": "#ff0000" }]`, nil)), menuState(nil, 0))
+	near(t, "no radius", rectOps(list, red)[0].Radius, 0)
+}

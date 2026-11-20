@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/game/native/internal/mode"
@@ -313,5 +314,47 @@ func TestSetPack_AnotherPackReleasesTheOldMenuSoundsAndMusicAndTheSamePackKeepsT
 	}
 	if themes != 2 || !p.menuPlaying {
 		t.Errorf("the new pack's music did not start: theme loads %d, playing %v", themes, p.menuPlaying)
+	}
+}
+
+func TestUpdate_AMenuMusicWithLoopStartRestartsFromItWhenItEnds(t *testing.T) {
+	pack := packWith(t, map[string]func([]byte) []byte{
+		"screenpack.json": func(b []byte) []byte {
+			return []byte(strings.Replace(string(b), `"music": { "file": "sounds/theme.ogg", "volume": 0.6 }`,
+				`"music": { "file": "sounds/tick.ogg", "volume": 0.6, "loopStartMs": 10 }`, 1))
+		},
+	})
+	p, warns, _ := menuPlayer(t, pack)
+	f := titleFlow(t)
+	p.Update(f)
+	if !p.menuPlaying {
+		t.Fatalf("the short theme is not playing, warnings %v", *warns)
+	}
+	for i := 0; i < 100 && p.loopRestarts < 2; i++ {
+		time.Sleep(20 * time.Millisecond)
+		p.Update(f)
+	}
+	if p.loopRestarts < 2 {
+		t.Fatalf("restarts = %d after 2 s of the short tick sound, want at least 2", p.loopRestarts)
+	}
+	if !mix.PlayingMusic() {
+		t.Error("the music must keep playing after a restart")
+	}
+}
+
+func TestUpdate_AMenuMusicWithoutLoopStartLoopsByItself(t *testing.T) {
+	pack := packWith(t, map[string]func([]byte) []byte{
+		"screenpack.json": func(b []byte) []byte {
+			return []byte(strings.Replace(string(b), `"sounds/theme.ogg"`, `"sounds/tick.ogg"`, 1))
+		},
+	})
+	p, _, _ := menuPlayer(t, pack)
+	f := titleFlow(t)
+	for range 20 {
+		p.Update(f)
+		time.Sleep(20 * time.Millisecond)
+	}
+	if p.loopRestarts != 0 || !mix.PlayingMusic() {
+		t.Fatalf("restarts = %d, playing %v: without loopStartMs the mixer loops the whole track", p.loopRestarts, mix.PlayingMusic())
 	}
 }

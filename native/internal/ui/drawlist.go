@@ -71,6 +71,8 @@ type Op struct {
 	Font           FontRef
 	Px             int
 	First, N       int
+	// Radius rounds an OpRect's corners, in pixels (at most half its short side).
+	Radius float32
 }
 
 // DrawList is a frame's ops in paint order, later on top. Reset keeps the

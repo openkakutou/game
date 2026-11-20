@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"math"
+
 	"github.com/openkakutou/screenpack"
 )
 
@@ -12,8 +14,8 @@ func (l *Layout) elements(dst *DrawList, view View, sc scope, list []screenpack.
 }
 
 // element draws one image, sprite, rect or text element placed inside parent.
-// shortcut: a rect's radius is drawn square, and a tiled image's scroll and a
-// text element's transition are ignored; upgrade when a screenpack needs them.
+// shortcut: a text element's transition is ignored; upgrade when a
+// screenpack needs it.
 func (l *Layout) element(dst *DrawList, view View, sc scope, e *screenpack.Element, parent rect, elapsedMs int) {
 	if e.Visible != nil && !*e.Visible {
 		return
@@ -42,7 +44,8 @@ func (l *Layout) rectElement(dst *DrawList, view View, e *screenpack.Element, pa
 		h = float32(*e.Size[1]) * view.unit()
 	}
 	box, alpha := enter(e.Transition, elapsedMs, view, place(parent, &e.Layout, w, h, view.unit()), alpha)
-	dst.Ops = append(dst.Ops, Op{Kind: OpRect, X: box.x, Y: box.y, W: box.w, H: box.h, Color: parseColor(e.Color, alpha)})
+	radius := min(float32(e.Radius)*view.unit(), box.w/2, box.h/2)
+	dst.Ops = append(dst.Ops, Op{Kind: OpRect, X: box.x, Y: box.y, W: box.w, H: box.h, Color: parseColor(e.Color, alpha), Radius: max(radius, 0)})
 }
 
 // picture is a region of an image file and its natural size in pixels.
@@ -119,9 +122,11 @@ func (l *Layout) imageElement(dst *DrawList, view View, sc scope, e *screenpack.
 		scale := float32(view.H) / referenceLines
 		if e.Tile == "x" || e.Tile == "both" {
 			pic.u1 = w / (pic.w * scale)
+			pic.u0, pic.u1 = scrolled(e.Scroll, 0, elapsedMs, view.unit()/(pic.w*scale), pic.u1)
 		}
 		if e.Tile == "y" || e.Tile == "both" {
 			pic.v1 = h / (pic.h * scale)
+			pic.v0, pic.v1 = scrolled(e.Scroll, 1, elapsedMs, view.unit()/(pic.h*scale), pic.v1)
 		}
 	}
 	box, alpha := enter(e.Transition, elapsedMs, view, place(parent, &e.Layout, w, h, view.unit()), alpha)
@@ -181,4 +186,17 @@ func progress(e *screenpack.Effect, elapsedMs int) float32 {
 		return 1 - 2*(1-t)*(1-t)
 	}
 	return 1 - (1-t)*(1-t) // easeOut, the default
+}
+
+// scrolled shifts the texture span [0, end] of a tiled axis by the image's
+// scroll on that axis (units per second) after elapsedMs: the image moves by
+// scroll, so the texture start goes the other way, kept within one cell.
+// cellsPerUnit converts units to repeats of the image.
+func scrolled(scroll *[2]float64, axis, elapsedMs int, cellsPerUnit, end float32) (float32, float32) {
+	if scroll == nil || scroll[axis] == 0 {
+		return 0, end
+	}
+	shift := -float32(scroll[axis]) * float32(elapsedMs) / 1000 * cellsPerUnit
+	start := shift - float32(math.Floor(float64(shift)))
+	return start, end + start
 }
