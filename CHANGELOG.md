@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The desktop game now shows a VS screen with both chosen fighters before each match, and its screens follow the Versus mode's definition (preselected rounds and time come from it).
 - In the desktop game, characters and stages dropped into their folders are listed in alphabetical order regardless of capital letters.
 
 ### Changed

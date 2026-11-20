@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done
 ---
 # Built-in screen-type library
 
@@ -10,3 +10,6 @@ Roadmap decision `030`: refactor today's hard-wired versus flow into reusable sc
 - [ ] Each screen type runs from parameters, not from code specific to the versus flow
 - [ ] Native and web builds expose the same screen types
 - [ ] Keyboard and gamepad navigation work on every screen
+
+## Scope (2026-11-20)
+Shipped natively: character select (sides), stage select, match setup, VS, match, results run from the mode's steps and rules (ADR 021). Web: through the core flow, item 065. Continue/victory: with the ladder rules, item 044. Title/main menu 034, options 029, controls 022, move list 042; pause already exists.

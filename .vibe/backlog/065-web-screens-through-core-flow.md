@@ -10,3 +10,6 @@ Step 4 of item 060. Character select, stage select, match setup, results and rem
 ## Acceptance Criteria
 - [ ] `src/selection`, `src/setup`, `src/result` and `src/roster` hold no navigation or rule logic
 - [ ] The web and native builds go through the same screens in the same order for the same inputs
+
+## Notes
+- Item 032 (2026-11-20) made the native flow walk a mode's steps (ADR 021), VS screen included: the web gets the same screen types by following that flow here.
