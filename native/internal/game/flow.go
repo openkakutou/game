@@ -198,6 +198,13 @@ func (f *Flow) enterMode(i int) {
 }
 
 // toMenu shows the main menu, its cursor on the mode being played.
+// ErrorReturnsToMenu is true when the error screen came from a mode the
+// player chose from the main menu: leaving it goes back there. Errors before
+// any mode (content missing) and in quick versus quit.
+func (f *Flow) ErrorReturnsToMenu() bool {
+	return f.quick == nil && f.Mode.ID != ""
+}
+
 func (f *Flow) toMenu() {
 	f.Match, f.Paused = nil, false
 	f.Screen = ScreenMainMenu
@@ -283,9 +290,14 @@ func (f *Flow) Navigate(n Nav) {
 	case ScreenResult:
 		f.navResult(n)
 	case ScreenError:
-		if n == NavCancel || n == NavConfirm {
-			f.Quit = true
+		if n != NavCancel && n != NavConfirm {
+			return
 		}
+		if f.ErrorReturnsToMenu() {
+			f.toMenu()
+			return
+		}
+		f.Quit = true
 	case ScreenMatch:
 		f.navMatch(n)
 	}

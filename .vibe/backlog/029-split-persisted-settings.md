@@ -11,3 +11,6 @@ Roadmap decision `029`: settings live outside any screenpack, in one file per co
 - [ ] A missing or corrupt settings file falls back to defaults for that concern only, with a visible notice
 - [ ] Options screen reachable from keyboard and gamepad
 - [ ] The in-match pause menu (item 021) gains an Options entry (Ikemen GO's Button Config sits there); audio and controls changed from it apply when the match resumes, gameplay on the next match
+
+## Notes
+- The main menu (item 034, ADR 022) gets its Options entry with this item.

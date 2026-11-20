@@ -300,3 +300,29 @@ func TestMatchEnd_ResultsOutcomeWithoutAResultsStepIsAnError(t *testing.T) {
 		t.Errorf("screen=%v message=%q", f.Screen, f.Message)
 	}
 }
+
+func TestErrorInsideAMode_ConfirmReturnsToTheMainMenuInsteadOfQuitting(t *testing.T) {
+	f := flowFromSrc(t, modeSrc(steps(stepSelect, stepStage, stepMatch, stepResult), "human", "human", 1, 99, "nextOpponent", "results"))
+	for range 3 {
+		f.Navigate(NavConfirm)
+	}
+	finishMatch(t, f, match.SideP1)
+	if !f.ErrorReturnsToMenu() {
+		t.Fatal("an error inside a mode should offer the main menu")
+	}
+	f.Navigate(NavConfirm)
+	if f.Quit || f.Screen != ScreenMainMenu || f.Match != nil {
+		t.Errorf("quit=%v screen=%v match=%v, want the main menu without a match", f.Quit, f.Screen, f.Match)
+	}
+}
+
+func TestErrorBeforeAnyMode_StillQuits(t *testing.T) {
+	f := NewFlow(nil, nil, nil, Loader{}, nil)
+	if f.Screen != ScreenError || f.ErrorReturnsToMenu() {
+		t.Fatalf("screen=%v returnsToMenu=%v, want a quitting error screen", f.Screen, f.ErrorReturnsToMenu())
+	}
+	f.Navigate(NavCancel)
+	if !f.Quit {
+		t.Error("cancel on a startup error should quit")
+	}
+}

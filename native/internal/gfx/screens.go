@@ -91,7 +91,11 @@ func (r *Renderer) Draw(f *game.Flow) {
 	case game.ScreenError:
 		w.TextCentered(70, 2, red, "Something went wrong")
 		r.wrapped(100, f.Message)
-		w.TextCentered(200, 1, grey, "Press enter to quit")
+		leave := "Press enter to quit"
+		if f.ErrorReturnsToMenu() {
+			leave = "Press enter to return to the main menu"
+		}
+		w.TextCentered(200, 1, grey, leave)
 	}
 }
 
