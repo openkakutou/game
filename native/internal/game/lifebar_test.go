@@ -74,3 +74,22 @@ func TestSelectLifebarWithoutLifebarsKeepsBuiltInBars(t *testing.T) {
 		t.Fatalf("a missing selection: hud %v notices %v", hud, notices)
 	}
 }
+
+func TestSelectLifebarLoadsItsFontsAndNamesTheMissingOnes(t *testing.T) {
+	root := t.TempDir()
+	put(t, filepath.Join(root, "lifebars", "default", "fight.def"), "[Files]\nfont1 = num1.fnt\nfont2 = NUM1.DEF\nfont3 = gone.fnt\n[Lifebar]\n")
+	for _, f := range []string{"num1.fnt", "num1.def", "num1.sff"} {
+		raw, err := os.ReadFile(filepath.Join(reference, "fonts", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		put(t, filepath.Join(root, "lifebars", "default", "font", f), string(raw))
+	}
+	hud, notices := selectLifebar(root, "default")
+	if hud == nil || hud.Fonts[1] == nil || hud.Fonts[2] == nil {
+		t.Fatalf("fonts 1 (v1 in font/) and 2 (v2, other case) must load: %+v, notices %v", hud, notices)
+	}
+	if hud.Fonts[3] != nil || len(notices) != 1 || !strings.Contains(notices[0], "font3") || !strings.Contains(notices[0], "built-in font") {
+		t.Fatalf("notices = %v, want one naming font3 and the built-in fallback", notices)
+	}
+}

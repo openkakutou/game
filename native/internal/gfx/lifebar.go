@@ -2,6 +2,7 @@ package gfx
 
 import (
 	"fmt"
+	"github.com/openkakutou/game/native/internal/bmfont"
 	"io/fs"
 	"os"
 
@@ -21,6 +22,10 @@ type lifebarHUD struct {
 	meters [2]lifebar.Meter
 	health [2]int
 	tick   int
+	// glyphs are the font glyph textures uploaded so far; placed is the
+	// layout buffer reused by every text.
+	glyphs map[*bmfont.Glyph]*Texture
+	placed []bmfont.Placed
 }
 
 func newLifebarHUD(hud *game.HUDLifebar, fsys fs.FS) *lifebarHUD {
@@ -82,6 +87,9 @@ func (l *lifebarHUD) elements() []lifebar.Element {
 
 func (l *lifebarHUD) delete() {
 	for _, t := range l.sheet {
+		t.Delete()
+	}
+	for _, t := range l.glyphs {
 		t.Delete()
 	}
 }
@@ -187,15 +195,37 @@ func (l *lifebarHUD) drawElement(w *Window, e lifebar.Element, pos [2]int, layer
 }
 
 // drawTexts prints the names and the timer where the lifebar places them,
-// in the built-in font: the lifebar's own fonts are not read yet.
+// in the lifebar's own font, else the built-in one.
 func (l *lifebarHUD) drawTexts(w *Window, scale float64, names [2]string, timer string) {
 	for i, name := range l.hud.Name {
 		if name.Shown() {
-			printAt(w, name, scale, names[i])
+			l.print(w, name, scale, names[i])
 		}
 	}
 	if l.hud.Time.Shown() {
-		printAt(w, l.hud.Time, scale, timer)
+		l.print(w, l.hud.Time, scale, timer)
+	}
+}
+
+func (l *lifebarHUD) print(w *Window, t lifebar.Text, scale float64, s string) {
+	f := l.hud.Fonts[t.Font]
+	if f == nil {
+		printAt(w, t, scale, s)
+		return
+	}
+	x := (float64(t.Pos[0]) + t.Offset[0]) * scale
+	y := (float64(t.Pos[1]) + t.Offset[1]) * scale
+	l.placed = f.Layout(s, t.Bank, t.Align, x, y, scale, l.placed)
+	for _, p := range l.placed {
+		tex := l.glyphs[p.Glyph]
+		if tex == nil {
+			if l.glyphs == nil {
+				l.glyphs = map[*bmfont.Glyph]*Texture{}
+			}
+			tex = NewTexture(p.Glyph.Pixels, p.Glyph.W, p.Glyph.H)
+			l.glyphs[p.Glyph] = tex
+		}
+		w.SpriteSized(tex, float32(p.X), float32(p.Y), float32(float64(p.Glyph.W)*scale), float32(float64(p.Glyph.H)*scale), false)
 	}
 }
 

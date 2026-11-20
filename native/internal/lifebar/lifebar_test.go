@@ -233,3 +233,16 @@ func TestMeterRefillFollowsAtOnce(t *testing.T) {
 		t.Fatalf("refill top %v mid %v", m.Top, m.Mid)
 	}
 }
+
+func TestParseReadsFontsAndTextBanks(t *testing.T) {
+	lb, err := Parse("[Files]\nsff = f.sff\nfont1 = font/name.fnt\nfont2.height = 10\nfont2 = timer.def ; comment\nfontx = bad\n[Lifebar]\n[Name]\np1.name.font = 1,3,-1\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lb.Fonts) != 2 || lb.Fonts[1] != "font/name.fnt" || lb.Fonts[2] != "timer.def" {
+		t.Fatalf("fonts = %v, want 1 and 2 only", lb.Fonts)
+	}
+	if n := lb.Name[0]; n.Font != 1 || n.Bank != 3 || n.Align != -1 {
+		t.Fatalf("p1 name font = %d,%d,%d, want 1,3,-1", n.Font, n.Bank, n.Align)
+	}
+}

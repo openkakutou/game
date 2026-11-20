@@ -6,6 +6,7 @@ require (
 	github.com/go-gl/gl v0.0.0-20260331235117-4566fea9a276
 	github.com/openkakutou/character v0.19.0
 	github.com/openkakutou/engine/v2 v2.25.0
+	github.com/openkakutou/fnt v0.2.0
 	github.com/openkakutou/screenpack v0.7.0
 	github.com/openkakutou/sff v0.8.1
 	github.com/openkakutou/snd v0.7.2

@@ -5,6 +5,7 @@ Unmodified third-party files, committed whatever their licence (roadmap decision
 - Ikemen GO: github.com/ikemen-engine/Ikemen-GO @ 54d4148a728153c2097a0fb899a06812b2d3e193
 - Ikemen GO Screenpack: github.com/ikemen-engine/Ikemen-GO-Screenpack @ c3d5059a6b70f863bda906e39d1a9c8f73c4082e (Elecbyte content under Elecbyte's non-commercial terms, see its README)
 - MUGEN 1.1 install: data/common1.cns (Elecbyte)
+- Ikemen GO Elecbyte Screenpack: github.com/ikemen-engine/Ikemen_GO-Elecbyte-Screenpack @ 91e9ff0cd21def4cf1fe2780e7709e2243b82bc9 (Elecbyte fonts, CC BY-NC 3.0, test use only)
 
 | path | sha256 | source | licence |
 |---|---|---|---|
@@ -40,3 +41,7 @@ Unmodified third-party files, committed whatever their licence (roadmap decision
 | common1.cns.zss | d801465c831877ce8c8833a30ab500307501599a88b9abbf662b95d25f6341d0 | Ikemen-GO @ 54d4148a data/common1.cns.zss | MIT (LICENCE-ikemen-go.txt) |
 | LICENCE-ikemen-go-screenpack.txt | 231698bd8541d1a4503cec171bdc88c1dbbd92c146840730d5e840a1adb095f5 | Ikemen-GO-Screenpack @ c3d5059a LICENCE.txt | as stated in the file |
 | LICENCE-ikemen-go.txt | 0779202d0207f16bb50a76f04da4d5458c78d69e48a423f75536154006a1f558 | Ikemen-GO @ 54d4148a LICENCE.txt | MIT |
+| fonts/jg.fnt | c0c7849b57912cd36734478d26f6b49c636b796580ea705a679f3cac64ae5f80 | Ikemen_GO-Elecbyte-Screenpack @ 91e9ff0c font/jg.fnt | Elecbyte, CC BY-NC 3.0 |
+| fonts/num1.def | 767c632195d2b726862f877fa126172af5fb053fa8d57b1f5b1b73edcf7f965c | Ikemen_GO-Elecbyte-Screenpack @ 91e9ff0c font/num1.def | Elecbyte, CC BY-NC 3.0 |
+| fonts/num1.fnt | 8d0188cf91e830a3b586fa579b4694e021f1d0353c9f7dde5ef5d1755ba0cc7e | Ikemen_GO-Elecbyte-Screenpack @ 91e9ff0c font/num1.fnt | Elecbyte, CC BY-NC 3.0 |
+| fonts/num1.sff | 4b52368111705a6197d0a0fbd71e28e708bb9b24f23592cf653a05a2b7fffd4f | Ikemen_GO-Elecbyte-Screenpack @ 91e9ff0c font/num1.sff | Elecbyte, CC BY-NC 3.0 |

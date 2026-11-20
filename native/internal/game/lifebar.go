@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"github.com/openkakutou/game/native/internal/bmfont"
 	"io/fs"
 	"path"
 	"strings"
@@ -20,6 +21,9 @@ type HUDLifebar struct {
 	// fightscreen.go:4918), as a name in the content file system; "" when
 	// none is found.
 	Sprites string
+	// Fonts are the [Files] fonts that loaded, by number; text in a font
+	// missing here is printed in the built-in font.
+	Fonts map[int]*bmfont.Font
 }
 
 // DiscoverLifebars lists the usable folders of lifebars/, with a notice for
@@ -64,5 +68,26 @@ func SelectLifebar(fsys fs.FS, entries []lifebar.Entry, name string) (*HUDLifeba
 			hud.Sprites = ""
 		}
 	}
+	hud.Fonts, notices = loadLifebarFonts(fsys, entry, lb.Fonts, notices)
 	return hud, notices
+}
+
+// loadLifebarFonts loads each [Files] font, searched like the sprite file
+// plus each folder's font/ (LoadFile with "font/", fightscreen.go:5034). A
+// font that cannot be read gets a notice; its text then uses the built-in
+// font (Ikemen GO draws nothing).
+func loadLifebarFonts(fsys fs.FS, entry lifebar.Entry, names map[int]string, notices []string) (map[int]*bmfont.Font, []string) {
+	fonts := map[int]*bmfont.Font{}
+	dir := path.Dir(entry.Def)
+	common := CommonFolder(fsys)
+	bases := []string{dir, path.Join(dir, "font"), ".", "font", common, path.Join(common, "font")}
+	for n, name := range names {
+		f, err := bmfont.Load(fsys, joinResolved(fsys, bases, name))
+		if err != nil {
+			notices = append(notices, fmt.Sprintf("lifebar %q: font%d %q not loaded, built-in font used: %v", entry.Name, n, name, err))
+			continue
+		}
+		fonts[n] = f
+	}
+	return fonts, notices
 }

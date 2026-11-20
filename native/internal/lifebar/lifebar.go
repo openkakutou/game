@@ -5,6 +5,7 @@ package lifebar
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/openkakutou/character/air"
@@ -51,6 +52,8 @@ type Text struct {
 	Pos    [2]int
 	Offset [2]float64
 	Font   int
+	// Bank is the font's second value: the palette (or sprite) bank.
+	Bank int
 	// Align is the font's third value: 1 left, 0 centered, -1 right.
 	Align int
 	set   bool
@@ -65,10 +68,12 @@ type Lifebar struct {
 	Localcoord [2]int
 	// Sprites is the [Files] sff entry as written, relative to the def.
 	Sprites string
-	Life    [2]Bar
-	Power   [2]Bar
-	Name    [2]Text
-	Time    Text
+	// Fonts are the [Files] fontN entries as written, by N.
+	Fonts map[int]string
+	Life  [2]Bar
+	Power [2]Bar
+	Name  [2]Text
+	Time  Text
 	// Anims are the def's [Begin Action] blocks by number.
 	Anims map[int]air.Animation
 }
@@ -92,6 +97,7 @@ func Parse(src string) (*Lifebar, error) {
 	}
 	if files, has := secs["files"]; has {
 		lb.Sprites = files["sff"]
+		lb.Fonts = readFonts(files)
 	}
 	power := secs["powerbar"]
 	name := secs["name"]
@@ -149,6 +155,20 @@ func (lb *Lifebar) readElement(s section, pre string) Element {
 	return e
 }
 
+// readFonts returns the fontN keys of [Files] (fightscreen.go:5003-5027);
+// fontN.height only sizes TrueType fonts and is ignored.
+func readFonts(files section) map[int]string {
+	fonts := map[int]string{}
+	for k, v := range files {
+		n, err := strconv.Atoi(strings.TrimPrefix(k, "font"))
+		if !strings.HasPrefix(k, "font") || err != nil || n < 0 || v == "" {
+			continue
+		}
+		fonts[n] = v
+	}
+	return fonts
+}
+
 func readText(s section, posPre, textPre string) Text {
 	var t Text
 	if s == nil {
@@ -156,8 +176,7 @@ func readText(s section, posPre, textPre string) Text {
 	}
 	s.ints(posPre+"pos", &t.Pos[0], &t.Pos[1])
 	s.floats(textPre+"offset", &t.Offset[0], &t.Offset[1])
-	var bank int
-	if s.ints(textPre+"font", &t.Font, &bank, &t.Align) {
+	if s.ints(textPre+"font", &t.Font, &t.Bank, &t.Align) {
 		t.set = true
 	}
 	return t
