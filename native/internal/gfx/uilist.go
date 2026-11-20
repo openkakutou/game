@@ -143,6 +143,22 @@ func newListPainter(win *Window, pack *ui.Pack, portraits *portraitCache) *listP
 	}
 }
 
+// release deletes every texture and glyph atlas page the painter holds.
+func (p *listPainter) release() {
+	for _, tex := range p.textures {
+		if tex != nil {
+			tex.Delete()
+		}
+	}
+	for _, atlas := range p.atlases {
+		for _, page := range atlas.pages {
+			page.tex.Delete()
+		}
+	}
+	clear(p.textures)
+	clear(p.atlases)
+}
+
 // draw paints the list over what is already queued.
 func (p *listPainter) draw(list *ui.DrawList) {
 	for i := range list.Ops {

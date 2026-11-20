@@ -98,28 +98,36 @@ func run() error {
 		stages, stageErr = game.DiscoverStages(fsys, stagesDir)
 		folderErr = errors.Join(charErr, stageErr)
 	}
-	pack, packNotices := ui.LoadPack(fsys)
-	for _, n := range packNotices {
-		fmt.Fprintln(os.Stderr, "openkakutou:", n)
+	packNames, packProblems := ui.DiscoverPacks(fsys)
+	for _, n := range packProblems {
+		warn(n)
 	}
-	// The screenpack's select screens say how their rosters are ordered.
-	by, descending := pack.Sort("characterSelect")
-	game.SortEntries(chars, by, descending)
-	by, descending = pack.Sort("stageSelect")
-	game.SortEntries(stages, by, descending)
+	// A selected screenpack or lifebar that is gone falls back to the default,
+	// with a notice on stderr and on the options screen.
+	loadPack := func(name string) *ui.Pack {
+		p, notices := ui.LoadPack(fsys, name)
+		for _, n := range notices {
+			warn(n)
+		}
+		return p
+	}
+	pack, packNotices := ui.LoadPack(fsys, settings.Appearance.Screenpack)
 	modes, modeNotices := game.DiscoverModes(fsys)
 	for _, n := range modeNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
 	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), modes)
-	hud, lifebarNotices := game.SelectLifebar(fsys)
-	flow.GridColumns = pack.SelectColumns()
+	lifebars, lifebarProblems := game.DiscoverLifebars(fsys)
+	for _, n := range lifebarProblems {
+		warn(n)
+	}
+	hud, lifebarNotices := game.SelectLifebar(fsys, lifebars, settings.Appearance.Lifebar)
 	flow.Settings = settings
 	defer flow.SaveOpenConcern() // a closed window keeps the changes of the open screen
-	flow.Lifebar = hud
-	for _, n := range lifebarNotices {
-		fmt.Fprintln(os.Stderr, "openkakutou:", n)
-	}
+	settings.NoteAppearance(append(packNotices, lifebarNotices...))
+	flow.Packs, flow.Lifebars, flow.Lifebar = packNames, lifebars, hud
+	// The screenpack's select screens say how their rosters are ordered.
+	pack.Arrange(flow)
 	switch {
 	case isQuick:
 		for _, n := range flow.StartQuickVersus(quick) {
@@ -143,7 +151,7 @@ func run() error {
 		}
 	}
 	applyVideo(width, height)
-	renderer := gfx.NewRenderer(win, pack)
+	renderer := gfx.NewRenderer(win, pack, loadPack)
 
 	var aud *audio.Player // nil plays nothing (-nosound)
 	if _, off := cl.Flags["-nosound"]; !off {
@@ -154,7 +162,7 @@ func run() error {
 	fmt.Println("audio:", aud.Driver())
 	aud.SetPack(pack)
 	aud.SetVolumes(settings.Audio)
-	audioGen, videoGen, windowGen := settings.AudioGen, settings.VideoGen, settings.WindowGen
+	audioGen, videoGen, windowGen, appearanceGen := settings.AudioGen, settings.VideoGen, settings.WindowGen, settings.AppearanceGen
 
 	pads := gfx.NewGamepads()
 	defer pads.Close()
@@ -176,6 +184,14 @@ func run() error {
 			audioGen = settings.AudioGen
 			aud.SetPack(pack)
 			aud.SetVolumes(settings.Audio)
+		}
+		if settings.AppearanceGen != appearanceGen {
+			// Leaving Options > Appearance with a change: the screens, the
+			// menu audio and the roster order follow the new screenpack.
+			appearanceGen = settings.AppearanceGen
+			pack = renderer.SetPack(flow.ScreenpackChoice())
+			pack.Arrange(flow)
+			aud.SetPack(pack)
 		}
 		if settings.VideoGen != videoGen {
 			videoGen = settings.VideoGen

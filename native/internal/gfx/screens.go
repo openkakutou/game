@@ -58,7 +58,15 @@ type Renderer struct {
 	stageScale, shift float64
 	// lifebar draws the flow's lifebar, when it has one.
 	lifebar *lifebarHUD
-	// The screenpack screens: layout, the reused draw list and its painter.
+	// sample draws the candidate lifebar of the appearance screen.
+	sample *lifebarHUD
+	// The screenpack screens: views holds the packs loaded by name (the one
+	// in use, and the candidate while the appearance screen is open), load
+	// loads another. layout and painter are those of the view being drawn,
+	// list is the reused draw list.
+	views   map[string]*packView
+	active  string
+	load    func(name string) *ui.Pack
 	layout  *ui.Layout
 	list    ui.DrawList
 	painter *listPainter
@@ -75,13 +83,16 @@ type Renderer struct {
 	result    resultTexts
 }
 
-// NewRenderer builds a renderer for win drawing the screens of pack.
-func NewRenderer(win *Window, pack *ui.Pack) *Renderer {
+// NewRenderer builds a renderer for win drawing the screens of pack; load
+// loads the screenpack of another name, to preview it or switch to it.
+func NewRenderer(win *Window, pack *ui.Pack, load func(name string) *ui.Pack) *Renderer {
 	portraits := newPortraitCache()
-	return &Renderer{
+	r := &Renderer{
 		win: win, sprites: map[spriteKey]*Texture{}, stageAxis: map[spriteKey][2]int{},
-		layout: ui.NewLayout(pack), painter: newListPainter(win, pack, portraits), portraits: portraits,
+		portraits: portraits, views: map[string]*packView{}, active: pack.Name(), load: load,
 	}
+	r.views[r.active] = newPackView(win, pack, portraits)
+	return r
 }
 
 // Draw renders the current screen of f.
@@ -89,11 +100,21 @@ func (r *Renderer) Draw(f *game.Flow) {
 	w := r.win
 	r.portraits.bind(f)
 	kind := packScreenOf(f)
+	preview, sample := f.PreviewPack(), f.PreviewLifebar()
+	if preview == "" {
+		r.releaseCandidates()
+	}
+	if sample == nil {
+		r.releaseSample()
+	}
 	if kind != r.packKind {
 		r.packKind, r.packSince = kind, time.Now()
 	}
 	if kind != packNone && kind != packPause {
 		r.drawPack(f, kind)
+		if sample != nil {
+			r.drawSample(f, sample)
+		}
 		return
 	}
 	w.Rect(0, 0, VW, VH, darkBg)
@@ -102,6 +123,24 @@ func (r *Renderer) Draw(f *game.Flow) {
 		if kind == packPause {
 			r.drawPack(f, packPause)
 		}
+	}
+}
+
+// drawSample draws the candidate lifebar over the appearance screen, its
+// sprites uploaded on first use.
+func (r *Renderer) drawSample(f *game.Flow, hud *game.HUDLifebar) {
+	if r.sample == nil || r.sample.hud != hud {
+		r.releaseSample()
+		r.sample = newLifebarHUD(hud, f.FS)
+	}
+	ticks := int(time.Since(r.packSince).Milliseconds()) * game.TickRateHz / 1000
+	r.sample.drawSample(r.win, ticks)
+}
+
+func (r *Renderer) releaseSample() {
+	if r.sample != nil {
+		r.sample.delete()
+		r.sample = nil
 	}
 }
 

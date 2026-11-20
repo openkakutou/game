@@ -22,20 +22,22 @@ type HUDLifebar struct {
 	Sprites string
 }
 
-// SelectLifebar loads the lifebar config/appearance.json selects, falling
-// back to lifebars/default (roadmap decisions 031, 032). It returns nil when
-// neither exists, and notices for every folder skipped and every fallback
-// taken; the HUD then keeps its built-in bars.
-func SelectLifebar(fsys fs.FS) (*HUDLifebar, []string) {
-	var notices []string
+// DiscoverLifebars lists the usable folders of lifebars/, with a notice for
+// every folder skipped.
+func DiscoverLifebars(fsys fs.FS) (entries []lifebar.Entry, notices []string) {
 	entries, problems := lifebar.Discover(fsys, joinResolved(fsys, []string{"."}, "lifebars"))
 	for _, p := range problems {
 		notices = append(notices, p.Error())
 	}
-	name, err := lifebar.Selected(fsys, path.Join(joinResolved(fsys, []string{"."}, "config"), "appearance.json"))
-	if err != nil {
-		notices = append(notices, fmt.Sprintf("appearance settings ignored: %v", err))
-	}
+	return entries, notices
+}
+
+// SelectLifebar loads the lifebar named name among entries, falling back to
+// lifebars/default (roadmap decisions 031, 032). It returns nil when neither
+// exists, and notices for every fallback taken; the HUD then keeps its
+// built-in bars.
+func SelectLifebar(fsys fs.FS, entries []lifebar.Entry, name string) (*HUDLifebar, []string) {
+	var notices []string
 	entry, ok := lifebar.Pick(entries, name)
 	if !ok {
 		if name != lifebar.DefaultName {

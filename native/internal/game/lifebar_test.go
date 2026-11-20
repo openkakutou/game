@@ -17,14 +17,21 @@ func put(t *testing.T, path, text string) {
 	}
 }
 
-func TestSelectLifebarUsesTheAppearanceChoice(t *testing.T) {
+// selectLifebar discovers the lifebars of root and selects name.
+func selectLifebar(root, name string) (*HUDLifebar, []string) {
+	fsys := os.DirFS(root)
+	entries, problems := DiscoverLifebars(fsys)
+	hud, notices := SelectLifebar(fsys, entries, name)
+	return hud, append(problems, notices...)
+}
+
+func TestSelectLifebarUsesTheNamedFolderWhateverItsCase(t *testing.T) {
 	root := t.TempDir()
 	put(t, filepath.Join(root, "lifebars", "default", "fight.def"), "[Lifebar]\n")
 	put(t, filepath.Join(root, "lifebars", "VHD", "FIGHT.DEF"), "[Files]\nsff = FightHD.sff\n[Lifebar]\n")
 	put(t, filepath.Join(root, "lifebars", "VHD", "fighthd.sff"), "x")
-	put(t, filepath.Join(root, "config", "appearance.json"), `{"lifebar":"vhd"}`)
 
-	hud, notices := SelectLifebar(os.DirFS(root))
+	hud, notices := selectLifebar(root, "vhd")
 	if hud == nil || filepath.Base(filepath.Dir(hud.Def)) != "VHD" {
 		t.Fatalf("hud = %+v, notices %v", hud, notices)
 	}
@@ -40,9 +47,8 @@ func TestSelectLifebarFallsBackToDefault(t *testing.T) {
 	root := t.TempDir()
 	put(t, filepath.Join(root, "lifebars", "default", "fight.def"), "[Files]\nsff = gone.sff\n[Lifebar]\n")
 	put(t, filepath.Join(root, "lifebars", "broken", "fight.def"), "nothing")
-	put(t, filepath.Join(root, "config", "appearance.json"), `{"lifebar":"missing"}`)
 
-	hud, notices := SelectLifebar(os.DirFS(root))
+	hud, notices := selectLifebar(root, "missing")
 	if hud == nil || filepath.Base(filepath.Dir(hud.Def)) != "default" {
 		t.Fatalf("hud = %+v", hud)
 	}
@@ -59,14 +65,12 @@ func TestSelectLifebarFallsBackToDefault(t *testing.T) {
 
 func TestSelectLifebarWithoutLifebarsKeepsBuiltInBars(t *testing.T) {
 	root := t.TempDir()
-	hud, notices := SelectLifebar(os.DirFS(root))
+	hud, notices := selectLifebar(root, "default")
 	if hud != nil || len(notices) != 0 {
 		t.Fatalf("hud %v notices %v", hud, notices)
 	}
-	put(t, filepath.Join(root, "config", "appearance.json"), `{"lifebar":`)
-	put(t, filepath.Join(root, "lifebars", "x", "fight.def"), "[Lifebar]\n")
-	hud, notices = SelectLifebar(os.DirFS(root))
-	if hud != nil || len(notices) != 1 || !strings.Contains(notices[0], "appearance settings ignored") {
-		t.Fatalf("corrupt settings: hud %v notices %v", hud, notices)
+	hud, notices = selectLifebar(root, "gone")
+	if hud != nil || len(notices) != 1 || !strings.Contains(notices[0], `lifebar "gone" not found`) {
+		t.Fatalf("a missing selection: hud %v notices %v", hud, notices)
 	}
 }

@@ -1,7 +1,6 @@
 package lifebar
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -66,33 +65,6 @@ func findDef(fsys fs.FS, folder string) (string, error) {
 		}
 	}
 	return "", errors.New("no fight.def")
-}
-
-// appearance is config/appearance.json (roadmap decision 032); only the
-// lifebar selection is read here.
-type appearance struct {
-	Lifebar string `json:"lifebar"`
-}
-
-// Selected reads the lifebar name chosen in the appearance file name of fsys. A
-// missing file or no choice is DefaultName; a corrupt file is DefaultName
-// plus the error to report, as decision 032 falls back per concern.
-func Selected(fsys fs.FS, name string) (string, error) {
-	src, err := fs.ReadFile(fsys, name)
-	if errors.Is(err, fs.ErrNotExist) {
-		return DefaultName, nil
-	}
-	if err != nil {
-		return DefaultName, err
-	}
-	var a appearance
-	if jerr := json.Unmarshal(src, &a); jerr != nil {
-		return DefaultName, fmt.Errorf("%s: %w", name, jerr)
-	}
-	if a.Lifebar == "" {
-		return DefaultName, nil
-	}
-	return a.Lifebar, nil
 }
 
 // Pick is the entry named name, else DefaultName's, matching names without

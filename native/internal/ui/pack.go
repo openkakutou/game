@@ -6,6 +6,8 @@ import (
 	"image"
 	"io/fs"
 	"path"
+	"slices"
+	"strings"
 
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/screenpack"
@@ -16,8 +18,12 @@ import (
 	_ "image/png"
 )
 
-// packFolder is where the game folder keeps the screenpack in use.
-const packFolder = "screenpacks/default"
+// packsFolder is where the game folder keeps its screenpacks, one folder each.
+const packsFolder = "screenpacks"
+
+// DefaultPack is the name of the pack every other one resolves against: the
+// folder screenpacks/default when it is valid, else the built-in pack.
+const DefaultPack = "default"
 
 type faceKey struct {
 	font FontRef
@@ -30,6 +36,7 @@ type scopeKey struct{ screen, part string }
 // parsed fonts, the image sizes and the cached font faces. Not safe for
 // concurrent use: layout and the renderer share it on the game's one thread.
 type Pack struct {
+	name     string
 	resolved *screenpack.Resolved
 	// fsys holds the files of the pack and of the built-in default, by Source.
 	fsys   [2]fs.FS
@@ -41,46 +48,136 @@ type Pack struct {
 	sheetImages map[Asset]string
 }
 
-// LoadPack returns the pack to draw with: screenpacks/default of the game
-// folder when it exists and is valid, else the built-in default screenpack.
-// A folder that exists but is refused is reported in notices.
-func LoadPack(gameFS fs.FS) (pack *Pack, notices []string) {
+// Name is the pack's folder name under screenpacks/, "default" for the
+// built-in pack.
+func (p *Pack) Name() string { return p.name }
+
+// errNoFolder says screenpacks/ holds no folder of the asked name.
+var errNoFolder = errors.New("no such folder")
+
+// builtInScreenpack is the built-in default screenpack, which always loads.
+func builtInScreenpack() *screenpack.Screenpack {
 	builtIn, err := screenpack.Load(screenpack.DefaultFS())
 	if err != nil {
 		panic(err) // the built-in screenpack is checked by its own tests
 	}
-	fallback, err := newPack(builtIn, builtIn, screenpack.DefaultFS(), screenpack.DefaultFS())
+	return builtIn
+}
+
+// builtInPack is the pack of the built-in default screenpack.
+func builtInPack() *Pack {
+	builtIn := builtInScreenpack()
+	pack, err := newPack(DefaultPack, builtIn, builtIn, screenpack.DefaultFS(), screenpack.DefaultFS())
 	if err != nil {
 		panic(err) // same
 	}
-	folder, err := game.ResolvePath(gameFS, ".", packFolder)
-	if errors.Is(err, fs.ErrNotExist) {
-		return fallback, nil
-	}
+	return pack
+}
+
+// packFolders are the folders of screenpacks/ (found whatever its case), as
+// the file system spells them; a symbolic link is listed so that loading it
+// can say it is refused. Without screenpacks/ there are none.
+func packFolders(gameFS fs.FS) []string {
+	dir, err := game.ResolvePath(gameFS, ".", packsFolder)
 	if err != nil {
-		return fallback, []string{fmt.Sprintf("%s: %v; using the built-in screenpack", packFolder, err)}
+		return nil
+	}
+	items, err := fs.ReadDir(gameFS, dir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, it := range items {
+		if it.IsDir() || it.Type()&fs.ModeSymlink != 0 {
+			names = append(names, it.Name())
+		}
+	}
+	return names
+}
+
+// loadFolder loads the pack of the folder of folders named name (whatever
+// the case), resolved against the built-in default; errNoFolder when none is.
+func loadFolder(gameFS fs.FS, folders []string, name string) (*Pack, error) {
+	i := slices.IndexFunc(folders, func(f string) bool { return strings.EqualFold(f, name) })
+	if i < 0 {
+		return nil, errNoFolder
+	}
+	folder, err := game.ResolvePath(gameFS, ".", path.Join(packsFolder, folders[i]))
+	if err != nil {
+		return nil, err
 	}
 	sub, err := fs.Sub(gameFS, folder)
 	if err != nil {
-		return fallback, []string{fmt.Sprintf("%s: %v; using the built-in screenpack", folder, err)}
+		return nil, err
 	}
 	loaded, err := screenpack.Load(sub)
-	if err == nil {
-		pack, err = newPack(loaded, builtIn, sub, screenpack.DefaultFS())
-	}
 	if err != nil {
-		return fallback, []string{fmt.Sprintf("%s is refused, using the built-in screenpack:\n%v", folder, err)}
+		return nil, err
 	}
-	return pack, nil
+	return newPack(folders[i], loaded, builtInScreenpack(), sub, screenpack.DefaultFS())
 }
 
-// newPack resolves own against def and parses both packs' fonts.
-func newPack(own, def *screenpack.Screenpack, ownFS, defFS fs.FS) (*Pack, error) {
+// DiscoverPacks lists the screenpacks of the game folder by folder name,
+// ignoring case: every folder of screenpacks/ that loads and resolves. A
+// folder that does not is left out and reported in problems. The built-in pack
+// is listed as "default" when screenpacks/default is absent or invalid.
+func DiscoverPacks(gameFS fs.FS) (names, problems []string) {
+	folders := packFolders(gameFS)
+	for _, folder := range folders {
+		if _, err := loadFolder(gameFS, folders, folder); err != nil {
+			problems = append(problems, fmt.Sprintf("screenpacks/%s is refused, skipped:\n%v", folder, err))
+			continue
+		}
+		names = append(names, folder)
+	}
+	if !slices.ContainsFunc(names, func(n string) bool { return strings.EqualFold(n, DefaultPack) }) {
+		names = append(names, DefaultPack)
+	}
+	slices.SortFunc(names, func(a, b string) int {
+		if c := strings.Compare(strings.ToLower(a), strings.ToLower(b)); c != 0 {
+			return c
+		}
+		return strings.Compare(a, b)
+	})
+	return names, problems
+}
+
+// LoadPack returns the pack to draw with: the folder of screenpacks/ named
+// name (whatever the case), else the default pack: screenpacks/default when
+// it exists and is valid, else the built-in one. A name with no folder, and
+// a folder that exists but is refused, are reported in notices.
+func LoadPack(gameFS fs.FS, name string) (pack *Pack, notices []string) {
+	folders := packFolders(gameFS)
+	if !strings.EqualFold(name, DefaultPack) {
+		pack, err := loadFolder(gameFS, folders, name)
+		if err == nil {
+			return pack, nil
+		}
+		if errors.Is(err, errNoFolder) {
+			notices = append(notices, fmt.Sprintf("screenpack %q not found, using %q", name, DefaultPack))
+		} else {
+			notices = append(notices, fmt.Sprintf("screenpacks/%s is refused, using %q:\n%v", name, DefaultPack, err))
+		}
+	}
+	pack, err := loadFolder(gameFS, folders, DefaultPack)
+	if err == nil {
+		return pack, notices
+	}
+	if !errors.Is(err, errNoFolder) {
+		notices = append(notices, fmt.Sprintf("screenpacks/%s is refused, using the built-in screenpack:\n%v", DefaultPack, err))
+	}
+	return builtInPack(), notices
+}
+
+// newPack resolves own against def and parses both packs' fonts; name is the
+// pack's.
+func newPack(name string, own, def *screenpack.Screenpack, ownFS, defFS fs.FS) (*Pack, error) {
 	resolved, err := screenpack.Resolve(own, def)
 	if err != nil {
 		return nil, err
 	}
 	p := &Pack{
+		name:        name,
 		resolved:    resolved,
 		fsys:        [2]fs.FS{ownFS, defFS},
 		fonts:       map[FontRef]*sfnt.Font{},

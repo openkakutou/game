@@ -153,6 +153,50 @@ before=$(convert "$out/21-select-no-portrait.png" -format '%[hex:u.p{342,288}]' 
 after=$(convert "$out/22-select-portrait.png" -format '%[hex:u.p{342,288}]' info:)
 [ "$before" != "$after" ] || { echo "Kung Fu Man's large portrait is not drawn: pixel 342x288 is still $after"; exit 1; }
 
+# 1f. Appearance: a second screenpack, alt, is the built-in one with its
+# background image replaced by a flat #204060. Options > Appearance >
+# Screenpack Right previews it (the page itself is drawn with alt, and the
+# lifebar row draws a sample lifebar, P1's full bar being yellow #FAD23C),
+# leaving the page applies and saves it, and a relaunch opens on its look.
+alt="$out/content-alt"
+cp -r testdata/content "$alt"
+mkdir -p "$alt/screenpacks"
+cp -r "$(go list -m -f '{{.Dir}}' github.com/openkakutou/screenpack)/default" "$alt/screenpacks/alt"
+chmod -R u+w "$alt/screenpacks"
+convert -size 8x8 xc:'#204060' "$alt/screenpacks/alt/images/background.png"
+./dist/openkakutou-linux-amd64 -content "$alt" -width 960 -height 720 >"$out/appearance.log" 2>&1 &
+pid=$!
+sleep 2
+key Return                       # title -> main menu
+key Down Return                  # Options
+key Down Down Down Down Return; shot 23-appearance-default   # Appearance, drawn with the default pack
+key Right; shot 24-appearance-preview-alt                    # Screenpack: alt
+key Down; shot 25-appearance-lifebar-sample                  # Lifebar row: the sample
+key Escape; sleep 0.5; shot 26-options-after-alt             # leave the page: applied and saved
+key Escape                       # leave Options
+key Down Return                  # Quit
+wait $pid || { echo "the game did not quit cleanly after choosing a screenpack:"; cat "$out/appearance.log"; exit 1; }
+grep -q '"screenpack": "alt"' "$alt/config/appearance.json" || { echo "appearance.json was not saved with screenpack alt:"; cat "$alt/config/appearance.json"; exit 1; }
+grep -q '"lifebar": "default"' "$alt/config/appearance.json" || { echo "appearance.json lost the lifebar:"; cat "$alt/config/appearance.json"; exit 1; }
+before=$(convert "$out/23-appearance-default.png" -format '%[hex:u.p{200,100}]' info:)
+preview=$(convert "$out/24-appearance-preview-alt.png" -format '%[hex:u.p{200,100}]' info:)
+[ "$before" = "1A1826" ] || { echo "23-appearance-default: the default pack's background is missing: pixel is $before, want 1A1826"; exit 1; }
+[ "$preview" != "$before" ] || { echo "the preview did not draw the alt screenpack: pixel is still $preview"; exit 1; }
+sample=$(convert "$out/25-appearance-lifebar-sample.png" -format '%[hex:u.p{310,80}]' info:)
+[ "$sample" = "FAD23C" ] || { echo "the sample lifebar is not drawn: pixel is $sample, want FAD23C"; exit 1; }
+applied=$(convert "$out/26-options-after-alt.png" -format '%[hex:u.p{200,100}]' info:)
+[ "$applied" = "$preview" ] || { echo "the applied pack does not look like its preview: $applied vs $preview"; exit 1; }
+! grep -q 'alt' "$out/appearance.log" || { echo "the alt screenpack raised a notice:"; cat "$out/appearance.log"; exit 1; }
+./dist/openkakutou-linux-amd64 -content "$alt" -width 960 -height 720 >"$out/appearance2.log" 2>&1 &
+pid=$!
+sleep 2
+shot 27-title-alt
+kill -0 $pid
+kill $pid; wait $pid 2>/dev/null || true
+relaunch=$(convert "$out/27-title-alt.png" -format '%[hex:u.p{200,100}]' info:)
+[ "$relaunch" = "$preview" ] || { echo "the relaunch did not open on the alt screenpack: pixel is $relaunch, want $preview"; exit 1; }
+! grep -qi 'screenpack' "$out/appearance2.log" || { echo "the relaunch raised a screenpack notice:"; cat "$out/appearance2.log"; exit 1; }
+
 # 2. Deterministic in-program capture (the title screen) and error screen.
 ./dist/openkakutou-linux-amd64 -content "$content" -frames 5 -capture "$out/7-capture.png"
 ./dist/openkakutou-linux-amd64 -content /nonexistent -frames 5 -capture "$out/8-error.png"

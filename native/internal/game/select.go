@@ -5,6 +5,7 @@ import (
 	"errors"
 	"image/color"
 	"io/fs"
+	"slices"
 	"sort"
 	"strings"
 
@@ -199,4 +200,30 @@ func (f *Flow) SelectCursors() [2]SideCursor {
 		}
 	}
 	return out
+}
+
+// SortRosters orders the character and stage lists by a screenpack's sort
+// rules (see SortEntries) and moves the picks and the stage choice to the
+// entries they named, so a pack applied from the pause menu leaves a match's
+// fighters as they were.
+func (f *Flow) SortRosters(charBy string, charDescending bool, stageBy string, stageDescending bool) {
+	chars, stages := slices.Clone(f.Chars), slices.Clone(f.Stages)
+	SortEntries(f.Chars, charBy, charDescending)
+	SortEntries(f.Stages, stageBy, stageDescending)
+	for i, pick := range f.Picks {
+		f.Picks[i] = movedIndex(chars, f.Chars, pick)
+	}
+	f.StageNo = movedIndex(stages, f.Stages, f.StageNo)
+}
+
+// movedIndex is where the entry at index i of before sits in after, the same
+// entries in another order; i itself when it points at no entry.
+func movedIndex(before, after []Entry, i int) int {
+	if i < 0 || i >= len(before) {
+		return i
+	}
+	if at := slices.Index(after, before[i]); at >= 0 {
+		return at
+	}
+	return i
 }

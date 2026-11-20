@@ -3,6 +3,9 @@ package game
 import (
 	"slices"
 	"strconv"
+	"strings"
+
+	"github.com/openkakutou/game/native/internal/lifebar"
 )
 
 // The options screens: ScreenOptions lists the concerns, each concern has a
@@ -26,6 +29,11 @@ const (
 	videoRowWindow
 )
 
+const (
+	appearanceRowScreenpack = iota
+	appearanceRowLifebar
+)
+
 // volumeStep is how much one left/right changes a volume.
 const volumeStep = 10
 
@@ -33,11 +41,11 @@ const volumeStep = 10
 // size read from the file.
 var WindowSizes = [][2]int{{640, 480}, {960, 720}, {1280, 960}, {1920, 1440}}
 
-var optionsItems = []string{"Gameplay", "Audio", "Video", "Controls", "Back"}
+var optionsItems = []string{"Gameplay", "Audio", "Video", "Controls", "Appearance", "Back"}
 
-var concernScreens = [concernCount]Screen{ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo, ScreenOptionsControls}
+var concernScreens = [concernCount]Screen{ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo, ScreenOptionsControls, ScreenOptionsAppearance}
 
-var concernTitles = [concernCount]string{"Gameplay", "Audio", "Video", "Controls"}
+var concernTitles = [concernCount]string{"Gameplay", "Audio", "Video", "Controls", "Appearance"}
 
 // OptionRow is one row of an options screen: its label, its values (one for
 // a setting, a key then a button for a binding; "" for none) and whether the
@@ -71,10 +79,16 @@ type optionsState struct {
 	cells []OptionRow
 	// gameplay, audio and video are the values when the concern screen was
 	// entered, to save only what changed.
-	gameplay Gameplay
-	audio    Audio
-	video    Video
-	controls Controls
+	gameplay   Gameplay
+	audio      Audio
+	video      Video
+	controls   Controls
+	appearance Appearance
+	// previewPack and previewLifebar are the candidates the appearance screen
+	// shows: the screenpack's name, and the lifebar loaded for the sample
+	// (nil for the built-in bars).
+	previewPack    string
+	previewLifebar *HUDLifebar
 	// bind is the state of the bindings screen.
 	bind bindState
 }
@@ -154,6 +168,8 @@ func (f *Flow) enterConcern(c Concern) {
 	s := f.Settings
 	f.options.concern, f.options.cursor = c, 0
 	f.options.gameplay, f.options.audio, f.options.video, f.options.controls = s.Gameplay, s.Audio, s.Video, s.Controls
+	f.options.appearance = s.Appearance
+	f.options.previewPack, f.options.previewLifebar = f.ScreenpackChoice(), f.Lifebar
 	f.Screen = concernScreens[c]
 	f.refreshRows()
 }
@@ -172,11 +188,77 @@ func (f *Flow) saveChanged() {
 		changed = s.Video != f.options.video
 	case ConcernControls:
 		changed = s.Controls != f.options.controls
+	case ConcernAppearance:
+		changed = s.Appearance != f.options.appearance
 	}
-	if changed {
-		s.Save(c)
-		f.options.gameplay, f.options.audio, f.options.video, f.options.controls = s.Gameplay, s.Audio, s.Video, s.Controls
+	if !changed {
+		return
 	}
+	s.Save(c)
+	f.options.gameplay, f.options.audio, f.options.video, f.options.controls = s.Gameplay, s.Audio, s.Video, s.Controls
+	f.options.appearance = s.Appearance
+	if c == ConcernAppearance {
+		// The lifebar the sample showed is the one the HUD uses now; the
+		// host switches the screenpack when it sees AppearanceGen change.
+		f.Lifebar = f.options.previewLifebar
+		s.AppearanceGen++
+	}
+}
+
+// ScreenpackChoice is the installed screenpack the settings select: the
+// listed name matching the saved one without case, else "default".
+func (f *Flow) ScreenpackChoice() string {
+	return pickName(f.Packs, f.Settings.Appearance.Screenpack)
+}
+
+// PreviewPack is the screenpack the appearance screen is drawn with, its
+// candidate; "" on any other screen.
+func (f *Flow) PreviewPack() string {
+	if f.Screen != ScreenOptionsAppearance {
+		return ""
+	}
+	return f.options.previewPack
+}
+
+// PreviewLifebar is the lifebar to draw as a sample under the appearance
+// screen while its Lifebar row is highlighted; nil when none is shown, or
+// the candidate is the built-in bars.
+func (f *Flow) PreviewLifebar() *HUDLifebar {
+	if f.Screen != ScreenOptionsAppearance || f.options.cursor != appearanceRowLifebar {
+		return nil
+	}
+	return f.options.previewLifebar
+}
+
+// pickName is the name of names matching saved without case, else the
+// default's, else "default" itself.
+func pickName(names []string, saved string) string {
+	for _, want := range []string{saved, defaultName} {
+		for _, n := range names {
+			if strings.EqualFold(n, want) {
+				return n
+			}
+		}
+	}
+	return defaultName
+}
+
+// nextName is the name after (before, when delta is -1) the one saved selects
+// among names, wrapping around.
+func nextName(names []string, saved string, delta int) string {
+	current := pickName(names, saved)
+	if !slices.Contains(names, current) {
+		names = append(slices.Clone(names), current)
+	}
+	return cycle(names, current, delta)
+}
+
+func lifebarNames(entries []lifebar.Entry) []string {
+	names := make([]string, len(entries))
+	for i, e := range entries {
+		names[i] = e.Name
+	}
+	return names
 }
 
 // leaveConcern goes back to the concerns list, saving the concern when it
@@ -241,6 +323,17 @@ func (f *Flow) changeRow(delta int) {
 		}
 		if s.Audio != before {
 			s.AudioGen++
+		}
+	case ConcernAppearance:
+		switch row {
+		case appearanceRowScreenpack:
+			s.Appearance.Screenpack = nextName(f.Packs, s.Appearance.Screenpack, delta)
+			f.options.previewPack = f.ScreenpackChoice()
+		case appearanceRowLifebar:
+			s.Appearance.Lifebar = nextName(lifebarNames(f.Lifebars), s.Appearance.Lifebar, delta)
+			hud, notices := SelectLifebar(f.FS, f.Lifebars, s.Appearance.Lifebar)
+			s.NoteAppearance(notices)
+			f.options.previewLifebar = hud
 		}
 	case ConcernControls:
 		// The rows are actions, not values.
@@ -329,6 +422,9 @@ func (f *Flow) refreshRows() {
 		o.addRow("Player 1", "")
 		o.addRow("Player 2", "")
 		o.addRow("Reset to defaults", "")
+	case ConcernAppearance:
+		o.addRow("Screenpack", f.ScreenpackChoice())
+		o.addRow("Lifebar", pickName(lifebarNames(f.Lifebars), s.Appearance.Lifebar))
 	case ConcernVideo:
 		o.addRow("Fullscreen", onOff(s.Video.Fullscreen))
 		o.addRow("VSync", onOff(s.Video.VSync))

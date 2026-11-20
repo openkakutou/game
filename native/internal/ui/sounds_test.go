@@ -34,7 +34,7 @@ func soundPack(t *testing.T, screens map[string]string) *ui.Pack {
 			game["screenpacks/default/screens/"+name+".json"] = &fstest.MapFile{Data: []byte(`{"formatVersion": 1, ` + parts + `}`)}
 		}
 	}
-	pack, notices := ui.LoadPack(game)
+	pack, notices := ui.LoadPack(game, "default")
 	if len(notices) > 0 {
 		t.Fatalf("pack refused: %v", notices)
 	}
@@ -99,7 +99,7 @@ func TestPack_MusicIsTheScreensThenTheRootsAndNullIsSilence(t *testing.T) {
 }
 
 func TestPack_TheBuiltInPackPlaysItsThemeOnTheMenusAndIsSilentOnPause(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	theme, ok := pack.Music("title")
 	if !ok || theme.Asset.Path != "sounds/theme.ogg" || theme.Volume != 0.6 {
 		t.Errorf("title music = %+v ok=%v, want sounds/theme.ogg at 0.6", theme, ok)
@@ -139,7 +139,7 @@ func TestScreens_AFadeInUsesTheDefaultEaseOutAndMultipliesTheElementsOwnOpacity(
 }
 
 func TestScreens_AFadeInReachesTextAndImagesOfTheScreenToo(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	var list ui.DrawList
 	// The built-in title fades in over 250 ms, easeOut: at 125 ms, 1-(0.5)^2 = 0.75.

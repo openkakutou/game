@@ -218,7 +218,7 @@ func TestCharacterSelect_MirrorP2FalseKeepsTheSecondPortraitUpright(t *testing.T
 }
 
 func TestCharacterSelect_TheBuiltInScreenDrawsItsTitleGridAndCursor(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	var list ui.DrawList
 	s := ui.SelectState{Title: "Player 1", Roster: roster(12), Portraits: portraits{missing: -1}}
@@ -312,7 +312,7 @@ func TestResults_DrawsTheWinnersLargePortrait(t *testing.T) {
 }
 
 func TestSelectScreens_AFrameAllocatesNothingOnceWarm(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	sel := ui.SelectState{Title: "Player 1", Roster: roster(25), Focus: 20, Portraits: portraits{missing: 3}}
 	sel.Sides = [2]ui.SideSelect{{Shown: true, Cursor: 20}, {Shown: true, Cursor: 20}}
@@ -343,7 +343,7 @@ func TestSelectScreens_AFrameAllocatesNothingOnceWarm(t *testing.T) {
 }
 
 func TestPack_ExposesTheGridColumnsAndTheSortRuleOfTheSelectScreens(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	if got := pack.SelectColumns(); got != 10 {
 		t.Errorf("built-in columns = %d, want 10", got)
 	}

@@ -63,7 +63,7 @@ func TestSettings_MissingFilesGiveDefaultsAndAreWrittenOnFirstLaunch(t *testing.
 	}
 	got := slices.Clone(rec.names)
 	slices.Sort(got)
-	if want := []string{"config/audio.json", "config/controls.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
+	if want := []string{"config/appearance.json", "config/audio.json", "config/controls.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
 		t.Fatalf("written = %q, want %q", got, want)
 	}
 	if want := map[string]any{"rounds": 3.0, "timeLimitSeconds": 99.0}; !reflect.DeepEqual(decodeJSON(t, rec.files["config/gameplay.json"]), want) {
@@ -84,7 +84,7 @@ func TestSettings_OnlyMissingFilesAreWrittenOnFirstLaunch(t *testing.T) {
 	}
 	got := slices.Clone(rec.names)
 	slices.Sort(got)
-	if want := []string{"config/controls.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
+	if want := []string{"config/appearance.json", "config/controls.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
 		t.Errorf("written = %q, want %q", got, want)
 	}
 }
@@ -111,8 +111,8 @@ func TestSettings_ACorruptConcernFallsBackAloneAndIsNotRewritten(t *testing.T) {
 	if len(warned) != 1 || !strings.Contains(warned[0], "config/gameplay.json") {
 		t.Errorf("stderr warnings = %q", warned)
 	}
-	if len(rec.names) != 0 {
-		t.Errorf("startup wrote %q, a corrupt file must be left alone", rec.names)
+	if !slices.Equal(rec.names, []string{"config/appearance.json"}) {
+		t.Errorf("startup wrote %q, want only the missing appearance.json: a corrupt file must be left alone", rec.names)
 	}
 	s.Gameplay.Rounds = 1
 	s.Save(ConcernGameplay)
@@ -296,5 +296,81 @@ func TestOptions_SaveOpenConcernWritesNothingWhenUnchangedOrNotOnAConcernScreen(
 	f.SaveOpenConcern() // unchanged
 	if len(rec.names) != 0 {
 		t.Errorf("written = %q, want nothing", rec.names)
+	}
+}
+
+func TestSettings_AppearanceDefaultsToTheDefaultPackAndLifebarAndIsWrittenOnFirstLaunch(t *testing.T) {
+	rec := &recorder{}
+	s := LoadSettings(fstest.MapFS{}, "linux", rec.write, nil)
+	if s.Appearance != (Appearance{Screenpack: "default", Lifebar: "default"}) {
+		t.Errorf("appearance = %+v", s.Appearance)
+	}
+	want := map[string]any{"screenpack": "default", "lifebar": "default"}
+	if !reflect.DeepEqual(decodeJSON(t, rec.files["config/appearance.json"]), want) {
+		t.Errorf("appearance.json = %s", rec.files["config/appearance.json"])
+	}
+}
+
+func TestSettings_AppearanceReadsBothNamesAndAMissingOrEmptyOneIsDefault(t *testing.T) {
+	cases := []struct {
+		body string
+		want Appearance
+	}{
+		{`{"screenpack": "alt", "lifebar": "VHD"}`, Appearance{"alt", "VHD"}},
+		{`{"lifebar": "VHD"}`, Appearance{"default", "VHD"}},
+		{`{"screenpack": "", "lifebar": "x"}`, Appearance{"default", "x"}},
+	}
+	for _, c := range cases {
+		s := LoadSettings(configFS(map[string]string{"appearance.json": c.body}), "linux", nil, nil)
+		if s.Appearance != c.want || len(s.Notices()) != 0 {
+			t.Errorf("%s: appearance = %+v notices = %q, want %+v and none", c.body, s.Appearance, s.Notices(), c.want)
+		}
+	}
+}
+
+func TestSettings_ACorruptAppearanceFallsBackAloneWithANoticeAndIsNotRewritten(t *testing.T) {
+	rec := &recorder{}
+	var warned []string
+	fsys := configFS(map[string]string{
+		"appearance.json": `{"screenpack": 5}`,
+		"audio.json":      `{"master": 50, "music": 60, "effects": 70}`,
+	})
+	s := LoadSettings(fsys, "linux", rec.write, func(m string) { warned = append(warned, m) })
+	if s.Appearance != (Appearance{"default", "default"}) {
+		t.Errorf("appearance = %+v, want the defaults", s.Appearance)
+	}
+	if s.Audio != (Audio{50, 60, 70}) {
+		t.Errorf("audio = %+v, want its own values", s.Audio)
+	}
+	if n := s.Notices(); len(n) != 1 || !strings.Contains(n[0], "config/appearance.json") {
+		t.Errorf("notices = %q, want one naming config/appearance.json", n)
+	}
+	if len(warned) != 1 || slices.Contains(rec.names, "config/appearance.json") {
+		t.Errorf("warnings = %q written = %q, want one warning and no rewrite", warned, rec.names)
+	}
+}
+
+func TestSettings_SavingAppearanceKeepsUnknownKeys(t *testing.T) {
+	rec := &recorder{}
+	fsys := configFS(map[string]string{"appearance.json": `{"screenpack": "alt", "theme": {"x": 1}}`})
+	s := LoadSettings(fsys, "linux", rec.write, nil)
+	rec.names = nil
+	s.Appearance.Lifebar = "VHD"
+	s.Save(ConcernAppearance)
+	want := map[string]any{"screenpack": "alt", "lifebar": "VHD", "theme": map[string]any{"x": 1.0}}
+	if got := decodeJSON(t, rec.files["config/appearance.json"]); !reflect.DeepEqual(got, want) {
+		t.Errorf("saved appearance.json = %v, want %v", got, want)
+	}
+}
+
+func TestSettings_NoteAppearanceShowsTheFallbacksOnTheOptionsScreenAndStderr(t *testing.T) {
+	var warned []string
+	s := LoadSettings(fstest.MapFS{}, "linux", nil, func(m string) { warned = append(warned, m) })
+	s.NoteAppearance([]string{"screenpack \"gone\" not found, using \"default\"", "lifebar \"x\" not found: \"default\" used"})
+	if n := s.Notices(); len(n) != 1 || n[0] != "screenpack \"gone\" not found, using \"default\"; lifebar \"x\" not found: \"default\" used" {
+		t.Errorf("notices = %q", n)
+	}
+	if len(warned) != 2 {
+		t.Errorf("warnings = %q, want one per fallback", warned)
 	}
 }

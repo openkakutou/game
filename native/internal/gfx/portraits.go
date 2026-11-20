@@ -24,6 +24,17 @@ func newPortraitCache() *portraitCache {
 // bind points the cache at the flow's content and roster.
 func (c *portraitCache) bind(f *game.Flow) { c.fsys, c.chars = f.FS, f.Chars }
 
+// clear deletes every portrait texture: the roster's order changed, so the
+// indexes they are keyed by name other characters now.
+func (c *portraitCache) clear() {
+	for _, tex := range c.textures {
+		if tex != nil {
+			tex.Delete()
+		}
+	}
+	clear(c.textures)
+}
+
 // texture returns a portrait's texture, nil when the character has none.
 func (c *portraitCache) texture(ref ui.PortraitRef) *Texture {
 	if tex, seen := c.textures[ref]; seen {

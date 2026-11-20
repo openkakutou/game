@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
+	"strings"
 )
 
 // Persisted settings, one file per concern in config/ (decision 023).
@@ -31,6 +32,17 @@ type Video struct {
 	WindowHeight int  `json:"windowHeight"`
 }
 
+// Appearance is config/appearance.json: the names of the screenpack and of the
+// lifebar folders in use (ADR 026).
+type Appearance struct {
+	Screenpack string `json:"screenpack"`
+	Lifebar    string `json:"lifebar"`
+}
+
+// defaultName is the screenpack and the lifebar used when none is selected or
+// the selected one is gone.
+const defaultName = "default"
+
 // Smallest window the settings accept.
 const (
 	MinWindowWidth  = 320
@@ -42,6 +54,8 @@ var (
 	defaultGameplay = Gameplay{Rounds: 3, TimeLimitSeconds: 99}
 	defaultAudio    = Audio{Master: 100, Music: 100, Effects: 100}
 	defaultVideo    = Video{VSync: true, WindowWidth: 960, WindowHeight: 720}
+
+	defaultAppearance = Appearance{Screenpack: defaultName, Lifebar: defaultName}
 )
 
 func (g Gameplay) validate() error {
@@ -79,10 +93,11 @@ const (
 	ConcernAudio
 	ConcernVideo
 	ConcernControls
+	ConcernAppearance
 	concernCount
 )
 
-var concernFiles = [concernCount]string{"gameplay.json", "audio.json", "video.json", "controls.json"}
+var concernFiles = [concernCount]string{"gameplay.json", "audio.json", "video.json", "controls.json", "appearance.json"}
 
 // SettingsPlatform is the video.json section key of the running platform,
 // from runtime.GOOS.
@@ -110,14 +125,16 @@ const (
 
 // Settings are the persisted settings of the running game. AudioGen, VideoGen
 // and ControlsGen grow each time the audio, video or controls values change,
-// so the main loop applies them without comparing values every frame.
+// and AppearanceGen each time a changed appearance is left, so the main loop
+// applies them without comparing values every frame.
 type Settings struct {
 	Gameplay                        Gameplay
 	Audio                           Audio
 	Video                           Video
 	Controls                        Controls
+	Appearance                      Appearance
 	AudioGen, VideoGen, ControlsGen int
-	WindowGen                       int
+	AppearanceGen, WindowGen        int
 
 	platform string
 	names    [concernCount]string                     // file names in the game folder
@@ -131,7 +148,7 @@ type Settings struct {
 // NewSettings returns the default settings, never persisted: the starting
 // point of a Flow until the host loads the real ones.
 func NewSettings() *Settings {
-	return &Settings{Gameplay: defaultGameplay, Audio: defaultAudio, Video: defaultVideo, Controls: defaultControls}
+	return &Settings{Gameplay: defaultGameplay, Audio: defaultAudio, Video: defaultVideo, Controls: defaultControls, Appearance: defaultAppearance}
 }
 
 // LoadSettings reads the settings files of fsys for platform (a
@@ -223,8 +240,25 @@ func (s *Settings) decode(c Concern, data []byte) error {
 			}
 		}
 		s.Controls = c
+	case ConcernAppearance:
+		a := defaultAppearance
+		if err := json.Unmarshal(data, &a); err != nil {
+			return err
+		}
+		s.Appearance = a.withDefaults()
 	}
 	return nil
+}
+
+// withDefaults gives the default name to a field the file leaves empty.
+func (a Appearance) withDefaults() Appearance {
+	if a.Screenpack == "" {
+		a.Screenpack = defaultName
+	}
+	if a.Lifebar == "" {
+		a.Lifebar = defaultName
+	}
+	return a
 }
 
 // RejectControls replaces controls the host cannot use (a name SDL does not
@@ -235,6 +269,24 @@ func (s *Settings) RejectControls(err error) {
 	s.ControlsGen++
 	name := s.names[ConcernControls]
 	s.setNotice(ConcernControls, fmt.Sprintf("%s: defaults used", name), fmt.Sprintf("%s ignored, defaults used: %v", name, err))
+}
+
+// NoteAppearance reports the fallbacks the host met choosing the screenpack
+// and the lifebar (a selected folder that is gone or refused): each on
+// stderr, and their first lines on the Options screen. The file keeps the
+// old names until the player changes them.
+func (s *Settings) NoteAppearance(notices []string) {
+	if len(notices) == 0 {
+		return
+	}
+	short := make([]string, len(notices))
+	for i, n := range notices {
+		short[i], _, _ = strings.Cut(n, "\n")
+		if s.warn != nil {
+			s.warn(n)
+		}
+	}
+	s.setNotice(ConcernAppearance, strings.Join(short, "; "), "")
 }
 
 // Notices are the problems the Options screen shows: concerns that fell back
@@ -291,6 +343,8 @@ func (s *Settings) encode(c Concern) (map[string]json.RawMessage, error) {
 		return obj, overlay(obj, s.Gameplay)
 	case ConcernAudio:
 		return obj, overlay(obj, s.Audio)
+	case ConcernAppearance:
+		return obj, overlay(obj, s.Appearance)
 	case ConcernControls:
 		// The section holds nothing but the known keys: decode refuses the others.
 		data, err := json.Marshal(s.Controls.section())

@@ -59,7 +59,7 @@ func (f *Flow) PackScreen() string {
 	case ScreenError:
 		return "error"
 	case ScreenOptions, ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo,
-		ScreenOptionsControls, ScreenOptionsBindings:
+		ScreenOptionsControls, ScreenOptionsBindings, ScreenOptionsAppearance:
 		return "options"
 	case ScreenMatch:
 		if f.Paused {

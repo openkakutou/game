@@ -178,22 +178,7 @@ func TestDiscoverListsValidFoldersAndReportsBrokenOnes(t *testing.T) {
 	}
 }
 
-func TestSelectedAndPick(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "appearance.json")
-	fsys := os.DirFS(dir)
-	if name, err := Selected(fsys, "appearance.json"); name != DefaultName || err != nil {
-		t.Errorf("missing file = %q %v", name, err)
-	}
-	write(t, path, `{"lifebar":"VHD","screenpack":"x"}`)
-	if name, err := Selected(fsys, "appearance.json"); name != "VHD" || err != nil {
-		t.Errorf("selected = %q %v", name, err)
-	}
-	write(t, path, `{not json`)
-	if name, err := Selected(fsys, "appearance.json"); name != DefaultName || err == nil {
-		t.Errorf("corrupt = %q %v", name, err)
-	}
-
+func TestPick(t *testing.T) {
 	entries := []Entry{{Name: "default"}, {Name: "vhd"}}
 	if e, ok := Pick(entries, "VHD"); !ok || e.Name != "vhd" {
 		t.Errorf("pick = %v %v", e, ok)

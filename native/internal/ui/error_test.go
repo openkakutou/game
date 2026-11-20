@@ -90,7 +90,7 @@ func TestError_APackWithoutAnErrorScreenBorrowsTheDefaultsWithItsBackground(t *t
 }
 
 func TestError_AFrameAllocatesNothingOnceTheMessageIsWrapped(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	s := ui.ErrorState{Title: "Something went wrong", Hint: "Press Enter to quit",
 		Message: "Cannot read the content: the chars folder is missing and the stages one too. Use -content to point at the content folder."}

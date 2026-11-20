@@ -167,10 +167,10 @@ func TestControls_RejectedNamesGiveDefaultsANoticeAndANewGeneration(t *testing.T
 	}
 }
 
-func TestOptions_ListsControlsBeforeBack(t *testing.T) {
+func TestOptions_ListsControlsAndAppearanceBeforeBack(t *testing.T) {
 	f, _ := optionsFlow(t)
 	navAll(f, NavDown, NavConfirm)
-	if want := []string{"Gameplay", "Audio", "Video", "Controls", "Back"}; !sameStrings(f.OptionsItems(), want) {
+	if want := []string{"Gameplay", "Audio", "Video", "Controls", "Appearance", "Back"}; !sameStrings(f.OptionsItems(), want) {
 		t.Fatalf("items = %q, want %q", f.OptionsItems(), want)
 	}
 }

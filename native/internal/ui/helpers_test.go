@@ -82,7 +82,7 @@ func screenGame(t *testing.T, screen, parts string, extra fstest.MapFS) fstest.M
 // layoutOf loads the game folder's pack, which must be valid.
 func layoutOf(t *testing.T, game fs.FS) *ui.Layout {
 	t.Helper()
-	pack, notices := ui.LoadPack(game)
+	pack, notices := ui.LoadPack(game, "default")
 	if len(notices) > 0 {
 		t.Fatalf("pack refused: %v", notices)
 	}

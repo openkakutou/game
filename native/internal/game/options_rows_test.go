@@ -28,8 +28,8 @@ func TestOptionsRows_TheConcernsListHasLabelsOnly(t *testing.T) {
 	f, _ := optionsFlow(t)
 	navAll(f, NavDown, NavConfirm)
 	got := f.OptionsRows()
-	if len(got) != 5 || got[3].Label != "Controls" || got[3].Values != [2]string{} {
-		t.Errorf("rows = %+v, want Gameplay, Audio, Video, Controls, Back as bare labels", got)
+	if len(got) != 6 || got[3].Label != "Controls" || got[3].Values != [2]string{} {
+		t.Errorf("rows = %+v, want Gameplay, Audio, Video, Controls, Appearance, Back as bare labels", got)
 	}
 }
 

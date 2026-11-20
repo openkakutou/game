@@ -32,7 +32,7 @@ func packScreenOf(f *game.Flow) packScreen {
 	case game.ScreenTitle, game.ScreenMainMenu:
 		return packTitle
 	case game.ScreenOptions, game.ScreenOptionsGameplay, game.ScreenOptionsAudio, game.ScreenOptionsVideo,
-		game.ScreenOptionsControls, game.ScreenOptionsBindings:
+		game.ScreenOptionsControls, game.ScreenOptionsBindings, game.ScreenOptionsAppearance:
 		return packOptions
 	case game.ScreenSelect:
 		return packSelect
@@ -56,6 +56,8 @@ func packScreenOf(f *game.Flow) packScreen {
 
 // drawPack draws a screenpack screen over the whole window, in pixels.
 func (r *Renderer) drawPack(f *game.Flow, kind packScreen) {
+	current := r.viewFor(f)
+	r.layout, r.painter = current.layout, current.painter
 	width, height := r.win.BeginPixels()
 	view := ui.View{W: width, H: height}
 	r.list.Reset()

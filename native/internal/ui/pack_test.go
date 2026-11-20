@@ -40,7 +40,7 @@ func TestUIPackage_ImportsNoFileAccessNorDrawing(t *testing.T) {
 const redBackground = `"background": [{ "type": "rect", "anchor": "topLeft", "size": [10, 10], "color": "#ff0000" }]`
 
 func TestLoadPack_UsesTheBuiltInScreenpackWhenTheGameFolderHasNone(t *testing.T) {
-	pack, notices := ui.LoadPack(fstest.MapFS{})
+	pack, notices := ui.LoadPack(fstest.MapFS{}, "default")
 	if len(notices) != 0 {
 		t.Errorf("notices = %v, want none", notices)
 	}
@@ -76,7 +76,7 @@ func TestLoadPack_FindsTheFolderWhateverItsCase(t *testing.T) {
 
 func TestLoadPack_AnInvalidFolderFallsBackToTheBuiltInWithANotice(t *testing.T) {
 	game := fstest.MapFS{"screenpacks/default/screenpack.json": {Data: []byte(`{}`)}}
-	pack, notices := ui.LoadPack(game)
+	pack, notices := ui.LoadPack(game, "default")
 	if len(notices) != 1 || !strings.Contains(notices[0], "screenpacks/default") {
 		t.Fatalf("notices = %q, want one naming screenpacks/default", notices)
 	}
@@ -88,7 +88,7 @@ func TestLoadPack_AnInvalidFolderFallsBackToTheBuiltInWithANotice(t *testing.T) 
 
 func TestLoadPack_AFontThatCannotBeParsedIsARefusedFolder(t *testing.T) {
 	game := gameWith(t, redBackground, fstest.MapFS{"fonts/NotoSans-Regular.ttf": {Data: []byte("not a font")}})
-	_, notices := ui.LoadPack(game)
+	_, notices := ui.LoadPack(game, "default")
 	if len(notices) != 1 || !strings.Contains(notices[0], "font") {
 		t.Errorf("notices = %q, want one about the font", notices)
 	}
@@ -98,7 +98,7 @@ func TestLoadPack_ASymbolicLinkInPlaceOfTheFolderIsRefusedWithANotice(t *testing
 	game := fstest.MapFS{
 		"screenpacks/default": {Mode: fs.ModeSymlink, Data: []byte("elsewhere")},
 	}
-	pack, notices := ui.LoadPack(game)
+	pack, notices := ui.LoadPack(game, "default")
 	if len(notices) != 1 || !strings.Contains(notices[0], "symbolic link") {
 		t.Fatalf("notices = %q, want one saying screenpacks/default is a symbolic link", notices)
 	}

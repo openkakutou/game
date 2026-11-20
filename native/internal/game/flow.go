@@ -8,6 +8,7 @@ import (
 
 	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/engine/v2/match"
+	"github.com/openkakutou/game/native/internal/lifebar"
 	"github.com/openkakutou/game/native/internal/mode"
 	"github.com/openkakutou/stage"
 )
@@ -26,12 +27,13 @@ const (
 	ScreenVersus          // both picked characters, before the match
 	ScreenMatch
 	ScreenResult
-	ScreenOptions         // the settings concerns: Gameplay, Audio, Video, Controls, Back
+	ScreenOptions         // the settings concerns: Gameplay, Audio, Video, Controls, Appearance, Back
 	ScreenOptionsGameplay // the rows of one concern, in Concern order
 	ScreenOptionsAudio
 	ScreenOptionsVideo
-	ScreenOptionsControls // Player 1, Player 2, Reset to defaults, Back
-	ScreenOptionsBindings // one player's actions with their key and button
+	ScreenOptionsControls   // Player 1, Player 2, Reset to defaults, Back
+	ScreenOptionsBindings   // one player's actions with their key and button
+	ScreenOptionsAppearance // the screenpack and the lifebar, with a preview
 	ScreenError
 )
 
@@ -140,9 +142,13 @@ type Flow struct {
 	FS fs.FS
 	// Lifebar is the HUD's lifebar; nil keeps the built-in bars.
 	Lifebar *HUDLifebar
-	Match   *Match
-	cpus    [2]*CPU // drive the sides the match setup gives to the CPU
-	cpuIn   [2]input.TickInput
+	// Lifebars are the usable folders of lifebars/ and Packs the installed
+	// screenpacks' names, which Options > Appearance offers.
+	Lifebars []lifebar.Entry
+	Packs    []string
+	Match    *Match
+	cpus     [2]*CPU // drive the sides the match setup gives to the CPU
+	cpuIn    [2]input.TickInput
 	// quick is the setup of a quick versus match started from the command
 	// line: no menus before it, and the game quits when it ends.
 	quick *Setup
@@ -322,7 +328,7 @@ func (f *Flow) navigate(n Nav) {
 		f.navResult(n)
 	case ScreenOptions:
 		f.navOptions(n)
-	case ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo, ScreenOptionsControls:
+	case ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo, ScreenOptionsControls, ScreenOptionsAppearance:
 		f.navConcern(n)
 	case ScreenOptionsBindings:
 		f.navBindings(n)

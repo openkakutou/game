@@ -40,7 +40,7 @@ func menuPlayer(t *testing.T, pack *ui.Pack) (p *Player, warns, infos *[]string)
 }
 
 func builtInPack() *ui.Pack {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	return pack
 }
 
@@ -67,7 +67,7 @@ func packWith(t *testing.T, edit map[string]func([]byte) []byte) *ui.Pack {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pack, notices := ui.LoadPack(game)
+	pack, notices := ui.LoadPack(game, "default")
 	if len(notices) > 0 {
 		t.Fatalf("pack refused: %v", notices)
 	}
@@ -283,5 +283,34 @@ func TestUpdate_AMenuMusicThatCannotBeLoadedIsWarnedOnceNotEveryFrame(t *testing
 	p.Update(f)
 	if len(*warns) != 2 {
 		t.Errorf("warnings = %d after returning from a match, want one more attempt (2 in all)", len(*warns))
+	}
+}
+
+func TestSetPack_AnotherPackReleasesTheOldMenuSoundsAndMusicAndTheSamePackKeepsThem(t *testing.T) {
+	p, _, infos := menuPlayer(t, builtInPack())
+	f := titleFlow(t)
+	p.Update(f)
+	f.Navigate(game.NavConfirm) // queues the confirm sound
+	p.Update(f)
+	if len(p.menuChunks) == 0 || !p.menuPlaying {
+		t.Fatalf("setup: menu chunks %d, music playing %v", len(p.menuChunks), p.menuPlaying)
+	}
+	p.SetPack(p.pack)
+	if len(p.menuChunks) == 0 || !p.menuPlaying {
+		t.Error("setting the pack already in use released its sounds or music")
+	}
+	p.SetPack(builtInPack())
+	if len(p.menuChunks) != 0 || p.menuPlaying || p.music != nil {
+		t.Errorf("after another pack: chunks %d, playing %v, music %v, want all released", len(p.menuChunks), p.menuPlaying, p.music)
+	}
+	p.Update(f)
+	themes := 0
+	for _, i := range *infos {
+		if strings.HasSuffix(i, "sounds/theme.ogg") {
+			themes++
+		}
+	}
+	if themes != 2 || !p.menuPlaying {
+		t.Errorf("the new pack's music did not start: theme loads %d, playing %v", themes, p.menuPlaying)
 	}
 }

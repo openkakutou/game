@@ -350,7 +350,7 @@ func TestTitle_SpriteSheetFramesAndAnimationsPickTheirSourceRect(t *testing.T) {
 }
 
 func TestTitle_BuiltInLogoIsCenteredAtTheTopAfterItsTransition(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	list := draw(ui.NewLayout(pack), ui.TitleState{Phase: ui.PhaseMenu, ElapsedMs: 10000})
 	logo := imageOps(list, "images/logo.png")
 	if len(logo) != 1 {
@@ -370,7 +370,7 @@ func TestTitle_BuiltInLogoIsCenteredAtTheTopAfterItsTransition(t *testing.T) {
 }
 
 func TestDrawList_ResetKeepsItsCapacitySoAFrameAllocatesNothing(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	var list ui.DrawList
 	states := []ui.TitleState{

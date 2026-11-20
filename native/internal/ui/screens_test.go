@@ -124,7 +124,7 @@ func TestOptions_TheTitleIsAPartAndThePromptAndNoticesStackUpFromTheHint(t *test
 }
 
 func TestOptions_TheBuiltInScreenDrawsTitleRowsValueAndCursor(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	rows := []ui.Row{{Label: "Fullscreen", Values: [2]string{"Off"}}, {Label: "Back"}}
 	var list ui.DrawList
@@ -168,7 +168,7 @@ func TestPause_DimsTheFrozenMatchThenTitleAndMenu(t *testing.T) {
 }
 
 func TestMatchSetup_ListsItsRowsWithTheirValuesUnderTheTitle(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	rows := []ui.Row{{Label: "Rounds", Values: [2]string{"best of 3"}}, {Label: "Start match"}}
 	var list ui.DrawList
@@ -240,7 +240,7 @@ func TestResults_ShowsTheWinnerTheMessageTheScoreAndTheMenuWithItsCursor(t *test
 }
 
 func TestScreens_AFrameAllocatesNothingOnceWarm(t *testing.T) {
-	pack, _ := ui.LoadPack(fstest.MapFS{})
+	pack, _ := ui.LoadPack(fstest.MapFS{}, "default")
 	l := ui.NewLayout(pack)
 	rows := []ui.Row{{Label: "A", Values: [2]string{"F", "a"}, Flagged: true}, {Label: "Back"}}
 	entries := []string{"Rematch", "Back"} // built once: a literal in the closure would be heap allocated by the test itself

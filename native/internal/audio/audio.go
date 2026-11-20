@@ -91,9 +91,27 @@ func New() *Player {
 }
 
 // SetPack gives the player the screenpack whose menu music and sounds it plays.
+// Another pack than the one in use releases the old one's loaded sounds and
+// stops its music (the next screen starts the new pack's).
 func (p *Player) SetPack(pack *ui.Pack) {
-	if p != nil {
-		p.pack = pack
+	if p == nil || pack == p.pack {
+		return
+	}
+	p.pack = pack
+	p.freeMenuChunks()
+	p.menuFailedOK = false
+	if p.menuPlaying {
+		p.stopMusic()
+	}
+}
+
+// freeMenuChunks releases every loaded menu sound.
+func (p *Player) freeMenuChunks() {
+	for k, c := range p.menuChunks {
+		if c != nil {
+			c.Free()
+		}
+		delete(p.menuChunks, k)
 	}
 }
 
@@ -387,12 +405,7 @@ func (p *Player) Close() {
 		return
 	}
 	p.stopAll()
-	for k, c := range p.menuChunks {
-		if c != nil {
-			c.Free()
-		}
-		delete(p.menuChunks, k)
-	}
+	p.freeMenuChunks()
 	mix.HaltChannel(-1)
 	p.owner = nil
 	p.open = false
