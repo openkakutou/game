@@ -35,6 +35,7 @@ func TestSchema_EnumsMatchThePackagesValues(t *testing.T) {
 	check("screens", at(append(flowItem, "screen", "enum")...), strs(Screens))
 	check("controls", at(append(rules, "sides", "items", "properties", "control", "enum")...), strs(Controls))
 	check("opponents", at(append(rules, "opponents", "properties", "kind", "enum")...), strs(OpponentsKinds))
+	check("pause", at("properties", "pause", "items", "enum"), strs(PauseEntries))
 	check("onWin", at(append(rules, "onWin", "enum")...), strs(Outcomes))
 	check("onLose", at(append(rules, "onLose", "enum")...), strs(Outcomes))
 	sides := s["properties"].(map[string]any)["flow"].(map[string]any)["items"].(map[string]any)["allOf"].([]any)[0].(map[string]any)["then"].(map[string]any)["properties"].(map[string]any)["params"].(map[string]any)["properties"].(map[string]any)["sides"].(map[string]any)["items"].(map[string]any)["enum"]

@@ -1,11 +1,11 @@
 # Game modes
 
-A **mode** is a data file, not code: the sequence of built-in screens a player goes through, and the rules of the matches (roadmap decision `030`). The game ships Arcade (a ladder of CPU opponents), Versus and Watch (two CPUs fight, the player picks both fighters) built in; further modes (survival, training) are new files in the same format. A mode cannot script anything: it only combines what the game offers.
+A **mode** is a data file, not code: the sequence of built-in screens a player goes through, and the rules of the matches (roadmap decision `030`). The game ships Arcade (a ladder of CPU opponents), Training (one player against a dummy, no time limit, life refilled), Versus and Watch (two CPUs fight, the player picks both fighters) built in; further modes (survival, for example) are new files in the same format. A mode cannot script anything: it only combines what the game offers.
 
 Versus (a mode) is not quick versus: quick versus starts one match straight from the command line, without any menu, as MUGEN and Ikemen GO do (see [command-line.md](command-line.md)).
 
-- Examples: [`native/internal/mode/arcade.jsonc`](../native/internal/mode/arcade.jsonc), [`native/internal/mode/versus.jsonc`](../native/internal/mode/versus.jsonc), [`native/internal/mode/watch.jsonc`](../native/internal/mode/watch.jsonc)
-- Where the game reads it: the desktop game reads every `.json` or `.jsonc` file of the `modes/` folder in its game folder (folder and extension in any case). It lists them in the main menu, in file-name order ignoring case, then Quit. A file that is not a valid mode is left out and its error (file, field, reason) is printed on stderr, as is a second file with the id of an earlier one. The built-in modes are Arcade, Versus and Watch: for each one, when no valid mode has its id (`arcade`, `versus`, `watch`), the built-in (the same file as the shipped `modes/arcade.jsonc`, `modes/versus.jsonc` or `modes/watch.jsonc`) is added after the others, with a notice on stderr, e.g. `modes/watch.jsonc not found or invalid, using the built-in Watch mode`.
+- Examples: [`native/internal/mode/arcade.jsonc`](../native/internal/mode/arcade.jsonc), [`native/internal/mode/training.jsonc`](../native/internal/mode/training.jsonc), [`native/internal/mode/versus.jsonc`](../native/internal/mode/versus.jsonc), [`native/internal/mode/watch.jsonc`](../native/internal/mode/watch.jsonc)
+- Where the game reads it: the desktop game reads every `.json` or `.jsonc` file of the `modes/` folder in its game folder (folder and extension in any case). It lists them in the main menu, in file-name order ignoring case, then Quit. A file that is not a valid mode is left out and its error (file, field, reason) is printed on stderr, as is a second file with the id of an earlier one. The built-in modes are Arcade, Training, Versus and Watch: for each one, when no valid mode has its id (`arcade`, `training`, `versus`, `watch`), the built-in (the same file as the shipped `modes/arcade.jsonc`, `modes/training.jsonc`, `modes/versus.jsonc` or `modes/watch.jsonc`) is added after the others, with a notice on stderr, e.g. `modes/watch.jsonc not found or invalid, using the built-in Watch mode`.
 - JSON Schema: [`native/internal/mode/mode.schema.json`](../native/internal/mode/mode.schema.json)
 - Loader: `native/internal/mode` (Go, imported by the native game) and `native/cmd/mode-wasm` (the same loader built to WebAssembly for the web game)
 
@@ -45,6 +45,7 @@ A mode is one JSONC file: JSON with `//` and `/* */` comments and trailing comma
 | `name` | non-empty string | Name the main menu shows. |
 | `flow` | non-empty array of steps | The screens, in order. Must include a `match` screen. |
 | `rules` | object | The match rules, below. |
+| `pause` | array of ids, optional | Entries the pause menu gets besides the game's own, from the set the game offers, see below. |
 
 Unknown fields are refused, so a typo is reported instead of silently ignored.
 
@@ -79,6 +80,24 @@ Title, main menu, options, pause and move list belong to the game itself, not to
 | `opponents.final` | non-empty string, optional | Folder name of a character fought after the `count` ladder opponents (a boss). `ladder` only. |
 | `onWin`, `onLose` | `results`, `nextOpponent`, `continue` or `gameOver` | What follows a won or a lost match. |
 | `roster` | object, optional | Which characters and stages the mode shows, see below. Absent: everything. |
+| `training` | boolean, optional | `true` turns on the training behaviour, see Training. Default `false`. |
+
+### Pause entries
+
+The pause menu always lists the game's own entries: Continue, Restart, Character Change (not in quick versus), Move List, Options and Exit. A mode's `pause` array adds entries from the set the game offers, inserted after Restart in the order the mode lists them. An id outside the set, or listed twice, is refused with the usual file, field (`pause[1]`) and reason error. Arcade, Versus and Watch list none.
+
+| Id | Entry | Does |
+|---|---|---|
+| `resetPositions` | Reset Positions | Puts both fighters back at their round-start positions, life and state, keeps the other settings (the dummy) and closes the menu. |
+| `dummy` | Dummy: Stand | Confirm cycles the dummy (side 2) through Stand (no input), Crouch (holds down), Jump (holds up), Guard (holds back, away from player 1, whichever side it stands on) and CPU (the CPU opponent drives it), then Stand again. Stand is the default each time the mode is entered. The menu stays open. |
+
+Guard only holds back: the dummy blocks once the engine guards (engine backlog item 023); until then it takes the hits.
+
+### Training
+
+`rules.training: true` makes a match a training match: a fighter whose life is below its maximum and has not changed for 60 ticks (1 second without a hit) gets its full life back, and a life that reaches 0 is refilled at once, so no round ends by KO and the match never ends (`onWin` and `onLose` are required by the format but never followed). With `timeLimitSeconds: 0` there is no timer either. The built-in Training mode has side 1 `human`, side 2 `cpu` (the dummy; its input follows the Dummy pause entry), one round, no `matchSetup`, `versus` or `results` screen, and `pause: ["resetPositions", "dummy"]`; Move List stays reachable from its pause menu.
+
+A KO the engine reports in the tick it happens is dropped, not undone: the fighter's life is back before the next tick, but the hit reaction that took it to 0 still plays.
 
 ### Ladder
 

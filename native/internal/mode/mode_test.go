@@ -158,15 +158,15 @@ func TestParse_JSONCTrailingCommas_AreAccepted(t *testing.T) {
 	}
 }
 
-func TestBuiltIn_ListsArcadeVersusThenWatchParsed(t *testing.T) {
+func TestBuiltIn_ListsArcadeTrainingVersusThenWatchParsed(t *testing.T) {
 	modes, err := BuiltIn()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(modes) != 3 || modes[0].ID != "arcade" || modes[1].ID != "versus" || modes[2].ID != "watch" || modes[2].Name != "Watch" {
-		t.Fatalf("modes = %+v, want arcade, versus then watch", modes)
+	if len(modes) != 4 || modes[0].ID != "arcade" || modes[1].ID != "training" || modes[2].ID != "versus" || modes[3].ID != "watch" || modes[3].Name != "Watch" {
+		t.Fatalf("modes = %+v, want arcade, training, versus then watch", modes)
 	}
-	w := modes[2]
+	w := modes[3]
 	if w.Rules.Sides[0].Control != ControlCPU || w.Rules.Sides[1].Control != ControlCPU || len(w.Flow) != 6 || w.Flow[0].Screen != ScreenCharacterSelect {
 		t.Errorf("watch = %+v, want two cpu sides and a 6-step flow starting with character select", w)
 	}
@@ -308,5 +308,93 @@ func TestMarshal_EmptyIncludeKeepsItsMeaningInJSON(t *testing.T) {
 	out, err = json.Marshal(Filter{Exclude: []string{"a"}})
 	if err != nil || string(out) != `{"exclude":["a"]}` {
 		t.Errorf("json = %s (%v), want an absent include dropped", out, err)
+	}
+}
+
+func TestBuiltIn_TrainingPicksBothFightersThenPlaysAMatchThatNeverEnds(t *testing.T) {
+	modes, err := BuiltIn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := modes[1]
+	want := []Step{{Screen: ScreenCharacterSelect, Sides: []string{"p1", "p2"}}, {Screen: ScreenStageSelect}, {Screen: ScreenMatch}}
+	if tr.Name != "Training" || !reflect.DeepEqual(tr.Flow, want) {
+		t.Errorf("training = %q, flow %+v, want Training and %+v", tr.Name, tr.Flow, want)
+	}
+	wantRules := Rules{
+		Sides:  [2]Side{{Control: ControlHuman, Characters: 1}, {Control: ControlCPU, Characters: 1}},
+		Rounds: 1, TimeLimitSeconds: 0,
+		Opponents: Opponents{Kind: OpponentsChosen},
+		OnWin:     OutcomeResults, OnLose: OutcomeResults,
+		Training: true,
+	}
+	if !reflect.DeepEqual(tr.Rules, wantRules) {
+		t.Errorf("rules = %+v, want %+v", tr.Rules, wantRules)
+	}
+	if !slices.Equal(tr.Pause, []PauseEntry{PauseResetPositions, PauseDummy}) {
+		t.Errorf("pause = %v, want resetPositions then dummy", tr.Pause)
+	}
+}
+
+func TestBuiltIn_OtherModesListNoPauseEntryAndAreNotTraining(t *testing.T) {
+	modes, err := BuiltIn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range modes {
+		if m.ID == "training" {
+			continue
+		}
+		if len(m.Pause) != 0 || m.Rules.Training {
+			t.Errorf("%s: pause %v, training %v, want none", m.ID, m.Pause, m.Rules.Training)
+		}
+	}
+}
+
+func TestParse_PauseEntries_AreReadInTheOrderListed(t *testing.T) {
+	src := strings.Replace(valid, `"flow"`, `"pause": ["dummy", "resetPositions"], "flow"`, 1)
+	m, err := Parse("m.jsonc", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(m.Pause, []PauseEntry{PauseDummy, PauseResetPositions}) {
+		t.Errorf("pause = %v, want dummy then resetPositions", m.Pause)
+	}
+}
+
+func TestParse_Training_IsReadAsABoolean(t *testing.T) {
+	src := strings.Replace(valid, `"rounds": 3,`, `"rounds": 3, "training": true,`, 1)
+	m, err := Parse("m.jsonc", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.Rules.Training {
+		t.Error("rules.training = false, want true")
+	}
+	plain, err := Parse("m.jsonc", []byte(valid))
+	if err != nil || plain.Rules.Training {
+		t.Errorf("without the field: training = %v, err = %v, want false", plain.Rules.Training, err)
+	}
+}
+
+func TestParse_InvalidPauseOrTraining_ReturnsAnErrorNamingFileFieldAndReason(t *testing.T) {
+	cases := []struct{ name, from, to, field, reason string }{
+		{"unknown entry", `"flow"`, `"pause": ["continue"], "flow"`, "pause[0]", "not one of"},
+		{"unknown entry after a good one", `"flow"`, `"pause": ["dummy", "nope"], "flow"`, "pause[1]", "not one of"},
+		{"duplicate entry", `"flow"`, `"pause": ["dummy", "dummy"], "flow"`, "pause[1]", "twice"},
+		{"pause not an array", `"flow"`, `"pause": "dummy", "flow"`, "pause", "array"},
+		{"training not a boolean", `"rounds": 3,`, `"rounds": 3, "training": "yes",`, "rules.training", "boolean"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := Parse("m.jsonc", []byte(strings.Replace(valid, c.from, c.to, 1)))
+			var me *Error
+			if !errors.As(err, &me) {
+				t.Fatalf("err = %v, want a *mode.Error", err)
+			}
+			if me.File != "m.jsonc" || me.Field != c.field || !strings.Contains(me.Reason, c.reason) {
+				t.Errorf("err = %+v, want file m.jsonc, field %s, reason containing %q", me, c.field, c.reason)
+			}
+		})
 	}
 }

@@ -29,6 +29,9 @@ const (
 	FallbackHalfWidth  = 200
 	StartingOffset     = 70
 	UnlimitedTimer     = 999_999
+	// TrainingRefillTicks is how long a training fighter must go without a
+	// hit to get its life back: 1 second.
+	TrainingRefillTicks = TickRateHz
 )
 
 // Fighter is a loaded character plus the file names the renderer needs.
@@ -97,6 +100,9 @@ type Setup struct {
 	CPU [2]bool
 	// Start overrides each side's life and power at the start of the match.
 	Start [2]StartValues
+	// Training refills a fighter's life after a second without a hit and ends
+	// no round (mode rule training).
+	Training bool
 }
 
 // StartValues overrides a fighter's life and power when the match starts
@@ -173,7 +179,10 @@ type Match struct {
 	missing  [2][]string // state files each character could not find
 	runtimes [2]engine.FighterRuntime
 	tick     int
-	cues     []Cue // PlaySnd events not yet drained
+	// Training life tracking, per side: the full life, the life seen last
+	// tick, and the ticks it has stayed the same.
+	maxHealth, lastHealth, quiet [2]int
+	cues                         []Cue // PlaySnd events not yet drained
 }
 
 // NewMatch assembles round 1 of a match.
@@ -198,7 +207,48 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 		return nil, err
 	}
 	m.applyStart()
+	m.trackLife()
 	return m, nil
+}
+
+// ResetPositions puts both fighters back at their round-start positions, life
+// and state, as when round 1 began; the score is kept.
+func (m *Match) ResetPositions() error {
+	if err := m.reset(1); err != nil {
+		return err
+	}
+	m.applyStart()
+	m.trackLife()
+	return nil
+}
+
+// trackLife takes the fighters' life now as their full life, for training.
+func (m *Match) trackLife() {
+	for i := range m.State.Fighters {
+		m.maxHealth[i] = m.State.Fighters[i].Health
+		m.lastHealth[i] = m.maxHealth[i]
+		m.quiet[i] = 0
+	}
+}
+
+// refillLife is a training tick's life rule: a fighter at zero life, or short
+// of life and not hit for TrainingRefillTicks (its life unchanged), gets its
+// full life back, in the state and in the state machine's context.
+func (m *Match) refillLife() {
+	for i := range m.State.Fighters {
+		health := m.State.Fighters[i].Health
+		if health != m.lastHealth[i] {
+			m.lastHealth[i], m.quiet[i] = health, 0
+		} else {
+			m.quiet[i]++
+		}
+		if health > 0 && (health >= m.maxHealth[i] || m.quiet[i] < TrainingRefillTicks) {
+			continue
+		}
+		m.State.Fighters[i].Health = m.maxHealth[i]
+		m.runtimes[i].Context.Health = m.maxHealth[i]
+		m.lastHealth[i], m.quiet[i] = m.maxHealth[i], 0
+	}
 }
 
 func (m *Match) reset(roundNo int) error {
@@ -267,6 +317,11 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	m.State, m.runtimes = res.State, res.Fighters
 	m.syncAnim()
 	m.queueCues(res.Sounds)
+	if m.Setup.Training {
+		// A KO the engine reports is dropped: the life is back before anyone sees it.
+		m.refillLife()
+		return nil
+	}
 	if res.Round.Outcome != round.OutcomeNone {
 		m.LastRound = res.Round
 		m.Progress = m.Progress.RecordRoundResult(res.Round)

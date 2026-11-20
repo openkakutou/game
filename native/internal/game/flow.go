@@ -199,6 +199,10 @@ type Flow struct {
 	Paused bool
 	// PauseCursor is the highlighted PauseItems entry.
 	PauseCursor int
+	// pauseItems are the current mode's pause entries (see pauseItemsOf).
+	pauseItems []PauseItem
+	// Dummy is the training dummy's setting, set from the pause menu.
+	Dummy Dummy
 	// pauser is the player who opened the pause menu, whose character the
 	// move list shows first; actor is the player whose input is being handled.
 	pauser, actor int
@@ -251,6 +255,7 @@ func (f *Flow) enterMode(i int) {
 	f.TimeIdx = slices.Index(f.timeOpts, timeLimit)
 	f.Player2CPU = false
 	f.Match, f.Paused, f.ladder = nil, false, nil
+	f.pauseItems, f.Dummy = pauseItemsOf(m), DummyStand
 	f.applyRoster()
 	msg := f.emptyRosterMessage()
 	if msg != "" {
@@ -347,7 +352,7 @@ func (f *Flow) Setup() Setup {
 	}
 	sides := f.Mode.Rules.Sides
 	cpu := [2]bool{sides[0].Control == mode.ControlCPU, sides[1].Control == mode.ControlCPU || f.Player2CPU}
-	return Setup{Rounds: f.roundOpts[f.RoundIdx], TimeLimitSeconds: f.timeOpts[f.TimeIdx], CPU: cpu}
+	return Setup{Rounds: f.roundOpts[f.RoundIdx], TimeLimitSeconds: f.timeOpts[f.TimeIdx], CPU: cpu, Training: f.Mode.Rules.Training}
 }
 
 func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
@@ -767,7 +772,7 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 		if cpu == nil {
 			continue
 		}
-		cpu.Decide(f.Match.State.Fighters[i].Position, f.Match.State.Fighters[1-i].Position, &f.cpuIn[i])
+		f.decideCPU(i, cpu)
 		in[i] = f.cpuIn[i]
 	}
 	if err := f.Match.Step(in); err != nil {
@@ -777,4 +782,16 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 	if f.Match.RoundEnded() {
 		f.RoundOverTicks = RoundEndTicks
 	}
+}
+
+// decideCPU writes the input of the CPU-driven side i into f.cpuIn[i]: the
+// CPU's, except for a training dummy, which follows its pause menu setting
+// unless that is CPU.
+func (f *Flow) decideCPU(i int, cpu *CPU) {
+	self, opponent := f.Match.State.Fighters[i].Position, f.Match.State.Fighters[1-i].Position
+	if i == 1 && f.Match.Setup.Training && f.Dummy != DummyCPU {
+		f.Dummy.Decide(self, opponent, &f.cpuIn[i])
+		return
+	}
+	cpu.Decide(self, opponent, &f.cpuIn[i])
 }

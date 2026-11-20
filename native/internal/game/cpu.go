@@ -35,13 +35,7 @@ func NewCPU(random func() float64) *CPU {
 // Decide writes this tick's input into dst in place (reusing its button map,
 // so a tick allocates nothing). Non-finite positions yield a neutral input.
 func (c *CPU) Decide(self, opponent match.Position, dst *input.TickInput) {
-	dst.Up, dst.Down, dst.Left, dst.Right = false, false, false, false
-	if dst.Buttons == nil {
-		dst.Buttons = make(map[string]bool, 6)
-	}
-	for name := range dst.Buttons {
-		dst.Buttons[name] = false
-	}
+	clearInput(dst)
 	if math.IsNaN(self.X) || math.IsInf(self.X, 0) || math.IsNaN(opponent.X) || math.IsInf(opponent.X, 0) {
 		return
 	}
@@ -57,5 +51,17 @@ func (c *CPU) Decide(self, opponent match.Position, dst *input.TickInput) {
 	}
 	if distance <= AttackRange && c.random() < AttackChance {
 		dst.Buttons["a"] = true
+	}
+}
+
+// clearInput releases every direction and button of dst in place, reusing its
+// button map.
+func clearInput(dst *input.TickInput) {
+	dst.Up, dst.Down, dst.Left, dst.Right = false, false, false, false
+	if dst.Buttons == nil {
+		dst.Buttons = make(map[string]bool, 6)
+	}
+	for name := range dst.Buttons {
+		dst.Buttons[name] = false
 	}
 }

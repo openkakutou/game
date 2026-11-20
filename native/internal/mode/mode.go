@@ -76,6 +76,18 @@ const (
 // Outcomes lists every Outcome.
 var Outcomes = []Outcome{OutcomeResults, OutcomeNextOpponent, OutcomeContinue, OutcomeGameOver}
 
+// PauseEntry is a pause menu entry a mode can ask the game to add.
+type PauseEntry string
+
+// The pause entries the game offers a mode.
+const (
+	PauseResetPositions PauseEntry = "resetPositions"
+	PauseDummy          PauseEntry = "dummy"
+)
+
+// PauseEntries lists every PauseEntry.
+var PauseEntries = []PauseEntry{PauseResetPositions, PauseDummy}
+
 // Sides are the side names a characterSelect screen can pick for.
 var Sides = []string{"p1", "p2"}
 
@@ -85,6 +97,9 @@ type Mode struct {
 	Name  string `json:"name"`
 	Flow  []Step `json:"flow"`
 	Rules Rules  `json:"rules"`
+	// Pause lists the entries the pause menu gets besides the game's own, in
+	// this order.
+	Pause []PauseEntry `json:"pause,omitempty"`
 }
 
 // Step is one screen of the flow. Sides is characterSelect's "sides"
@@ -103,6 +118,9 @@ type Rules struct {
 	OnWin            Outcome   `json:"onWin"`
 	OnLose           Outcome   `json:"onLose"`
 	Roster           Roster    `json:"roster"` // the zero Roster shows everything
+	// Training turns on the training behaviour: life refills and no round
+	// ends by KO.
+	Training bool `json:"training,omitempty"`
 }
 
 // Roster says which characters and stages the mode shows (roadmap decision
@@ -269,6 +287,14 @@ func (v *validator) integer(path string, x any, minimum int) int {
 	return i
 }
 
+func (v *validator) boolean(path string, x any) bool {
+	b, ok := x.(bool)
+	if !ok {
+		v.fail(path, "must be a boolean")
+	}
+	return b
+}
+
 func oneOf[T ~string](v *validator, path string, x any, values []T) T {
 	s, _ := x.(string)
 	if slices.Contains(values, T(s)) {
@@ -279,7 +305,7 @@ func oneOf[T ~string](v *validator, path string, x any, values []T) T {
 }
 
 func (v *validator) mode(x any) Mode {
-	obj := v.object("", x, []string{"formatVersion", "id", "name", "flow", "rules"}, "$schema")
+	obj := v.object("", x, []string{"formatVersion", "id", "name", "flow", "rules"}, "$schema", "pause")
 	if obj == nil {
 		return Mode{}
 	}
@@ -299,7 +325,29 @@ func (v *validator) mode(x any) Mode {
 	if rules, ok := obj["rules"]; ok {
 		m.Rules = v.rules(rules)
 	}
+	if pause, ok := obj["pause"]; ok {
+		m.Pause = v.pause(pause)
+	}
 	return m
+}
+
+// pause validates the pause entries: only the ones the game offers, each once.
+func (v *validator) pause(x any) []PauseEntry {
+	list, ok := x.([]any)
+	if !ok {
+		v.fail("pause", "must be an array of pause entries")
+		return nil
+	}
+	entries := make([]PauseEntry, 0, len(list))
+	for i, item := range list {
+		path := index("pause", i)
+		entry := oneOf(v, path, item, PauseEntries)
+		if slices.Contains(entries, entry) {
+			v.fail(path, fmt.Sprintf("%q is listed twice", entry))
+		}
+		entries = append(entries, entry)
+	}
+	return entries
 }
 
 func (v *validator) flow(x any) []Step {
@@ -359,7 +407,7 @@ func (v *validator) params(path string, screen Screen, x any) []string {
 }
 
 func (v *validator) rules(x any) Rules {
-	obj := v.object("rules", x, []string{"sides", "rounds", "timeLimitSeconds", "opponents", "onWin", "onLose"}, "roster")
+	obj := v.object("rules", x, []string{"sides", "rounds", "timeLimitSeconds", "opponents", "onWin", "onLose"}, "roster", "training")
 	if obj == nil {
 		return Rules{}
 	}
@@ -397,6 +445,9 @@ func (v *validator) rules(x any) Rules {
 	}
 	if roster, ok := obj["roster"]; ok {
 		r.Roster = v.roster(roster)
+	}
+	if training, ok := obj["training"]; ok {
+		r.Training = v.boolean("rules.training", training)
 	}
 	return r
 }

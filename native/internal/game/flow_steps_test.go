@@ -315,7 +315,7 @@ func TestWatchMode_BothSidesCPUDrivenWithoutAPlayer2RowAndPreselectedFromTheRule
 	fsys := os.DirFS(content)
 	chars, _ := DiscoverCharacters(fsys, "chars")
 	stages, _ := DiscoverStages(fsys, "stages")
-	f := inMode(t, NewFlow(fsys, chars, stages, DefaultLoader(fsys), builtIns[2:]))
+	f := inMode(t, NewFlow(fsys, chars, stages, DefaultLoader(fsys), builtIns[3:]))
 	for range 3 {
 		f.Navigate(NavConfirm) // P1 pick, P2 pick, stage
 	}

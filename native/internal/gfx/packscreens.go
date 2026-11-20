@@ -131,7 +131,7 @@ func (r *Renderer) layoutOptions(f *game.Flow, view ui.View, ms int) {
 func (r *Renderer) layoutPause(f *game.Flow, view ui.View, ms int) {
 	r.labels = r.labels[:0]
 	for _, item := range f.PauseItems() {
-		r.labels = append(r.labels, item.Label())
+		r.labels = append(r.labels, f.PauseLabel(item))
 	}
 	r.layout.Pause(&r.list, view, ui.PauseState{Title: "PAUSE", Entries: r.labels, Cursor: f.PauseCursor, ElapsedMs: ms})
 }

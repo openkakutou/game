@@ -18,7 +18,7 @@ const modesFolder = "modes"
 // folder, in file-name order ignoring case. A file that is not a valid mode is
 // left out with a notice carrying the mode error, and so is a second file with
 // the id of an earlier one. A missing folder is not an error. When no mode has
-// the id of a built-in mode (Arcade, Versus, Watch), that built-in mode is added after
+// the id of a built-in mode (Arcade, Training, Versus, Watch), that built-in mode is added after
 // the others, with a notice, so the game always has it.
 func DiscoverModes(fsys fs.FS) (modes []mode.Mode, notices []string) {
 	dir, err := ResolvePath(fsys, ".", modesFolder)

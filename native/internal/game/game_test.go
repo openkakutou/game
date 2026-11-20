@@ -278,7 +278,7 @@ func versusMode(t *testing.T) mode.Mode {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := builtins[1] // versus.jsonc, second in file-name order after arcade.jsonc
+	m := builtins[2] // versus.jsonc, third in file-name order (arcade, training, versus)
 	return m
 }
 

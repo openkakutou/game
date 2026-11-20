@@ -94,6 +94,12 @@
         ]
       }
     },
+    "pause": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["resetPositions", "dummy"] },
+      "description": "Entries the pause menu gets after Restart, in this order, from the set the game offers. Absent: the game's own entries only."
+    },
     "rules": {
       "type": "object",
       "additionalProperties": false,
@@ -153,6 +159,10 @@
         },
         "onLose": {
           "enum": ["results", "nextOpponent", "continue", "gameOver"]
+        },
+        "training": {
+          "type": "boolean",
+          "description": "Training behaviour: a fighter not hit for 1 second gets its life back, and no round ends by KO. Default false."
         },
         "roster": {
           "type": "object",

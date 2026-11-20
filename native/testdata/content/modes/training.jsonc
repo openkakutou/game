@@ -1,0 +1,30 @@
+// Training: the player picks a fighter and the dummy, a stage, and fights with
+// no time limit; a fighter not hit for a second gets its life back and no round
+// ends by KO (rules.training), so the match never ends: onWin and onLose are
+// never followed. The pause menu adds Reset Positions and Dummy (stand, crouch,
+// jump, guard, CPU). The dummy guards only once the engine guards (engine item
+// 023).
+{
+  "$schema": "mode.schema.json",
+  "formatVersion": 1,
+  "id": "training",
+  "name": "Training",
+  "flow": [
+    { "screen": "characterSelect", "params": { "sides": ["p1", "p2"] } },
+    { "screen": "stageSelect" },
+    { "screen": "match" }
+  ],
+  "rules": {
+    "sides": [
+      { "control": "human", "characters": 1 },
+      { "control": "cpu", "characters": 1 }
+    ],
+    "rounds": 1,
+    "timeLimitSeconds": 0,
+    "opponents": { "kind": "chosen" },
+    "onWin": "results",
+    "onLose": "results",
+    "training": true
+  },
+  "pause": ["resetPositions", "dummy"]
+}

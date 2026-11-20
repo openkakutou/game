@@ -232,7 +232,7 @@ func TestRosterFilter_VersusAndWatch_ShowEveryCharacterAndStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := NewFlow(nil, slices.Clone(filterChars), slices.Clone(filterStages), Loader{}, builtIns)
-	f.enterMode(1)
+	f.enterMode(2)
 	if got := f.VisibleChars(); !slices.Equal(got, []int{0, 1, 2, 3, 4}) {
 		t.Errorf("versus characters = %v", got)
 	}
