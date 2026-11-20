@@ -98,16 +98,22 @@ func run() error {
 		stages, stageErr = game.DiscoverStages(fsys, stagesDir)
 		folderErr = errors.Join(charErr, stageErr)
 	}
-	modes, modeNotices := game.DiscoverModes(fsys)
-	for _, n := range modeNotices {
-		fmt.Fprintln(os.Stderr, "openkakutou:", n)
-	}
 	pack, packNotices := ui.LoadPack(fsys)
 	for _, n := range packNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
+	// The screenpack's select screens say how their rosters are ordered.
+	by, descending := pack.Sort("characterSelect")
+	game.SortEntries(chars, by, descending)
+	by, descending = pack.Sort("stageSelect")
+	game.SortEntries(stages, by, descending)
+	modes, modeNotices := game.DiscoverModes(fsys)
+	for _, n := range modeNotices {
+		fmt.Fprintln(os.Stderr, "openkakutou:", n)
+	}
 	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), modes)
 	hud, lifebarNotices := game.SelectLifebar(fsys)
+	flow.GridColumns = pack.SelectColumns()
 	flow.Settings = settings
 	defer flow.SaveOpenConcern() // a closed window keeps the changes of the open screen
 	flow.Lifebar = hud

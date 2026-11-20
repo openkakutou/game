@@ -35,7 +35,23 @@ const (
 	// Color; X, Y is the pen's origin on the baseline and each glyph's X is
 	// its pen offset from it.
 	OpText
+	// OpPortrait draws a character's portrait, like OpImage but from the
+	// character's own sprite file: Portrait says which.
+	OpPortrait
 )
+
+// PortraitRef names a portrait: the Character-th of the game's roster, its
+// large or small one.
+type PortraitRef struct {
+	Character int
+	Large     bool
+}
+
+// PortraitSizes tells the layout the pixel size of a character's portrait;
+// ok is false when the character has none (its screens then draw without).
+type PortraitSizes interface {
+	PortraitSize(character int, large bool) (w, h int, ok bool)
+}
 
 // Glyph is one character of a text run and its pen offset.
 type Glyph struct {
@@ -50,6 +66,7 @@ type Op struct {
 	X, Y, W, H     float32
 	Color          Color
 	Asset          Asset
+	Portrait       PortraitRef
 	U0, V0, U1, V1 float32
 	Font           FontRef
 	Px             int

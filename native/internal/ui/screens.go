@@ -118,16 +118,24 @@ func (l *Layout) MatchSetup(dst *DrawList, view View, s MatchSetupState) {
 // VersusState is what the game shows on the VS screen.
 type VersusState struct {
 	P1, P2, Stage string
-	ElapsedMs     int
+	// P1Char and P2Char are the roster indexes of the two fighters, whose
+	// large portraits Portraits sizes.
+	P1Char, P2Char int
+	Portraits      PortraitSizes
+	ElapsedMs      int
 }
 
-// Versus adds the VS screen to dst: both names and the stage.
-// shortcut: the portraits are not drawn; they come with the character
-// select screens, which load the characters' portrait sprites.
+// Versus adds the VS screen to dst: both large portraits, both names and
+// the stage.
 func (l *Layout) Versus(dst *DrawList, view View, s VersusState) {
 	v := l.pack.resolved.Screens.Versus
 	screen := view.rect()
 	l.elements(dst, view, l.pack.scope("versus", ""), v.Background, screen, s.ElapsedMs)
+	if v.Portrait != nil {
+		mirror := v.Portrait.MirrorP2 == nil || *v.Portrait.MirrorP2
+		l.portrait(dst, view, v.Portrait.P1, s.Portraits, s.P1Char, false, screen)
+		l.portrait(dst, view, v.Portrait.P2, s.Portraits, s.P2Char, mirror, screen)
+	}
 	if v.Name != nil {
 		sc := l.pack.scope("versus", "name")
 		if v.Name.P1 != nil {
@@ -146,18 +154,24 @@ func (l *Layout) Versus(dst *DrawList, view View, s VersusState) {
 // ResultsState is what the game shows on the results screen.
 type ResultsState struct {
 	Message, Score, Winner string
-	Entries                []string
-	Cursor                 int
-	ElapsedMs              int
+	// WinnerChar is the winner's roster index, whose large portrait
+	// Portraits sizes.
+	WinnerChar int
+	Portraits  PortraitSizes
+	Entries    []string
+	Cursor     int
+	ElapsedMs  int
 }
 
-// Results adds the results screen to dst: the winner's name, the message, the
-// score and the menu.
-// shortcut: the winner's portrait is not drawn, see Versus.
+// Results adds the results screen to dst: the winner's portrait and name, the
+// message, the score and the menu.
 func (l *Layout) Results(dst *DrawList, view View, s ResultsState) {
 	r := l.pack.resolved.Screens.Results
 	screen := view.rect()
 	l.elements(dst, view, l.pack.scope("results", ""), r.Background, screen, s.ElapsedMs)
+	if r.Winner != nil {
+		l.portrait(dst, view, r.Winner.Portrait, s.Portraits, s.WinnerChar, false, screen)
+	}
 	if r.Winner != nil && r.Winner.Name != nil {
 		l.text(dst, view, l.pack.scope("results", "winner"), &r.Winner.Name.Layout, r.Winner.Name.Style, s.Winner, screen, 1, "")
 	}

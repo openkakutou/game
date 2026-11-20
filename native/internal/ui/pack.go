@@ -206,6 +206,10 @@ func screenStyles(s *screenpack.Screens, screen string) map[screenpack.StyleID]s
 		return s.Versus.TextStyles
 	case "results":
 		return s.Results.TextStyles
+	case "characterSelect":
+		return s.CharacterSelect.TextStyles
+	case "stageSelect":
+		return s.StageSelect.TextStyles
 	}
 	return nil
 }
@@ -216,4 +220,26 @@ func (p *Pack) style(sc scope, id screenpack.StyleID) screenpack.TextStyle {
 		return st
 	}
 	return p.screenpack(sc.src).TextStyles[id]
+}
+
+// SelectColumns is how many cells a row of the character select grid has.
+func (p *Pack) SelectColumns() int {
+	return p.resolved.Screens.CharacterSelect.Grid.Columns
+}
+
+// Sort is the order rule of a select screen's roster ("characterSelect" or
+// "stageSelect"): what to sort by (folder, displayName or author) and
+// whether descending. A screen without a rule sorts by folder.
+func (p *Pack) Sort(screen string) (by string, descending bool) {
+	var rule *screenpack.Sort
+	switch screen {
+	case "characterSelect":
+		rule = p.resolved.Screens.CharacterSelect.Sort
+	case "stageSelect":
+		rule = p.resolved.Screens.StageSelect.Sort
+	}
+	if rule == nil {
+		return "folder", false
+	}
+	return rule.By, rule.Descending
 }

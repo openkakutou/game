@@ -123,19 +123,20 @@ func (a *glyphAtlas) glyph(r rune) glyphEntry {
 // created the first time they are used and kept, and consecutive quads of
 // one texture go out in one draw call, in the list's order.
 type listPainter struct {
-	win      *Window
-	pack     *ui.Pack
-	textures map[ui.Asset]*Texture
-	atlases  map[atlasKey]*glyphAtlas
+	win       *Window
+	pack      *ui.Pack
+	portraits *portraitCache
+	textures  map[ui.Asset]*Texture
+	atlases   map[atlasKey]*glyphAtlas
 	// batch holds textured vertices (x, y, u, v, r, g, b, a) of batchTex.
 	batch       []float32
 	batchTex    *Texture
 	batchRepeat [2]bool // wrap each axis instead of clamping, for tiled images
 }
 
-func newListPainter(win *Window, pack *ui.Pack) *listPainter {
+func newListPainter(win *Window, pack *ui.Pack, portraits *portraitCache) *listPainter {
 	return &listPainter{
-		win: win, pack: pack,
+		win: win, pack: pack, portraits: portraits,
 		textures: map[ui.Asset]*Texture{},
 		atlases:  map[atlasKey]*glyphAtlas{},
 		batch:    make([]float32, 0, 8*6*1024),
@@ -154,6 +155,10 @@ func (p *listPainter) draw(list *ui.DrawList) {
 			if tex := p.texture(op.Asset); tex != nil {
 				repeat := [2]bool{op.U1 > 1, op.V1 > 1}
 				p.quad(tex, repeat, op.X, op.Y, op.X+op.W, op.Y+op.H, op.U0, op.V0, op.U1, op.V1, op.Color)
+			}
+		case ui.OpPortrait:
+			if tex := p.portraits.texture(op.Portrait); tex != nil {
+				p.quad(tex, [2]bool{}, op.X, op.Y, op.X+op.W, op.Y+op.H, op.U0, op.V0, op.U1, op.V1, op.Color)
 			}
 		case ui.OpText:
 			p.text(list, op)

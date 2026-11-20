@@ -62,6 +62,8 @@ type Renderer struct {
 	layout  *ui.Layout
 	list    ui.DrawList
 	painter *listPainter
+	// portraits are the characters' portrait textures, loaded on first use.
+	portraits *portraitCache
 	// packKind is the screenpack screen shown, and packSince when it appeared,
 	// for the transitions; the rest is what the screens' rows are built from
 	// (reused, rebuilt only when what they show changes).
@@ -75,15 +77,17 @@ type Renderer struct {
 
 // NewRenderer builds a renderer for win drawing the screens of pack.
 func NewRenderer(win *Window, pack *ui.Pack) *Renderer {
+	portraits := newPortraitCache()
 	return &Renderer{
 		win: win, sprites: map[spriteKey]*Texture{}, stageAxis: map[spriteKey][2]int{},
-		layout: ui.NewLayout(pack), painter: newListPainter(win, pack),
+		layout: ui.NewLayout(pack), painter: newListPainter(win, pack, portraits), portraits: portraits,
 	}
 }
 
 // Draw renders the current screen of f.
 func (r *Renderer) Draw(f *game.Flow) {
 	w := r.win
+	r.portraits.bind(f)
 	kind := packScreenOf(f)
 	if kind != r.packKind {
 		r.packKind, r.packSince = kind, time.Now()
@@ -94,10 +98,6 @@ func (r *Renderer) Draw(f *game.Flow) {
 	}
 	w.Rect(0, 0, VW, VH, darkBg)
 	switch f.Screen {
-	case game.ScreenSelect:
-		r.drawList(f, "Select your fighter", fmt.Sprintf("Player %d", f.Picking+1), names(f.Chars), f.Cursor)
-	case game.ScreenStage:
-		r.drawList(f, "Select a stage", "", names(f.Stages), f.Cursor)
 	case game.ScreenMatch:
 		r.drawMatch(f)
 		if kind == packPause {
@@ -114,14 +114,6 @@ func (r *Renderer) Draw(f *game.Flow) {
 	}
 }
 
-func names(es []game.Entry) []string {
-	out := make([]string, len(es))
-	for i, e := range es {
-		out[i] = e.Name
-	}
-	return out
-}
-
 func (r *Renderer) wrapped(y float32, msg string) {
 	const perLine = 50
 	runes := []rune(msg)
@@ -131,38 +123,6 @@ func (r *Renderer) wrapped(y float32, msg string) {
 		runes = runes[n:]
 		y += 12
 	}
-}
-
-// drawList draws the rows of a menu around the cursor.
-func (r *Renderer) drawList(f *game.Flow, title, sub string, items []string, cursor int) {
-	w := r.win
-	w.TextCentered(16, 2, gold, title)
-	if sub != "" {
-		col := blue
-		if f.Picking == 1 {
-			col = red
-		}
-		w.TextCentered(40, 1.5, col, sub)
-	}
-	if f.Screen == game.ScreenSelect {
-		w.Text(8, 60, 1, blue, "P1: "+f.Chars[f.Picks[0]].Name)
-		if f.Picking == 1 {
-			w.Text(8, 72, 1, red, "P2: choosing")
-		}
-	}
-	const rows = 9
-	first := max(0, min(cursor-rows/2, len(items)-rows))
-	for i := first; i < min(len(items), first+rows); i++ {
-		y := float32(90 + (i-first)*14)
-		colour := grey
-		if i == cursor {
-			colour = white
-			w.Rect(70, y-3, 180, 13, panel)
-			w.Text(76, y, 1, gold, ">")
-		}
-		w.Text(90, y, 1, colour, items[i])
-	}
-	w.TextCentered(222, 1, grey, "Arrows/pad move  Enter/A confirm  Esc/B back")
 }
 
 // loadSprites decodes and uploads every sprite the match's animations

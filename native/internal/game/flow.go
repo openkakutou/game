@@ -117,8 +117,11 @@ type Flow struct {
 	Picking int
 	pickPos int
 	Cursor  int
-	Picks   [2]int // chosen roster indexes
-	StageNo int
+	// GridColumns is how many cells a row of the character select grid has
+	// (the screenpack's); 0 means a single row of every character.
+	GridColumns int
+	Picks       [2]int // chosen roster indexes
+	StageNo     int
 
 	// RoundIdx and TimeIdx index roundOpts and timeOpts: RoundOptions and
 	// TimeOptions plus the rules' own value when they lack it.
@@ -420,10 +423,8 @@ func (f *Flow) back() {
 func (f *Flow) navSelect(n Nav) {
 	sides := f.Mode.Flow[f.Step].Sides
 	switch n {
-	case NavUp, NavLeft:
-		f.Cursor = wrap(f.Cursor, -1, len(f.Chars))
-	case NavDown, NavRight:
-		f.Cursor = wrap(f.Cursor, 1, len(f.Chars))
+	case NavUp, NavDown, NavLeft, NavRight:
+		f.Cursor = gridMove(f.Cursor, n, f.GridColumns, len(f.Chars))
 	case NavConfirm:
 		f.Picks[f.Picking] = f.Cursor
 		if f.pickPos < len(sides)-1 {

@@ -16,6 +16,8 @@ const (
 	packNone packScreen = iota
 	packTitle
 	packOptions
+	packSelect
+	packStage
 	packPause
 	packSetup
 	packVersus
@@ -31,6 +33,10 @@ func packScreenOf(f *game.Flow) packScreen {
 	case game.ScreenOptions, game.ScreenOptionsGameplay, game.ScreenOptionsAudio, game.ScreenOptionsVideo,
 		game.ScreenOptionsControls, game.ScreenOptionsBindings:
 		return packOptions
+	case game.ScreenSelect:
+		return packSelect
+	case game.ScreenStage:
+		return packStage
 	case game.ScreenSetup:
 		return packSetup
 	case game.ScreenVersus:
@@ -56,6 +62,10 @@ func (r *Renderer) drawPack(f *game.Flow, kind packScreen) {
 		r.layoutTitle(f, view, ms)
 	case packOptions:
 		r.layoutOptions(f, view, ms)
+	case packSelect:
+		r.layoutSelect(f, view, ms)
+	case packStage:
+		r.layoutStage(f, view, ms)
 	case packPause:
 		r.layoutPause(f, view, ms)
 	case packSetup:
@@ -143,20 +153,47 @@ func (r *Renderer) layoutSetup(f *game.Flow, view ui.View, ms int) {
 	r.layout.MatchSetup(&r.list, view, ui.MatchSetupState{Title: "Match setup", Rows: r.setup.rows, Cursor: cursor, ElapsedMs: ms})
 }
 
+// selectTitles name the side picking, indexed by side.
+var selectTitles = [2]string{"Player 1: select your fighter", "Player 2: select your fighter"}
+
+// layoutSelect draws the character select: the sides' cursors, the grid
+// scrolled to the picking side's.
+func (r *Renderer) layoutSelect(f *game.Flow, view ui.View, ms int) {
+	var sides [2]ui.SideSelect
+	for i, c := range f.SelectCursors() {
+		sides[i] = ui.SideSelect{Shown: c.Shown, Cursor: c.Cursor}
+	}
+	r.layout.CharacterSelect(&r.list, view, ui.SelectState{
+		Title: selectTitles[f.Picking], Roster: f.Chars, Sides: sides, Focus: f.Cursor,
+		Portraits: r.portraits, ElapsedMs: ms,
+	})
+}
+
+func (r *Renderer) layoutStage(f *game.Flow, view ui.View, ms int) {
+	r.layout.StageSelect(&r.list, view, ui.StageSelectState{Title: "Select a stage", Roster: f.Stages, Cursor: f.Cursor, ElapsedMs: ms})
+}
+
 // charName is the name of the character side picked, "" before any pick.
 func charName(f *game.Flow, side int) string {
-	if pick := f.Picks[side]; pick < len(f.Chars) {
+	pick := f.Picks[side]
+	if pick >= len(f.Chars) {
+		return ""
+	}
+	if f.Chars[pick].Display == "" {
 		return f.Chars[pick].Name
 	}
-	return ""
+	return f.Chars[pick].Display
 }
 
 func (r *Renderer) layoutVersus(f *game.Flow, view ui.View, ms int) {
 	stage := ""
 	if f.StageNo < len(f.Stages) {
-		stage = f.Stages[f.StageNo].Name
+		stage = f.Stages[f.StageNo].Display
 	}
-	r.layout.Versus(&r.list, view, ui.VersusState{P1: charName(f, 0), P2: charName(f, 1), Stage: stage, ElapsedMs: ms})
+	r.layout.Versus(&r.list, view, ui.VersusState{
+		P1: charName(f, 0), P2: charName(f, 1), Stage: stage,
+		P1Char: f.Picks[0], P2Char: f.Picks[1], Portraits: r.portraits, ElapsedMs: ms,
+	})
 }
 
 // resultTexts are the result screen's texts, built again only when the
@@ -182,6 +219,7 @@ func (r *Renderer) layoutResult(f *game.Flow, view ui.View, ms int) {
 	r.result.update(f)
 	r.layout.Results(&r.list, view, ui.ResultsState{
 		Message: r.result.message, Score: r.result.score, Winner: charName(f, int(f.ResultWinner)),
+		WinnerChar: f.Picks[f.ResultWinner], Portraits: r.portraits,
 		Entries: f.ResultItems(), Cursor: f.ResultCursor, ElapsedMs: ms,
 	})
 }

@@ -332,7 +332,7 @@ func TestFlow_FullPathSelectionToResultAndRematch(t *testing.T) {
 
 func TestFlow_CursorWrapsAndCancelBacksOut(t *testing.T) {
 	f := newTestFlow(t)
-	f.Navigate(NavUp)
+	f.Navigate(NavLeft)
 	if f.Cursor != 1 {
 		t.Errorf("cursor = %d, want wrap to 1", f.Cursor)
 	}
@@ -357,11 +357,11 @@ func TestFlow_MirrorMatchAllowed(t *testing.T) {
 }
 
 func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
-	f := NewFlow(os.DirFS("."), nil, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
+	f := NewFlow(os.DirFS("."), nil, []Entry{{Name: "s", DefPath: "s.def"}}, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
 	if f.Screen != ScreenError || f.Message == "" {
 		t.Errorf("no characters: screen=%v", f.Screen)
 	}
-	f = NewFlow(os.DirFS("."), []Entry{{"c", "c.def"}}, nil, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
+	f = NewFlow(os.DirFS("."), []Entry{{Name: "c", DefPath: "c.def"}}, nil, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
 	if f.Screen != ScreenError {
 		t.Errorf("no stages: screen=%v", f.Screen)
 	}
@@ -372,7 +372,7 @@ func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
 }
 
 func TestFlow_UnloadableCharacterShowsErrorNamingIt(t *testing.T) {
-	f := NewFlow(os.DirFS("."), []Entry{{"ghost", "ghost/ghost.def"}}, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
+	f := NewFlow(os.DirFS("."), []Entry{{Name: "ghost", DefPath: "ghost/ghost.def"}}, []Entry{{Name: "s", DefPath: "s.def"}}, DefaultLoader(os.DirFS(".")), []mode.Mode{versusMode(t)})
 	inMode(t, f)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)

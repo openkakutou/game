@@ -15,9 +15,18 @@ import (
 
 // Entry is one selectable character or stage found in the content.
 type Entry struct {
+	// Name is the folder name of a character, the file name of a stage.
 	Name string
 	// DefPath is the name of its .def in the content file system.
 	DefPath string
+	// Display is the name shown on the select screens: the .def [Info]
+	// displayname, else its name, else Name (see readDefInfo).
+	Display string
+	// Author is the .def [Info] author, "" when it has none.
+	Author string
+	// Sprite is the name of the character's sprite file in the content file
+	// system, "" when its .def names none.
+	Sprite string
 }
 
 // DiscoverCharacters lists the characters under root, a folder of fsys: every sub-directory
@@ -39,7 +48,7 @@ func DiscoverCharacters(fsys fs.FS, root string) ([]Entry, error) {
 			continue
 		}
 		if st, err := fs.Stat(fsys, def); err == nil && !st.IsDir() {
-			out = append(out, Entry{Name: d.Name(), DefPath: def})
+			out = append(out, characterEntry(fsys, d.Name(), def))
 		}
 	}
 	sortByName(out)
@@ -64,7 +73,9 @@ func DiscoverStages(fsys fs.FS, root string) ([]Entry, error) {
 		if err != nil || !strings.Contains(strings.ToLower(string(data)), "[bgdef]") {
 			continue
 		}
-		out = append(out, Entry{Name: strings.TrimSuffix(f.Name(), path.Ext(f.Name())), DefPath: defPath})
+		name := strings.TrimSuffix(f.Name(), path.Ext(f.Name()))
+		info := readDefInfo(data)
+		out = append(out, Entry{Name: name, DefPath: defPath, Display: info.display(name), Author: info.author})
 	}
 	sortByName(out)
 	return out, nil
@@ -81,4 +92,19 @@ func sortByName(es []Entry) {
 		}
 		return es[i].Name < es[j].Name
 	})
+}
+
+// characterEntry builds the entry of the character folder name, whose .def is def.
+func characterEntry(fsys fs.FS, name, def string) Entry {
+	e := Entry{Name: name, DefPath: def, Display: name}
+	data, err := fs.ReadFile(fsys, def)
+	if err != nil {
+		return e
+	}
+	info := readDefInfo(data)
+	e.Display, e.Author = info.display(name), info.author
+	if info.sprite != "" {
+		e.Sprite = joinResolved(fsys, []string{path.Dir(def)}, info.sprite)
+	}
+	return e
 }
