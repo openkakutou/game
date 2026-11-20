@@ -56,11 +56,17 @@ type moveListState struct {
 // MoveListOpen is whether the move list is shown over the paused match.
 func (f *Flow) MoveListOpen() bool { return f.moveList.open }
 
-// MoveListTitle is the name of the character whose list is shown.
+// MoveListTitle is the name of the character whose list is shown: the one the
+// roster shows (its .def displayname), else the loaded character's name (a
+// quick versus entry has only the command-line argument), else the entry's name.
 func (f *Flow) MoveListTitle() string {
-	e := f.lastChars[f.moveList.side]
+	side := f.moveList.side
+	e := f.lastChars[side]
 	if e.Display != "" {
 		return e.Display
+	}
+	if name := f.Fighters[side].Char.Name; name != "" {
+		return name
 	}
 	return e.Name
 }
@@ -283,14 +289,16 @@ var commandIcons = map[string]string{
 // icon when it has one, joined by "+". A diagonal (DF...) has no icon: text.
 func commandRuns(input string) []MoveRun {
 	core := strings.TrimLeft(input, "~/$>0123456789")
+	prefix := input[:len(input)-len(core)]
 	var runs []MoveRun
-	if prefix := input[:len(input)-len(core)]; prefix != "" {
+	if prefix != "" {
 		runs = append(runs, MoveRun{Text: prefix})
 	}
-	for i, part := range strings.Split(core, "+") {
+	for i, part := range strings.Split(strings.TrimSpace(core), "+") {
 		if i > 0 {
 			runs = append(runs, MoveRun{Text: "+"})
 		}
+		part = strings.TrimSpace(part)
 		runs = append(runs, MoveRun{Text: part, Icon: commandIcons[part]})
 	}
 	return runs

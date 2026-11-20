@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 depends_on: [021]
 ---
 # Move list screen from the pause menu
@@ -13,3 +13,6 @@ Cross-repo: character#073 done (character v0.19.0, 2026-11-20): `Character.Movel
 - [ ] A character with an Ikemen GO movelist file shows it, glyphs included
 - [ ] A character without one shows its commands from `.cmd`
 - [ ] Each player sees the move list of their own character
+
+## Done (2026-11-20)
+Native: Ikemen GO move list (index 0) with the [Glyphs] token set from Ikemen GO source, .cmd fallback, pausing player's side. Reviewed, 3 findings fixed. Open: motion glyphs (QCF…) drawn as text until the screenpack has icons for them; list width not in the format (screen width minus margins).

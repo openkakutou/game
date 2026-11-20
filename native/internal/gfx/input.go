@@ -52,7 +52,7 @@ func PollEvents(f *game.Flow, pads *Gamepads, b *Bindings) bool {
 				if n == game.NavCancel && e.Keysym.Scancode == sdl.SCANCODE_ESCAPE && f.Screen == game.ScreenMatch {
 					n = game.NavPause // Escape pauses; a match's other cancel inputs are fighter buttons
 				}
-				f.Navigate(n)
+				f.NavigateBy(n, pads.pads.KeyboardPlayer())
 			}
 		case *sdl.ControllerButtonEvent:
 			if device, waiting := f.WaitingForBinding(); waiting && device == game.DevicePad && e.Type == sdl.CONTROLLERBUTTONDOWN {

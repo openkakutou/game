@@ -274,3 +274,31 @@ func TestMoveList_QueuesMenuSoundsOnItsOwnScreen(t *testing.T) {
 		t.Errorf("cues = %v, want %v", got, want)
 	}
 }
+
+func TestMoveList_QuickVersusTitleIsTheCharactersNameNotTheCommandLineArgument(t *testing.T) {
+	f := moveListFlow(t)
+	f.lastChars = [2]Entry{{Name: "kfm"}, {Name: "bob", Display: "Bob the Rival"}}
+	f.Fighters[0].Char.Name = "Kung Fu Man"
+	f.Fighters[1].Char.Name = "ignored"
+	openMoveListBy(f, 0)
+	if f.MoveListTitle() != "Kung Fu Man" {
+		t.Errorf("title = %q, want the character's name", f.MoveListTitle())
+	}
+	f.Navigate(NavRight)
+	if f.MoveListTitle() != "Bob the Rival" {
+		t.Errorf("title = %q, want the entry's display name first", f.MoveListTitle())
+	}
+}
+
+func TestCommandRuns_SpacesAroundModifiersAndPlusKeepTheIcons(t *testing.T) {
+	got := commandRuns("~ D")
+	want := []MoveRun{text("~"), icon("down", "D")}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("~ D = %v, want %v", got, want)
+	}
+	got = commandRuns("x + y")
+	want = []MoveRun{icon("x", "x"), text("+"), icon("y", "y")}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("x + y = %v, want %v", got, want)
+	}
+}

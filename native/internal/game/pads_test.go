@@ -308,3 +308,22 @@ func TestPads_OutsideAMatchTheFixedStartIsPauseAndTheBoundOneIsIgnored(t *testin
 		t.Errorf("fixed Start in a menu = %v, want [NavPause]", got)
 	}
 }
+
+func TestPads_KeyboardPlaysTheFirstPlayerWithoutAController(t *testing.T) {
+	var p Pads
+	if got := p.KeyboardPlayer(); got != 0 {
+		t.Errorf("no pad: keyboard player = %d, want 0", got)
+	}
+	p.Connect(7)
+	if got := p.KeyboardPlayer(); got != 1 {
+		t.Errorf("a pad on player 1: keyboard player = %d, want 1 (player 2)", got)
+	}
+	p.Connect(8)
+	if got := p.KeyboardPlayer(); got != 0 {
+		t.Errorf("pads on both: keyboard player = %d, want 0 (nobody plays it, Escape pauses as player 1)", got)
+	}
+	p.Disconnect(7)
+	if got := p.KeyboardPlayer(); got != 0 {
+		t.Errorf("only the second player has a pad: keyboard player = %d, want 0", got)
+	}
+}

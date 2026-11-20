@@ -116,3 +116,16 @@ func (p *Pads) Navs(player int, menu, bound PadState, inMatch bool, dst []Nav) [
 	p.prev[player] = cur
 	return dst
 }
+
+// KeyboardPlayer is the player the keyboard plays: the first one without a
+// controller, as gfx.Held assigns it. With a controller each, nobody plays
+// the keyboard, and its menu inputs (Escape) count as player 1.
+func (p *Pads) KeyboardPlayer() int {
+	if !p.Has(0) {
+		return 0
+	}
+	if p.Has(1) {
+		return 0
+	}
+	return 1
+}
