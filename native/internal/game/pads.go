@@ -10,7 +10,7 @@ const PadButtons = 6
 // counts as a direction; below it is the dead zone.
 const StickThreshold = 16384
 
-var padButtonNames = [PadButtons]string{"a", "b", "c", "x", "y", "z"}
+var padButtonNames = PadActions[:PadButtons]
 
 // PadState is one controller's raw state for a frame, decoded from SDL by the
 // gfx package. StickY follows SDL: negative is up.

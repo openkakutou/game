@@ -78,10 +78,11 @@ const (
 	ConcernGameplay Concern = iota
 	ConcernAudio
 	ConcernVideo
+	ConcernControls
 	concernCount
 )
 
-var concernFiles = [concernCount]string{"gameplay.json", "audio.json", "video.json"}
+var concernFiles = [concernCount]string{"gameplay.json", "audio.json", "video.json", "controls.json"}
 
 // SettingsPlatform is the video.json section key of the running platform,
 // from runtime.GOOS.
@@ -107,15 +108,16 @@ const (
 	fileCorrupt
 )
 
-// Settings are the persisted settings of the running game. AudioGen and
-// VideoGen grow each time the audio or video values change, so the main loop
-// applies them without comparing values every frame.
+// Settings are the persisted settings of the running game. AudioGen, VideoGen
+// and ControlsGen grow each time the audio, video or controls values change,
+// so the main loop applies them without comparing values every frame.
 type Settings struct {
-	Gameplay           Gameplay
-	Audio              Audio
-	Video              Video
-	AudioGen, VideoGen int
-	WindowGen          int
+	Gameplay                        Gameplay
+	Audio                           Audio
+	Video                           Video
+	Controls                        Controls
+	AudioGen, VideoGen, ControlsGen int
+	WindowGen                       int
 
 	platform string
 	names    [concernCount]string                     // file names in the game folder
@@ -129,7 +131,7 @@ type Settings struct {
 // NewSettings returns the default settings, never persisted: the starting
 // point of a Flow until the host loads the real ones.
 func NewSettings() *Settings {
-	return &Settings{Gameplay: defaultGameplay, Audio: defaultAudio, Video: defaultVideo}
+	return &Settings{Gameplay: defaultGameplay, Audio: defaultAudio, Video: defaultVideo, Controls: defaultControls}
 }
 
 // LoadSettings reads the settings files of fsys for platform (a
@@ -213,8 +215,26 @@ func (s *Settings) decode(c Concern, data []byte) error {
 			return err
 		}
 		s.Video = v
+	case ConcernControls:
+		c := defaultControls
+		if section, ok := obj[s.platform]; ok {
+			if err := c.decode(section); err != nil {
+				return fmt.Errorf("%s: %w", s.platform, err)
+			}
+		}
+		s.Controls = c
 	}
 	return nil
+}
+
+// RejectControls replaces controls the host cannot use (a name SDL does not
+// know) with the defaults, with the notice of an invalid file; the file is
+// left as it is until Save.
+func (s *Settings) RejectControls(err error) {
+	s.Controls = defaultControls
+	s.ControlsGen++
+	name := s.names[ConcernControls]
+	s.setNotice(ConcernControls, fmt.Sprintf("%s: defaults used", name), fmt.Sprintf("%s ignored, defaults used: %v", name, err))
 }
 
 // Notices are the problems the Options screen shows: concerns that fell back
@@ -271,6 +291,11 @@ func (s *Settings) encode(c Concern) (map[string]json.RawMessage, error) {
 		return obj, overlay(obj, s.Gameplay)
 	case ConcernAudio:
 		return obj, overlay(obj, s.Audio)
+	case ConcernControls:
+		// The section holds nothing but the known keys: decode refuses the others.
+		data, err := json.Marshal(s.Controls.section())
+		obj[s.platform] = data
+		return obj, err
 	}
 	var section map[string]json.RawMessage
 	if old, ok := obj[s.platform]; ok {

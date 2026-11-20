@@ -72,11 +72,11 @@ func (r *Renderer) Draw(f *game.Flow) {
 		w.TextCentered(80, 4, gold, "OpenKakutou")
 		w.TextCentered(150, 1, grey, "Press Enter or Start")
 	case game.ScreenMainMenu:
-		r.drawList(f, "Main menu", "", f.MainMenuItems(), f.MenuCursor)
+		r.drawList(f, "Main menu", "", f.MainMenuItems(), f.MenuCursor, nil)
 	case game.ScreenSelect:
-		r.drawList(f, "Select your fighter", fmt.Sprintf("Player %d", f.Picking+1), names(f.Chars), f.Cursor)
+		r.drawList(f, "Select your fighter", fmt.Sprintf("Player %d", f.Picking+1), names(f.Chars), f.Cursor, nil)
 	case game.ScreenStage:
-		r.drawList(f, "Select a stage", "", names(f.Stages), f.Cursor)
+		r.drawList(f, "Select a stage", "", names(f.Stages), f.Cursor, nil)
 	case game.ScreenSetup:
 		r.drawSetup(f)
 	case game.ScreenVersus:
@@ -88,7 +88,8 @@ func (r *Renderer) Draw(f *game.Flow) {
 		}
 	case game.ScreenResult:
 		r.drawResult(f)
-	case game.ScreenOptions, game.ScreenOptionsGameplay, game.ScreenOptionsAudio, game.ScreenOptionsVideo:
+	case game.ScreenOptions, game.ScreenOptionsGameplay, game.ScreenOptionsAudio, game.ScreenOptionsVideo,
+		game.ScreenOptionsControls, game.ScreenOptionsBindings:
 		r.drawOptions(f)
 	case game.ScreenError:
 		w.TextCentered(70, 2, red, "Something went wrong")
@@ -116,10 +117,12 @@ func (r *Renderer) drawPause(f *game.Flow) {
 	}
 }
 
-// drawOptions lists the rows of an options screen, then the settings notices
-// (files ignored or not saved) in red above the help line.
+// drawOptions lists the rows of an options screen, then the controls prompt
+// under the title and the settings notices (files ignored or not saved) in red above the help
+// line.
 func (r *Renderer) drawOptions(f *game.Flow) {
-	r.drawList(f, f.OptionsTitle(), "", f.OptionsItems(), f.OptionsCursor())
+	r.drawList(f, f.OptionsTitle(), "", f.OptionsItems(), f.OptionsCursor(), f.OptionsFlagged())
+	r.win.TextCentered(40, 1, gold, f.OptionsPrompt()) // under the title, above the rows
 	for i, notice := range f.Settings.Notices() {
 		r.win.TextCentered(float32(170+i*10), 1, red, notice)
 	}
@@ -144,7 +147,9 @@ func (r *Renderer) wrapped(y float32, msg string) {
 	}
 }
 
-func (r *Renderer) drawList(f *game.Flow, title, sub string, items []string, cursor int) {
+// drawList draws the rows of a menu around the cursor; the rows flagged are
+// red (flagged may be nil).
+func (r *Renderer) drawList(f *game.Flow, title, sub string, items []string, cursor int, flagged []bool) {
 	w := r.win
 	w.TextCentered(16, 2, gold, title)
 	if sub != "" {
@@ -164,13 +169,16 @@ func (r *Renderer) drawList(f *game.Flow, title, sub string, items []string, cur
 	first := max(0, min(cursor-rows/2, len(items)-rows))
 	for i := first; i < min(len(items), first+rows); i++ {
 		y := float32(90 + (i-first)*14)
+		colour := grey
 		if i == cursor {
+			colour = white
 			w.Rect(70, y-3, 180, 13, panel)
 			w.Text(76, y, 1, gold, ">")
-			w.Text(90, y, 1, white, items[i])
-		} else {
-			w.Text(90, y, 1, grey, items[i])
 		}
+		if i < len(flagged) && flagged[i] {
+			colour = red
+		}
+		w.Text(90, y, 1, colour, items[i])
 	}
 	w.TextCentered(222, 1, grey, "Arrows/pad move  Enter/A confirm  Esc/B back")
 }

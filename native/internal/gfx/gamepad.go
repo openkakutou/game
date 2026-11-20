@@ -65,8 +65,16 @@ func (g *Gamepads) remove(instance sdl.JoystickID) {
 	}
 }
 
-// state reads the player's controller; false means use the keyboard.
-func (g *Gamepads) state(player int) (game.PadState, bool) {
+// menuPad is the buttons the menus read, whatever the player bound: A, B and
+// Start.
+var menuPad = [len(game.PadActions)]sdl.GameControllerButton{
+	sdl.CONTROLLER_BUTTON_A, sdl.CONTROLLER_BUTTON_B, sdl.CONTROLLER_BUTTON_X, sdl.CONTROLLER_BUTTON_Y,
+	sdl.CONTROLLER_BUTTON_LEFTSHOULDER, sdl.CONTROLLER_BUTTON_RIGHTSHOULDER, sdl.CONTROLLER_BUTTON_START,
+}
+
+// state reads the player's controller, its buttons as bound to
+// game.PadActions; false means use the keyboard.
+func (g *Gamepads) state(player int, buttons *[len(game.PadActions)]sdl.GameControllerButton) (game.PadState, bool) {
 	var s game.PadState
 	if g == nil || !g.pads.Has(player) || g.open[player] == nil {
 		return s, false
@@ -76,23 +84,25 @@ func (g *Gamepads) state(player int) (game.PadState, bool) {
 	s.Up, s.Down = pressed(sdl.CONTROLLER_BUTTON_DPAD_UP), pressed(sdl.CONTROLLER_BUTTON_DPAD_DOWN)
 	s.Left, s.Right = pressed(sdl.CONTROLLER_BUTTON_DPAD_LEFT), pressed(sdl.CONTROLLER_BUTTON_DPAD_RIGHT)
 	s.StickX, s.StickY = c.Axis(sdl.CONTROLLER_AXIS_LEFTX), c.Axis(sdl.CONTROLLER_AXIS_LEFTY)
-	s.Buttons = [game.PadButtons]bool{
-		pressed(sdl.CONTROLLER_BUTTON_A), pressed(sdl.CONTROLLER_BUTTON_B),
-		pressed(sdl.CONTROLLER_BUTTON_X), pressed(sdl.CONTROLLER_BUTTON_Y),
-		pressed(sdl.CONTROLLER_BUTTON_LEFTSHOULDER), pressed(sdl.CONTROLLER_BUTTON_RIGHTSHOULDER),
+	for i := range s.Buttons {
+		s.Buttons[i] = pressed(buttons[i])
 	}
-	s.Start = pressed(sdl.CONTROLLER_BUTTON_START)
+	s.Start = pressed(buttons[game.PadButtons])
 	return s, true
 }
 
-// navigate feeds newly pressed controller buttons to the menus.
-func (g *Gamepads) navigate(f *game.Flow) {
+// navigate feeds newly pressed controller buttons to the menus. With skip the
+// presses are only noted: they were this frame's bindings, not menu inputs.
+func (g *Gamepads) navigate(f *game.Flow, skip bool) {
 	for p := 0; p < 2; p++ {
-		s, ok := g.state(p)
+		s, ok := g.state(p, &menuPad)
 		if !ok {
 			continue
 		}
 		g.navs = g.pads.Navs(p, s, g.navs[:0])
+		if skip {
+			continue
+		}
 		for _, n := range g.navs {
 			f.Navigate(n)
 		}

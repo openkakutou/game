@@ -81,6 +81,42 @@ wait $pid || { echo "the game did not quit cleanly from the main menu:"; cat "$o
 grep -q '"music": 90' "$content/config/audio.json" || { echo "audio.json was not saved with music 90:"; cat "$content/config/audio.json"; exit 1; }
 grep -q '"master": 100' "$content/config/audio.json" || { echo "audio.json lost master:"; cat "$content/config/audio.json"; exit 1; }
 
+# 1d. Controls: Options > Controls > Player 1, the row of "a" waits for a key,
+# U binds it; leaving saves config/controls.json (linux, P1 keyboard a = "U").
+for f in controls; do
+  [ -f "$content/config/$f.json" ] || { echo "first launch did not write config/$f.json"; exit 1; }
+done
+grep -q '"a": "F"' "$content/config/controls.json" || { echo "default controls.json is wrong:"; cat "$content/config/controls.json"; exit 1; }
+./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/controls.log" 2>&1 &
+pid=$!
+sleep 2
+key Return                       # title -> main menu
+key Down Return                  # Options
+key Down Down Down Return; shot 16-options-controls
+key Return; shot 17-controls-player1
+key Down Down Down Down Return; shot 18-controls-waiting   # the row of "a"
+key u; shot 19-controls-bound
+key Escape Escape Escape         # leave Player 1 (nothing saved yet), Controls (saves), Options
+key Down Return                  # Quit
+wait $pid || { echo "the game did not quit cleanly after rebinding:"; cat "$out/controls.log"; exit 1; }
+sed -n '/"linux"/,/"p2"/p' "$content/config/controls.json" | grep -q '"a": "U"' || { echo "controls.json was not saved with P1 a = U:"; cat "$content/config/controls.json"; exit 1; }
+# A second launch loads and resolves it without a notice, then a match plays
+# (the idle animation loops, so a screenshot cannot tell the attack from it:
+# the binding itself is covered by the file check above and the unit tests).
+./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/rebound.log" 2>&1 &
+pid=$!
+sleep 2
+key Return; key Return                     # title, Versus
+key Return; key Right Return; key Return   # P1, P2, stage
+key Return                                 # start
+key Return                                 # skip the VS screen
+sleep 2
+xdotool keydown u; sleep 0.3; shot 20-rebound-new-key; xdotool keyup u
+kill -0 $pid
+kill $pid; wait $pid 2>/dev/null || true
+! grep -q 'controls.json' "$out/rebound.log" || { echo "the rebound controls.json was refused:"; cat "$out/rebound.log"; exit 1; }
+sed -n '/"linux"/,/"p2"/p' "$content/config/controls.json" | grep -q '"a": "U"' || { echo "controls.json lost the binding"; exit 1; }
+
 # 2. Deterministic in-program capture (the title screen) and error screen.
 ./dist/openkakutou-linux-amd64 -content "$content" -frames 5 -capture "$out/7-capture.png"
 ./dist/openkakutou-linux-amd64 -content /nonexistent -frames 5 -capture "$out/8-error.png"

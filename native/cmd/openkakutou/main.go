@@ -146,6 +146,7 @@ func run() error {
 
 	pads := gfx.NewGamepads()
 	defer pads.Close()
+	bindings := gfx.NewBindings()
 	var held [2]input.TickInput
 	var acc float64
 	last := time.Now()
@@ -153,7 +154,8 @@ func run() error {
 		now := time.Now()
 		ticks := gfx.Ticks(&acc, float64(now.Sub(last).Microseconds())/1000)
 		last = now
-		gfx.Held(&held, pads)
+		bindings.Update(settings)
+		gfx.Held(&held, pads, bindings)
 		for i := 0; i < ticks; i++ {
 			flow.Tick(held)
 		}

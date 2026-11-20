@@ -6,45 +6,35 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-// playerKeys mirrors the web build's default bindings: P1 on WASD + FGH/RTY,
-// P2 on the arrows + JKL/IOP.
-var playerKeys = [2]struct {
-	up, down, left, right sdl.Scancode
-	buttons               map[string]sdl.Scancode
-}{
-	{sdl.SCANCODE_W, sdl.SCANCODE_S, sdl.SCANCODE_A, sdl.SCANCODE_D, map[string]sdl.Scancode{
-		"a": sdl.SCANCODE_F, "b": sdl.SCANCODE_G, "c": sdl.SCANCODE_H,
-		"x": sdl.SCANCODE_R, "y": sdl.SCANCODE_T, "z": sdl.SCANCODE_Y}},
-	{sdl.SCANCODE_UP, sdl.SCANCODE_DOWN, sdl.SCANCODE_LEFT, sdl.SCANCODE_RIGHT, map[string]sdl.Scancode{
-		"a": sdl.SCANCODE_J, "b": sdl.SCANCODE_K, "c": sdl.SCANCODE_L,
-		"x": sdl.SCANCODE_I, "y": sdl.SCANCODE_O, "z": sdl.SCANCODE_P}},
-}
-
 // Held reads both players' held inputs into dst, reusing the button maps
 // already in dst so a tick allocates nothing. A player with a controller uses
 // it instead of the keyboard.
-func Held(dst *[2]input.TickInput, pads *Gamepads) {
+func Held(dst *[2]input.TickInput, pads *Gamepads, b *Bindings) {
 	keys := sdl.GetKeyboardState()
 	for i := range dst {
-		if s, ok := pads.state(i); ok {
+		if s, ok := pads.state(i, &b.pads[i]); ok {
 			s.Apply(&dst[i])
 			continue
 		}
-		p, in := playerKeys[i], &dst[i]
-		in.Up, in.Down = keys[p.up] != 0, keys[p.down] != 0
-		in.Left, in.Right = keys[p.left] != 0, keys[p.right] != 0
+		k, in := &b.keys[i], &dst[i]
+		in.Up, in.Down = keys[k[0]] != 0, keys[k[1]] != 0
+		in.Left, in.Right = keys[k[2]] != 0, keys[k[3]] != 0
 		if in.Buttons == nil {
-			in.Buttons = make(map[string]bool, len(p.buttons))
+			in.Buttons = make(map[string]bool, len(k)-game.KeyDirections)
 		}
-		for name, sc := range p.buttons {
-			in.Buttons[name] = keys[sc] != 0
+		for a := game.KeyDirections; a < len(k); a++ {
+			in.Buttons[game.KeyboardActions[a]] = keys[k[a]] != 0
 		}
 	}
 }
 
 // PollEvents drains SDL events, turning key presses and controller changes
 // into menu inputs for f. It reports false when the window was closed.
+//
+// While the controls screen waits for a key or button, the next one goes to
+// f.Bind instead of the menus; Escape cancels the wait.
 func PollEvents(f *game.Flow, pads *Gamepads) bool {
+	_, binding := f.WaitingForBinding()
 	for ev := sdl.PollEvent(); ev != nil; ev = sdl.PollEvent() {
 		switch e := ev.(type) {
 		case *sdl.QuitEvent:
@@ -53,8 +43,16 @@ func PollEvents(f *game.Flow, pads *Gamepads) bool {
 			if e.Type != sdl.KEYDOWN {
 				continue
 			}
+			if device, waiting := f.WaitingForBinding(); waiting {
+				bindKey(f, device, e)
+				continue
+			}
 			if n, ok := navFor(e.Keysym.Scancode); ok {
 				f.Navigate(n)
+			}
+		case *sdl.ControllerButtonEvent:
+			if device, waiting := f.WaitingForBinding(); waiting && device == game.DevicePad && e.Type == sdl.CONTROLLERBUTTONDOWN {
+				f.Bind(game.DevicePad, sdl.GameControllerGetStringForButton(sdl.GameControllerButton(e.Button)))
 			}
 		case *sdl.ControllerDeviceEvent:
 			switch e.Type {
@@ -65,8 +63,21 @@ func PollEvents(f *game.Flow, pads *Gamepads) bool {
 			}
 		}
 	}
-	pads.navigate(f)
+	// A button bound this frame is not also a menu press.
+	pads.navigate(f, binding)
 	return true
+}
+
+// bindKey handles a key press while the controls screen waits for a binding:
+// Escape cancels (it is never bindable, menus need it), a key binds when a key
+// is awaited and is otherwise ignored; held keys repeating do not rebind.
+func bindKey(f *game.Flow, device game.Device, e *sdl.KeyboardEvent) {
+	switch {
+	case e.Keysym.Scancode == sdl.SCANCODE_ESCAPE:
+		f.Navigate(game.NavCancel)
+	case device == game.DeviceKeyboard && e.Repeat == 0:
+		f.Bind(game.DeviceKeyboard, sdl.GetScancodeName(e.Keysym.Scancode))
+	}
 }
 
 func navFor(sc sdl.Scancode) (game.Nav, bool) {

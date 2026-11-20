@@ -63,7 +63,7 @@ func TestSettings_MissingFilesGiveDefaultsAndAreWrittenOnFirstLaunch(t *testing.
 	}
 	got := slices.Clone(rec.names)
 	slices.Sort(got)
-	if want := []string{"config/audio.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
+	if want := []string{"config/audio.json", "config/controls.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
 		t.Fatalf("written = %q, want %q", got, want)
 	}
 	if want := map[string]any{"rounds": 3.0, "timeLimitSeconds": 99.0}; !reflect.DeepEqual(decodeJSON(t, rec.files["config/gameplay.json"]), want) {
@@ -84,7 +84,7 @@ func TestSettings_OnlyMissingFilesAreWrittenOnFirstLaunch(t *testing.T) {
 	}
 	got := slices.Clone(rec.names)
 	slices.Sort(got)
-	if want := []string{"config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
+	if want := []string{"config/controls.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
 		t.Errorf("written = %q, want %q", got, want)
 	}
 }
@@ -96,6 +96,7 @@ func TestSettings_ACorruptConcernFallsBackAloneAndIsNotRewritten(t *testing.T) {
 		"gameplay.json": `{"rounds": 5,`,
 		"audio.json":    `{"master": 50, "music": 60, "effects": 70}`,
 		"video.json":    `{}`,
+		"controls.json": `{}`,
 	})
 	s := LoadSettings(fsys, "linux", rec.write, func(m string) { warned = append(warned, m) })
 	if s.Gameplay != (Gameplay{Rounds: 3, TimeLimitSeconds: 99}) {

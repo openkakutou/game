@@ -33,11 +33,11 @@ const volumeStep = 10
 // size read from the file.
 var WindowSizes = [][2]int{{640, 480}, {960, 720}, {1280, 960}, {1920, 1440}}
 
-var optionsItems = []string{"Gameplay", "Audio", "Video", "Back"}
+var optionsItems = []string{"Gameplay", "Audio", "Video", "Controls", "Back"}
 
-var concernScreens = [concernCount]Screen{ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo}
+var concernScreens = [concernCount]Screen{ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo, ScreenOptionsControls}
 
-var concernTitles = [concernCount]string{"Gameplay", "Audio", "Video"}
+var concernTitles = [concernCount]string{"Gameplay", "Audio", "Video", "Controls"}
 
 // optionsState is the options screens' own state.
 type optionsState struct {
@@ -54,12 +54,18 @@ type optionsState struct {
 	gameplay Gameplay
 	audio    Audio
 	video    Video
+	controls Controls
+	// bind is the state of the bindings screen.
+	bind bindState
 }
 
 // OptionsTitle is the heading of the options screen shown.
 func (f *Flow) OptionsTitle() string {
-	if f.Screen == ScreenOptions {
+	switch f.Screen {
+	case ScreenOptions:
 		return "Options"
+	case ScreenOptionsBindings:
+		return bindTitles[f.options.bind.player]
 	}
 	return concernTitles[f.options.concern]
 }
@@ -77,7 +83,12 @@ func (f *Flow) OptionsCursor() int { return f.options.cursor }
 
 // inOptions is whether an options screen is shown.
 func (f *Flow) inOptions() bool {
-	return f.Screen == ScreenOptions || slices.Contains(concernScreens[:], f.Screen)
+	return f.Screen == ScreenOptions || f.inConcern()
+}
+
+// inConcern is whether a screen of one concern is shown.
+func (f *Flow) inConcern() bool {
+	return slices.Contains(concernScreens[:], f.Screen) || f.Screen == ScreenOptionsBindings
 }
 
 func (f *Flow) openOptions(fromPause bool) {
@@ -113,7 +124,7 @@ func (f *Flow) navOptions(n Nav) {
 func (f *Flow) enterConcern(c Concern) {
 	s := f.Settings
 	f.options.concern, f.options.cursor = c, 0
-	f.options.gameplay, f.options.audio, f.options.video = s.Gameplay, s.Audio, s.Video
+	f.options.gameplay, f.options.audio, f.options.video, f.options.controls = s.Gameplay, s.Audio, s.Video, s.Controls
 	f.Screen = concernScreens[c]
 	f.refreshRows()
 }
@@ -130,10 +141,12 @@ func (f *Flow) saveChanged() {
 		changed = s.Audio != f.options.audio
 	case ConcernVideo:
 		changed = s.Video != f.options.video
+	case ConcernControls:
+		changed = s.Controls != f.options.controls
 	}
 	if changed {
 		s.Save(c)
-		f.options.gameplay, f.options.audio, f.options.video = s.Gameplay, s.Audio, s.Video
+		f.options.gameplay, f.options.audio, f.options.video, f.options.controls = s.Gameplay, s.Audio, s.Video, s.Controls
 	}
 }
 
@@ -147,7 +160,7 @@ func (f *Flow) leaveConcern() {
 // SaveOpenConcern saves the concern screen being shown, if it changed: the
 // host calls it when the game exits, so a closed window loses no change.
 func (f *Flow) SaveOpenConcern() {
-	if slices.Contains(concernScreens[:], f.Screen) {
+	if f.inConcern() {
 		f.saveChanged()
 	}
 }
@@ -164,8 +177,11 @@ func (f *Flow) navConcern(n Nav) {
 	case NavRight:
 		f.changeRow(1)
 	case NavConfirm:
-		if f.options.cursor == last {
+		switch {
+		case f.options.cursor == last:
 			f.leaveConcern()
+		case f.options.concern == ConcernControls:
+			f.confirmControlsRow()
 		}
 	case NavCancel:
 		f.leaveConcern()
@@ -197,6 +213,8 @@ func (f *Flow) changeRow(delta int) {
 		if s.Audio != before {
 			s.AudioGen++
 		}
+	case ConcernControls:
+		// The rows are actions, not values.
 	case ConcernVideo:
 		before := s.Video
 		switch row {
@@ -267,6 +285,8 @@ func (f *Flow) refreshRows() {
 			"Master  "+strconv.Itoa(s.Audio.Master),
 			"Music  "+strconv.Itoa(s.Audio.Music),
 			"Effects  "+strconv.Itoa(s.Audio.Effects))
+	case ConcernControls:
+		rows = append(rows, "Player 1", "Player 2", "Reset to defaults")
 	case ConcernVideo:
 		rows = append(rows,
 			"Fullscreen  "+onOff(s.Video.Fullscreen),

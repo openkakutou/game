@@ -26,10 +26,12 @@ const (
 	ScreenVersus          // both picked characters, before the match
 	ScreenMatch
 	ScreenResult
-	ScreenOptions         // the settings concerns: Gameplay, Audio, Video, Back
+	ScreenOptions         // the settings concerns: Gameplay, Audio, Video, Controls, Back
 	ScreenOptionsGameplay // the rows of one concern, in Concern order
 	ScreenOptionsAudio
 	ScreenOptionsVideo
+	ScreenOptionsControls // Player 1, Player 2, Reset to defaults, Back
+	ScreenOptionsBindings // one player's actions with their key and button
 	ScreenError
 )
 
@@ -312,8 +314,10 @@ func (f *Flow) Navigate(n Nav) {
 		f.navResult(n)
 	case ScreenOptions:
 		f.navOptions(n)
-	case ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo:
+	case ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo, ScreenOptionsControls:
 		f.navConcern(n)
+	case ScreenOptionsBindings:
+		f.navBindings(n)
 	case ScreenError:
 		if n != NavCancel && n != NavConfirm {
 			return
