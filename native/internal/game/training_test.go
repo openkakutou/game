@@ -2,6 +2,7 @@ package game
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -332,5 +333,38 @@ func TestTraining_HasNoTimerAndTheMatchKeepsRunning(t *testing.T) {
 	}
 	if f.Match.RoundEnded() || f.Screen != ScreenMatch {
 		t.Fatalf("round ended or screen = %v: training never ends", f.Screen)
+	}
+}
+
+func TestPause_ResetPositionsDuringARoundEndBannerChangesNothing(t *testing.T) {
+	src := strings.Replace(modeSrc(steps(stepSelect, stepStage, stepMatch, stepResult), "human", "human", 3, 99, "results", "results"),
+		`"name": "T",`, `"name": "T", "pause": ["resetPositions"],`, 1)
+	f := flowFromSrc(t, src)
+	for range 3 {
+		f.Navigate(NavConfirm) // P1, P2, stage
+	}
+	for i := 0; i < 20000 && !f.Match.RoundEnded(); i++ {
+		var in [2]input.TickInput
+		in[0] = tapA(i)
+		f.Tick(in)
+	}
+	if !f.Match.RoundEnded() || f.Match.Over {
+		t.Fatalf("setup: round ended = %v, over = %v; want round 1 just won", f.Match.RoundEnded(), f.Match.Over)
+	}
+	round := f.Match.State.Round
+	f.Navigate(NavPause)
+	at := slices.Index(f.PauseItems(), PauseResetPositions)
+	for range at {
+		f.Navigate(NavDown)
+	}
+	f.Navigate(NavConfirm)
+	if !f.Match.RoundEnded() || f.Match.State.Round != round {
+		t.Errorf("round ended = %v, round = %d; want the finished round %d left as it was", f.Match.RoundEnded(), f.Match.State.Round, round)
+	}
+	for i := 0; i < RoundEndTicks+2 && f.Screen == ScreenMatch; i++ {
+		f.Tick([2]input.TickInput{})
+	}
+	if f.Screen != ScreenMatch || f.Match.State.Round != round+1 {
+		t.Errorf("screen = %v (%q), round = %d; want round %d to start", f.Screen, f.Message, f.Match.State.Round, round+1)
 	}
 }

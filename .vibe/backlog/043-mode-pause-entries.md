@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 depends_on: [021, 031]
 ---
 # Pause menu entries provided by the mode
@@ -10,3 +10,6 @@ Roadmap decision `030`: the pause menu lists the game's entries (resume, restart
 ## Acceptance Criteria
 - [ ] A mode can add entries only from the offered set; an unknown entry is a validation error
 - [ ] Versus shows only the game's entries
+
+## Done (2026-11-20)
+Native: mode field `pause` with `resetPositions` and `dummy`, inserted after Restart. Reset is ignored during a round-end banner and keeps the round being played. Web: through the core flow (065).

@@ -212,9 +212,10 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 }
 
 // ResetPositions puts both fighters back at their round-start positions, life
-// and state, as when round 1 began; the score is kept.
+// and state, in the round being played; the score is kept.
 func (m *Match) ResetPositions() error {
-	if err := m.reset(1); err != nil {
+	err := m.reset(m.State.Round)
+	if err != nil {
 		return err
 	}
 	m.applyStart()

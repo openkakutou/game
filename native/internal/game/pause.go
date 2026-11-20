@@ -118,7 +118,13 @@ func (f *Flow) choosePause(item PauseItem) {
 	case PauseRestart:
 		f.start(f.lastChars, f.lastStage)
 	case PauseResetPositions:
-		if err := f.Match.ResetPositions(); err != nil {
+		// A finished round's banner is left alone: resetting it would undo
+		// the round's end while its win is already counted.
+		if f.Match.RoundEnded() {
+			return
+		}
+		err := f.Match.ResetPositions()
+		if err != nil {
 			f.fail(fmt.Sprintf("Could not reset the positions: %v", err))
 		}
 	case PauseCharacterChange:
