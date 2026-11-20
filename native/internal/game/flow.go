@@ -46,8 +46,8 @@ const (
 	NavRight
 	NavConfirm
 	NavCancel
-	// NavPause is a controller's Start button: it opens and closes the
-	// pause menu, and does nothing elsewhere.
+	// NavPause is Escape or a controller's start button in a match: it opens
+	// and closes the pause menu, and does nothing elsewhere.
 	NavPause
 )
 
@@ -332,13 +332,15 @@ func (f *Flow) Navigate(n Nav) {
 	}
 }
 
-// navMatch opens the pause menu on cancel or Start, then hands it the inputs.
+// navMatch opens the pause menu on NavPause (Escape, the bound start button),
+// then hands it the inputs. Cancel (a pad's B, Backspace) is a fighter's
+// button there.
 func (f *Flow) navMatch(n Nav) {
 	if f.Paused {
 		f.navPause(n)
 		return
 	}
-	if n == NavCancel || n == NavPause {
+	if n == NavPause {
 		f.Paused, f.PauseCursor = true, 0
 	}
 }

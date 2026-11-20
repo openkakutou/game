@@ -91,15 +91,21 @@ func (g *Gamepads) state(player int, buttons *[len(game.PadActions)]sdl.GameCont
 	return s, true
 }
 
-// navigate feeds newly pressed controller buttons to the menus. With skip the
-// presses are only noted: they were this frame's bindings, not menu inputs.
-func (g *Gamepads) navigate(f *game.Flow, skip bool) {
+// navigate feeds newly pressed controller buttons to the menus; in a match
+// the player's bound start button pauses. With skip the presses are only
+// noted: they were this frame's bindings, not menu inputs.
+func (g *Gamepads) navigate(f *game.Flow, b *Bindings, skip bool) {
+	inMatch := f.Screen == game.ScreenMatch
 	for p := 0; p < 2; p++ {
-		s, ok := g.state(p, &menuPad)
+		menu, ok := g.state(p, &menuPad)
 		if !ok {
 			continue
 		}
-		g.navs = g.pads.Navs(p, s, g.navs[:0])
+		bound := menu
+		if inMatch {
+			bound, _ = g.state(p, &b.pads[p])
+		}
+		g.navs = g.pads.Navs(p, menu, bound, inMatch, g.navs[:0])
 		if skip {
 			continue
 		}

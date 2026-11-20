@@ -167,7 +167,7 @@ func TestUpdate_HaltsMusicOnBackToSelectAndRestartsItOnRematch(t *testing.T) {
 	if !mix.PlayingMusic() || p.owner != f.Match {
 		t.Fatal("rematch must restart the music under the new match")
 	}
-	f.Navigate(game.NavCancel) // pause menu
+	f.Navigate(game.NavPause) // pause menu
 	f.Navigate(game.NavDown)
 	f.Navigate(game.NavDown)
 	f.Navigate(game.NavConfirm) // Character Change
@@ -181,7 +181,7 @@ func TestUpdate_PauseMenuHoldsTheMusicAndContinueResumesIt(t *testing.T) {
 	p, _ := newPlayer(t)
 	f := matchFlow(t)
 	p.Update(f)
-	f.Navigate(game.NavCancel)
+	f.Navigate(game.NavPause)
 	p.Update(f)
 	if !mix.PausedMusic() {
 		t.Fatal("the pause menu must pause the music")
@@ -191,7 +191,7 @@ func TestUpdate_PauseMenuHoldsTheMusicAndContinueResumesIt(t *testing.T) {
 	if mix.PausedMusic() || !mix.PlayingMusic() {
 		t.Fatal("Continue must resume the music")
 	}
-	f.Navigate(game.NavCancel)
+	f.Navigate(game.NavPause)
 	p.Update(f)
 	f.Navigate(game.NavDown)
 	f.Navigate(game.NavConfirm) // Restart: a new match, music from the start, not paused
@@ -297,7 +297,7 @@ func TestUpdate_OwnerChangeSilencesEffectsAndEmptiesTheChunkCache(t *testing.T) 
 	f := matchFlow(t)
 	withSample(f, 0)
 	playUntilCached(t, p, f)
-	f.Navigate(game.NavCancel) // pause menu
+	f.Navigate(game.NavPause) // pause menu
 	f.Navigate(game.NavDown)
 	f.Navigate(game.NavDown)
 	f.Navigate(game.NavConfirm) // Character Change: the owner becomes nil

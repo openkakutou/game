@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done
 ---
 # Rebindable controls
 
@@ -10,3 +10,6 @@ Default controls are fixed. Let each player rebind keyboard and gamepad buttons 
 - [ ] Controls screen for both players on web and native
 - [ ] Bindings persisted and restored
 - [ ] Conflicts are shown and resolved explicitly
+
+## Done (2026-11-20)
+Native (ADR 024): controls screen, config/controls.json, swap-or-cancel conflicts. Gamepad conflicts are checked within one player (each player has their own pad); keyboard conflicts across both players. The bound pad start is the in-match pause. Web: item 069. Not exercised with a real gamepad (Xvfb, no pad).

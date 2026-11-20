@@ -7,7 +7,7 @@ import (
 )
 
 func navsOf(p *Pads, player int, s PadState) []Nav {
-	return p.Navs(player, s, nil)
+	return p.Navs(player, s, s, false, nil)
 }
 
 func TestPads_FirstTwoControllersGoToP1ThenP2(t *testing.T) {
@@ -97,7 +97,7 @@ func TestPads_NoPadsMeansNoPlayerHasOne(t *testing.T) {
 	if p.Has(-1) || p.Has(2) {
 		t.Error("out of range player reports a pad")
 	}
-	if got := p.Navs(2, PadState{}, nil); len(got) != 0 {
+	if got := p.Navs(2, PadState{}, PadState{}, false, nil); len(got) != 0 {
 		t.Errorf("out of range player navs = %v", got)
 	}
 }
@@ -265,8 +265,8 @@ func TestPads_NavsReusesTheCallersSlice(t *testing.T) {
 	s := PadState{}
 	toggle := PadState{Down: true}
 	if n := testing.AllocsPerRun(100, func() {
-		buf = p.Navs(0, toggle, buf[:0])
-		buf = p.Navs(0, s, buf[:0])
+		buf = p.Navs(0, toggle, toggle, true, buf[:0])
+		buf = p.Navs(0, s, s, true, buf[:0])
 	}); n != 0 {
 		t.Errorf("Navs allocates %v times", n)
 	}
@@ -281,5 +281,30 @@ func TestPads_StartButtonIsPauseOnPressOnly(t *testing.T) {
 	}
 	if got := navsOf(&p, 0, start); len(got) != 0 {
 		t.Errorf("held Start repeated: %v", got)
+	}
+}
+
+func TestPads_InAMatchTheBoundStartPausesAndTheFixedStartDoesNot(t *testing.T) {
+	var p Pads
+	p.Connect(1)
+	fixedOnly := PadState{Start: true}
+	if got := p.Navs(0, fixedOnly, PadState{}, true, nil); len(got) != 0 {
+		t.Errorf("fixed Start in a match = %v, want nothing", got)
+	}
+	p.Navs(0, PadState{}, PadState{}, true, nil)
+	if got := p.Navs(0, PadState{}, PadState{Start: true}, true, nil); len(got) != 1 || got[0] != NavPause {
+		t.Errorf("bound start in a match = %v, want [NavPause]", got)
+	}
+}
+
+func TestPads_OutsideAMatchTheFixedStartIsPauseAndTheBoundOneIsIgnored(t *testing.T) {
+	var p Pads
+	p.Connect(1)
+	if got := p.Navs(0, PadState{}, PadState{Start: true}, false, nil); len(got) != 0 {
+		t.Errorf("bound start in a menu = %v, want nothing", got)
+	}
+	p.Navs(0, PadState{}, PadState{}, false, nil)
+	if got := p.Navs(0, PadState{Start: true}, PadState{}, false, nil); len(got) != 1 || got[0] != NavPause {
+		t.Errorf("fixed Start in a menu = %v, want [NavPause]", got)
 	}
 }

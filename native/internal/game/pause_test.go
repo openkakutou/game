@@ -23,7 +23,7 @@ func pausedMatch(t *testing.T) *Flow {
 func TestPause_FreezesTheMatchUntilContinue(t *testing.T) {
 	f := pausedMatch(t)
 	f.Tick([2]input.TickInput{})
-	f.Navigate(NavCancel)
+	f.Navigate(NavPause)
 	if !f.Paused || f.PauseCursor != 0 {
 		t.Fatalf("Escape must open the menu on Continue: paused=%v cursor=%d", f.Paused, f.PauseCursor)
 	}
@@ -52,7 +52,7 @@ func TestPause_StartOpensAndClosesAndIsIgnoredOutsideMatches(t *testing.T) {
 	if f.Paused || f.Screen != ScreenMatch {
 		t.Fatal("Start on the menu must close it, as Ikemen GO's menu.cancel.key")
 	}
-	f.Navigate(NavCancel)
+	f.Navigate(NavPause)
 	f.Navigate(NavCancel)
 	if f.Paused {
 		t.Fatal("cancel on the menu must close it")
@@ -64,13 +64,26 @@ func TestPause_StartOpensAndClosesAndIsIgnoredOutsideMatches(t *testing.T) {
 	}
 }
 
+func TestPause_CancelDoesNotOpenTheMenuInAMatchButClosesIt(t *testing.T) {
+	f := pausedMatch(t)
+	f.Navigate(NavCancel) // a pad's B (fighter b) or Backspace
+	if f.Paused || f.Screen != ScreenMatch {
+		t.Fatalf("cancel in a match opened the menu: paused=%v screen=%v", f.Paused, f.Screen)
+	}
+	f.Navigate(NavPause)
+	f.Navigate(NavCancel)
+	if f.Paused {
+		t.Fatal("cancel in the pause menu must resume")
+	}
+}
+
 func TestPause_RestartStartsTheSameMatchFresh(t *testing.T) {
 	f := pausedMatch(t)
 	for range 10 {
 		f.Tick([2]input.TickInput{})
 	}
 	old, chars, st := f.Match, f.lastChars, f.lastStage
-	f.Navigate(NavCancel)
+	f.Navigate(NavPause)
 	f.Navigate(NavDown)
 	f.Navigate(NavConfirm)
 	if f.Paused || f.Match == old || f.Match.Ticks() != 0 || f.Screen != ScreenMatch {
@@ -87,7 +100,7 @@ func TestPause_ExitGoesBackToTheMainMenuAndItemsDependOnTheMode(t *testing.T) {
 	if len(items) != 5 || items[2].Label() != "Character Change" || items[3].Label() != "Options" || items[4].Label() != "Exit" {
 		t.Fatalf("items = %v", items)
 	}
-	f.Navigate(NavCancel)
+	f.Navigate(NavPause)
 	f.Navigate(NavUp)
 	f.Navigate(NavConfirm)
 	if f.Quit || f.Screen != ScreenMainMenu || f.Paused || f.Match != nil || f.MenuCursor != 0 {

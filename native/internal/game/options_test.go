@@ -114,7 +114,7 @@ func TestOptions_CancelOnOptionsReturnsToTheMainMenuOnOptions(t *testing.T) {
 
 func TestOptions_OpenedFromThePauseMenuReturnsToThePausedMatch(t *testing.T) {
 	f := pausedMatch(t)
-	navAll(f, NavCancel, NavDown, NavDown, NavDown) // pause menu, Options
+	navAll(f, NavPause, NavDown, NavDown, NavDown) // pause menu, Options
 	if got := f.PauseItems()[f.PauseCursor].Label(); got != "Options" {
 		t.Fatalf("pause cursor on %q", got)
 	}

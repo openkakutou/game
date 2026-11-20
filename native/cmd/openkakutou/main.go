@@ -147,10 +147,11 @@ func run() error {
 	pads := gfx.NewGamepads()
 	defer pads.Close()
 	bindings := gfx.NewBindings()
+	bindings.Update(settings) // the first PollEvents already reads the bound start
 	var held [2]input.TickInput
 	var acc float64
 	last := time.Now()
-	for n := 0; !flow.Quit && gfx.PollEvents(flow, pads); n++ {
+	for n := 0; !flow.Quit && gfx.PollEvents(flow, pads, bindings); n++ {
 		now := time.Now()
 		ticks := gfx.Ticks(&acc, float64(now.Sub(last).Microseconds())/1000)
 		last = now

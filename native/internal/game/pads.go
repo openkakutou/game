@@ -18,7 +18,7 @@ type PadState struct {
 	Up, Down, Left, Right bool
 	StickX, StickY        int16
 	Buttons               [PadButtons]bool
-	// Start is the Start (menu) button, which pauses a match.
+	// Start is the pad's start action: the pause button of a match.
 	Start bool
 }
 
@@ -94,14 +94,19 @@ func (p *Pads) ID(player int) (int32, bool) {
 }
 
 // Navs appends to dst the menu inputs newly pressed on the player's pad since
-// the previous call: directions from d-pad or stick, A confirm, B cancel.
-func (p *Pads) Navs(player int, s PadState, dst []Nav) []Nav {
+// the previous call: directions from d-pad or stick, A confirm, B cancel, all
+// read from menu (the fixed menu buttons). Pause is menu's Start, except in a
+// match, where it is bound's Start: the player's bound start button.
+func (p *Pads) Navs(player int, menu, bound PadState, inMatch bool, dst []Nav) []Nav {
 	if !p.Has(player) {
 		return dst
 	}
 	var cur padEdges
-	cur[0], cur[1], cur[2], cur[3] = s.dirs()
-	cur[4], cur[5], cur[6] = s.Buttons[0], s.Buttons[1], s.Start
+	cur[0], cur[1], cur[2], cur[3] = menu.dirs()
+	cur[4], cur[5], cur[6] = menu.Buttons[0], menu.Buttons[1], menu.Start
+	if inMatch {
+		cur[6] = bound.Start
+	}
 	navs := [7]Nav{NavUp, NavDown, NavLeft, NavRight, NavConfirm, NavCancel, NavPause}
 	for i, n := range navs {
 		if cur[i] && !p.prev[player][i] {

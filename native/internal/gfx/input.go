@@ -33,8 +33,9 @@ func Held(dst *[2]input.TickInput, pads *Gamepads, b *Bindings) {
 //
 // While the controls screen waits for a key or button, the next one goes to
 // f.Bind instead of the menus; Escape cancels the wait.
-func PollEvents(f *game.Flow, pads *Gamepads) bool {
-	_, binding := f.WaitingForBinding()
+func PollEvents(f *game.Flow, pads *Gamepads, b *Bindings) bool {
+	device, waiting := f.WaitingForBinding()
+	padWait := waiting && device == game.DevicePad
 	for ev := sdl.PollEvent(); ev != nil; ev = sdl.PollEvent() {
 		switch e := ev.(type) {
 		case *sdl.QuitEvent:
@@ -48,6 +49,9 @@ func PollEvents(f *game.Flow, pads *Gamepads) bool {
 				continue
 			}
 			if n, ok := navFor(e.Keysym.Scancode); ok {
+				if n == game.NavCancel && e.Keysym.Scancode == sdl.SCANCODE_ESCAPE && f.Screen == game.ScreenMatch {
+					n = game.NavPause // Escape pauses; a match's other cancel inputs are fighter buttons
+				}
 				f.Navigate(n)
 			}
 		case *sdl.ControllerButtonEvent:
@@ -63,8 +67,9 @@ func PollEvents(f *game.Flow, pads *Gamepads) bool {
 			}
 		}
 	}
-	// A button bound this frame is not also a menu press.
-	pads.navigate(f, binding)
+	// A button bound this frame is not also a menu press; during a keyboard
+	// wait a pad's B still cancels it.
+	pads.navigate(f, b, padWait)
 	return true
 }
 
