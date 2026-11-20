@@ -10,4 +10,5 @@ Split from item 029 (2026-11-20), which shipped the native half (ADR 023). The w
 ## Acceptance Criteria
 - [ ] Each concern persists and restores independently in the browser
 - [ ] A missing or corrupt stored value falls back to defaults for that concern only, with a visible notice
+- [ ] Controls screen and `controls` key, as native item 022 (ADR 024)
 - [ ] Options reachable from the main menu and the pause menu, keyboard and gamepad
