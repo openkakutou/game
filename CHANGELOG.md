@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- In the desktop game, a CPU-driven character with its own AI, such as Ikemen GO's Kung Fu Man (.zss version), now plays with that AI.
 - The desktop game's CPU plays as Ikemen GO's: it presses random directions and buttons, more often at a higher level, and characters with their own AI get the level they read. The level is the new Difficulty option (1 to 8, default 4), or -ailevel and -p1.ai/-p2.ai on the command line.
 - The desktop game's character select has a random cell after the last character, when the screenpack draws one: it picks a character at random.
 - In the desktop game, screenpack panels and menu cursors have rounded corners, tiled backgrounds scroll, and menu music loops from its loop point, as the screenpack format describes.

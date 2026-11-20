@@ -36,16 +36,11 @@ func statesVisited(t *testing.T, level float64, ticks int) map[int]bool {
 	return seen
 }
 
-// Known engine gap: AI.zss uses .zss features the engine lacks (map
-// variables, let, standby, numTarget; engine backlog item 056). Kept as an
-// expected failure, skipped with the item named, never weakened: once the
-// AI runs, the skip no longer triggers and the assertion must pass.
+// kfm_zss's AI.zss acts on its own at a level (engine v2.27.0 runs it), and
+// not without one.
 func TestAILevel_KungFuMansOwnAIPlaysOnlyWithALevel(t *testing.T) {
 	human := statesVisited(t, 0, 600)
 	cpu := statesVisited(t, 8, 600)
-	if len(cpu) == 1 && len(human) == 1 {
-		t.Skip("kfm_zss AI.zss does not run yet: engine backlog item 056 (zss grammar gaps)")
-	}
 	if len(cpu) <= len(human) {
 		t.Fatalf("states with AI level 8 = %v, without = %v: kfm_zss's AI.zss must act on its own", cpu, human)
 	}
