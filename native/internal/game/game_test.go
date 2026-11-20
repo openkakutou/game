@@ -478,9 +478,9 @@ func TestFlow_CPUDecisionReplacesPlayer2Keys(t *testing.T) {
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Match, _ = NewMatch(f.Fighters[0], f.Fighters[1], closeStage(), f.Setup())
-	f.cpus[1] = NewCPU(func() float64 { return 0 }) // always attacks in range
+	f.cpus[1] = NewCPU(4, highest) // never presses anything
 	f.Tick([2]input.TickInput{{}, {Buttons: map[string]bool{"b": true}, Up: true}})
-	if !f.cpuIn[1].Buttons["a"] || f.cpuIn[1].Buttons["b"] || f.cpuIn[1].Up {
-		t.Errorf("CPU input = %+v, want attack only (human keys ignored)", f.cpuIn)
+	if f.cpuIn[1].Buttons["b"] || f.cpuIn[1].Up {
+		t.Errorf("CPU input = %+v, want the CPU's (nothing), human keys ignored", f.cpuIn)
 	}
 }

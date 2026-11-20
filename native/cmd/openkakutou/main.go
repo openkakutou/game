@@ -143,7 +143,7 @@ func run() error {
 		}
 	}
 	flow.Settings = settings
-	flow.MaxPowerMode, flow.HideLifebars = run.MaxPowerMode, run.HideLifebars
+	flow.MaxPowerMode, flow.HideLifebars, flow.RunAILevel = run.MaxPowerMode, run.HideLifebars, run.AILevel
 	flow.Rand = rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0)).IntN // the arcade ladder and stages
 	defer flow.SaveOpenConcern()                                             // a closed window keeps the changes of the open screen
 	settings.NoteScreenpack(packNotices)

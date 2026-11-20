@@ -88,8 +88,8 @@ func TestQuickVersusFrom_DefaultsAndOptions(t *testing.T) {
 	if s.Start[0].Life != 500 || s.Start[1].Power != 3000 || s.Start[1].Life != 0 {
 		t.Errorf("start = %+v", s.Start)
 	}
-	if !slices.ContainsFunc(notices, func(n string) bool { return strings.Contains(n, "-p2.ai") && strings.Contains(n, "level") }) {
-		t.Errorf("notices = %v, want one saying the AI level is not used", notices)
+	if s.AILevel[1] != 8 || len(notices) != 0 {
+		t.Errorf("AI level = %v, notices = %v; want level 8 and no notice", s.AILevel, notices)
 	}
 
 	qv, _, _, _ = QuickVersusFrom(ParseArgs([]string{"kfm", "kfm"}))

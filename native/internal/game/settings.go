@@ -16,6 +16,8 @@ import (
 type Gameplay struct {
 	Rounds           int `json:"rounds"`
 	TimeLimitSeconds int `json:"timeLimitSeconds"`
+	// Difficulty is the CPU's AI level, 1 to 8 (Ikemen GO Options.Difficulty).
+	Difficulty int `json:"difficulty"`
 }
 
 // Audio is config/audio.json: volumes from 0 to 100.
@@ -52,7 +54,7 @@ const (
 
 // The values of a concern whose file is missing or corrupt.
 var (
-	defaultGameplay = Gameplay{Rounds: 3, TimeLimitSeconds: 99}
+	defaultGameplay = Gameplay{Rounds: 3, TimeLimitSeconds: 99, Difficulty: DefaultAILevel}
 	defaultAudio    = Audio{Master: 100, Music: 100, Effects: 100}
 	defaultVideo    = Video{VSync: true, WindowWidth: 960, WindowHeight: 720}
 
@@ -65,6 +67,9 @@ func (g Gameplay) validate() error {
 	}
 	if g.TimeLimitSeconds < 0 {
 		return fmt.Errorf("timeLimitSeconds %d must not be negative", g.TimeLimitSeconds)
+	}
+	if g.Difficulty < 1 || g.Difficulty > 8 {
+		return fmt.Errorf("difficulty %d must be between 1 and 8", g.Difficulty)
 	}
 	return nil
 }

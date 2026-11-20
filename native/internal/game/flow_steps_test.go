@@ -43,10 +43,12 @@ func flowFromSrc(t *testing.T, src string) *Flow {
 func steps(s ...string) string { return strings.Join(s, ",") }
 
 // finishMatch swaps in a close-quarters stage and ticks until the match
-// leaves the match screen, side p attacking and the other side idle.
+// leaves the match screen, side p attacking and the other side idle; the
+// CPU's random presses are switched off so the script decides.
 func finishMatch(t *testing.T, f *Flow, p match.Side) {
 	t.Helper()
 	f.Match, _ = NewMatch(f.Fighters[0], f.Fighters[1], closeStage(), f.Setup())
+	f.cpus = [2]*CPU{}
 	for i := 0; i < 20000 && f.Screen == ScreenMatch; i++ {
 		var in [2]input.TickInput
 		in[p] = tapA(i)

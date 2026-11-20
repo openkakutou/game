@@ -105,6 +105,9 @@ type Setup struct {
 	Training bool
 	// MaxPowerMode starts round 1 with full power (-maxpowermode).
 	MaxPowerMode bool
+	// AILevel is each CPU side's level, 1 to 8 (Ikemen GO's sys.aiLevel),
+	// given to its state machine for the AILevel trigger; 0 for a human side.
+	AILevel [2]float64
 }
 
 // StartValues overrides a fighter's life and power when the match starts
@@ -264,6 +267,7 @@ func (m *Match) reset(roundNo int) error {
 		if err != nil {
 			return fmt.Errorf("side %d: %w%s", i, err, m.missingNote(i))
 		}
+		rt.Context.AILevel = m.Setup.AILevel[i]
 		m.runtimes[i] = rt
 	}
 	m.State = *state

@@ -14,3 +14,4 @@ Quick versus (decision `019`) supports Ikemen GO's core options; the rest are ac
 
 ## Notes
 - 2026-11-20: `-setvolume`, `-nojoy`, `-togglelifebars`, `-maxpowermode`, `-fight`, `-r` work (docs/command-line.md), and the smoke test runs a quick versus with all of them. Still open: `-p<n>.color`, `-p<n>.ai` levels, `-p<n>.input`, `.lifeMax`/`.dizzyPoints`/`.guardPoints`, `-draws`, teams, `-log`, `-speed`.
+- 2026-11-20: `-p<n>.ai` levels and `-ailevel` work (decision 030).

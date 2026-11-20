@@ -15,6 +15,7 @@ import (
 const (
 	gameplayRowRounds = iota
 	gameplayRowTime
+	gameplayRowDifficulty
 )
 
 const (
@@ -325,6 +326,8 @@ func (f *Flow) changeRow(delta int) {
 			s.Gameplay.Rounds = cycle(withOption(RoundOptions, s.Gameplay.Rounds), s.Gameplay.Rounds, delta)
 		case gameplayRowTime:
 			s.Gameplay.TimeLimitSeconds = cycle(withOption(TimeOptions, s.Gameplay.TimeLimitSeconds), s.Gameplay.TimeLimitSeconds, delta)
+		case gameplayRowDifficulty:
+			s.Gameplay.Difficulty = cycle(DifficultyOptions, s.Gameplay.Difficulty, delta)
 		}
 	case ConcernAudio:
 		before := s.Audio
@@ -429,6 +432,7 @@ func (f *Flow) refreshRows() {
 		}
 		o.addRow("Rounds", strconv.Itoa(s.Gameplay.Rounds))
 		o.addRow("Time", limit)
+		o.addRow("Difficulty", strconv.Itoa(s.Gameplay.Difficulty))
 	case ConcernAudio:
 		o.addRow("Master", strconv.Itoa(s.Audio.Master))
 		o.addRow("Music", strconv.Itoa(s.Audio.Music))

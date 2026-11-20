@@ -83,7 +83,7 @@ const HelpText = `OpenKakutou command line options (case sensitive):
 Quick VS options (start one match without menus, then quit):
 <p1> <p2>               The first two names are player 1 and player 2
 -p1 <char> -p2 <char>   Loads player 1 / player 2, eg. -p1 kfm
--p<n>.ai <level>        Player n (1 or 2) is played by the CPU when level > 0
+-p<n>.ai <level>        Player n (1 or 2) is played by the CPU at <level> (1-8) when level > 0
 -p<n>.life <life>       Sets player n's life to <life> (1-1000) for round 1
 -p<n>.power <power>     Sets player n's power to <power> (0-3000) for round 1
 -time <num>             Round time in seconds (-1 to disable)
@@ -100,6 +100,7 @@ Other options:
 -nojoy                  Disables gamepads
 -togglelifebars         Hides the life and power bars
 -maxpowermode           Fighters start the match with full power
+-ailevel <level>        CPU level (1-8) for this run
 -fight <path>           Uses the lifebar <path> (a fight.def) for this run
 -r <name>               Uses the screenpack folder <name> for this run
 
@@ -120,7 +121,9 @@ type QuickVersus struct {
 	Wins   int    // rounds to win (-rounds)
 	Time   int    // round time in seconds, -1 for none (-time)
 	CPU    [2]bool
-	Start  [2]StartValues
+	// AILevel is -p<n>.ai, the level of a CPU side.
+	AILevel [2]float64
+	Start   [2]StartValues
 }
 
 // Ikemen GO's defaults: Options.Match.Wins 2 and Options.Time 99 (its
@@ -136,7 +139,7 @@ func (q QuickVersus) Setup() Setup {
 	if limit < 0 {
 		limit = 0
 	}
-	return Setup{Rounds: 2*q.Wins - 1, TimeLimitSeconds: limit, CPU: q.CPU, Start: q.Start}
+	return Setup{Rounds: 2*q.Wins - 1, TimeLimitSeconds: limit, CPU: q.CPU, AILevel: q.AILevel, Start: q.Start}
 }
 
 // handledFlags are the flags this game reads.
@@ -192,9 +195,7 @@ func QuickVersusFrom(cl CommandLine) (q QuickVersus, ok bool, notices []string, 
 		p := fmt.Sprintf("-p%d", i+1)
 		if level, given := intFlag(p+".ai", func(n int) bool { return n >= 0 }, "an AI level, 0 for a human player"); given {
 			q.CPU[i] = level > 0
-			if level > 0 {
-				notices = append(notices, fmt.Sprintf("%s.ai %d: the CPU opponent has no levels yet, the level is not used", p, level))
-			}
+			q.AILevel[i] = float64(level)
 		}
 		if life, given := intFlag(p+".life", func(n int) bool { return n >= 1 && n <= DefaultHealth }, fmt.Sprintf("between 1 and %d", DefaultHealth)); given {
 			q.Start[i].Life = life

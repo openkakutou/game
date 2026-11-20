@@ -108,6 +108,9 @@ func (c *Core) StartMatch(req string) string {
 		return fail("cannot load stage %q: %v", r.Stage, err)
 	}
 	setup := game.Setup{Rounds: r.Setup.Rounds, TimeLimitSeconds: r.Setup.TimeLimitSeconds, CPU: [2]bool{false, r.P2CPU}}
+	if r.P2CPU {
+		setup.AILevel[1] = game.DefaultAILevel
+	}
 	m, err := game.NewMatch(fighters[0], fighters[1], st, setup)
 	if err != nil {
 		return fail("cannot start the match: %v", err)
@@ -116,7 +119,7 @@ func (c *Core) StartMatch(req string) string {
 	s.cam = game.NewStageCamera(st, game.CameraTension(st), game.StageScale(st, r.ViewWidth), r.ViewWidth)
 	s.roundTimerTicks, s.roundsToWin = setup.RoundTimerTicks(), m.Progress.RoundsToWin()
 	if r.P2CPU {
-		s.cpu = game.NewCPU(nil)
+		s.cpu = game.NewCPU(game.DefaultAILevel, nil)
 	}
 	for i := range s.in {
 		s.in[i].Buttons = make(map[string]bool, len(buttonNames))

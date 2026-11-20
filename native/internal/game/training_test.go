@@ -175,10 +175,10 @@ func TestFlowTick_TrainingDummyFollowsItsSetting(t *testing.T) {
 		t.Errorf("Guard with the dummy left of the player: %+v, want left only", in)
 	}
 	f.Dummy = DummyCPU
-	f.Match.State.Fighters[0].Position.X, f.Match.State.Fighters[1].Position.X = -150, 150
+	f.cpus[1] = NewCPU(4, lowest) // jams up and every button
 	f.Tick([2]input.TickInput{})
-	if in := f.cpuIn[1]; !in.Left || in.Right {
-		t.Errorf("CPU with the player far to the left: %+v, want the CPU walking left", in)
+	if in := f.cpuIn[1]; !in.Up || !in.Buttons["a"] {
+		t.Errorf("Dummy CPU: %+v, want the CPU's input", in)
 	}
 }
 

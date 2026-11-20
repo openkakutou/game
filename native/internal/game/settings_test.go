@@ -49,7 +49,7 @@ func configFS(files map[string]string) fstest.MapFS {
 func TestSettings_MissingFilesGiveDefaultsAndAreWrittenOnFirstLaunch(t *testing.T) {
 	rec := &recorder{}
 	s := LoadSettings(fstest.MapFS{}, "linux", rec.write, nil)
-	if s.Gameplay != (Gameplay{Rounds: 3, TimeLimitSeconds: 99}) {
+	if s.Gameplay != (Gameplay{Rounds: 3, TimeLimitSeconds: 99, Difficulty: 4}) {
 		t.Errorf("gameplay = %+v", s.Gameplay)
 	}
 	if s.Audio != (Audio{Master: 100, Music: 100, Effects: 100}) {
@@ -66,7 +66,7 @@ func TestSettings_MissingFilesGiveDefaultsAndAreWrittenOnFirstLaunch(t *testing.
 	if want := []string{"config/appearance.json", "config/audio.json", "config/controls.json", "config/gameplay.json", "config/video.json"}; !slices.Equal(got, want) {
 		t.Fatalf("written = %q, want %q", got, want)
 	}
-	if want := map[string]any{"rounds": 3.0, "timeLimitSeconds": 99.0}; !reflect.DeepEqual(decodeJSON(t, rec.files["config/gameplay.json"]), want) {
+	if want := map[string]any{"rounds": 3.0, "timeLimitSeconds": 99.0, "difficulty": 4.0}; !reflect.DeepEqual(decodeJSON(t, rec.files["config/gameplay.json"]), want) {
 		t.Errorf("gameplay.json = %s", rec.files["config/gameplay.json"])
 	}
 	wantVideo := map[string]any{"linux": map[string]any{"fullscreen": false, "vsync": true, "windowWidth": 960.0, "windowHeight": 720.0}}
@@ -99,7 +99,7 @@ func TestSettings_ACorruptConcernFallsBackAloneAndIsNotRewritten(t *testing.T) {
 		"controls.json": `{}`,
 	})
 	s := LoadSettings(fsys, "linux", rec.write, func(m string) { warned = append(warned, m) })
-	if s.Gameplay != (Gameplay{Rounds: 3, TimeLimitSeconds: 99}) {
+	if s.Gameplay != (Gameplay{Rounds: 3, TimeLimitSeconds: 99, Difficulty: 4}) {
 		t.Errorf("gameplay = %+v, want the defaults", s.Gameplay)
 	}
 	if s.Audio != (Audio{Master: 50, Music: 60, Effects: 70}) {
@@ -141,7 +141,7 @@ func TestSettings_InvalidValuesMakeTheConcernCorrupt(t *testing.T) {
 		if n := s.Notices(); len(n) != 1 || !strings.Contains(n[0], "config/"+c.file) {
 			t.Errorf("%s %s: notices = %q", c.file, c.body, n)
 		}
-		if s.Gameplay != (Gameplay{3, 99}) || s.Audio != (Audio{100, 100, 100}) || s.Video != (Video{false, true, 960, 720}) {
+		if s.Gameplay != (Gameplay{3, 99, DefaultAILevel}) || s.Audio != (Audio{100, 100, 100}) || s.Video != (Video{false, true, 960, 720}) {
 			t.Errorf("%s %s: values = %+v %+v %+v, want defaults", c.file, c.body, s.Gameplay, s.Audio, s.Video)
 		}
 	}
@@ -190,12 +190,12 @@ func TestSettings_SavingGameplayKeepsUnknownFields(t *testing.T) {
 	rec := &recorder{}
 	fsys := configFS(map[string]string{"gameplay.json": `{"rounds": 5, "timeLimitSeconds": 30, "note": "hi"}`})
 	s := LoadSettings(fsys, "linux", rec.write, nil)
-	if s.Gameplay != (Gameplay{5, 30}) {
+	if s.Gameplay != (Gameplay{5, 30, DefaultAILevel}) {
 		t.Fatalf("gameplay = %+v", s.Gameplay)
 	}
 	s.Gameplay.Rounds = 1
 	s.Save(ConcernGameplay)
-	want := map[string]any{"rounds": 1.0, "timeLimitSeconds": 30.0, "note": "hi"}
+	want := map[string]any{"rounds": 1.0, "timeLimitSeconds": 30.0, "difficulty": 4.0, "note": "hi"}
 	if got := decodeJSON(t, rec.files["config/gameplay.json"]); !reflect.DeepEqual(got, want) {
 		t.Errorf("gameplay.json = %v, want %v", got, want)
 	}
@@ -256,7 +256,7 @@ func TestSettings_AnInvalidValueKeepsUnknownKeysOfTheObjectOnSave(t *testing.T) 
 	rec := &recorder{}
 	s := LoadSettings(configFS(map[string]string{"gameplay.json": `{"rounds": 2, "note": "hi"}`}), "linux", rec.write, nil)
 	s.Save(ConcernGameplay)
-	want := map[string]any{"rounds": 3.0, "timeLimitSeconds": 99.0, "note": "hi"}
+	want := map[string]any{"rounds": 3.0, "timeLimitSeconds": 99.0, "difficulty": 4.0, "note": "hi"}
 	if got := decodeJSON(t, rec.files["config/gameplay.json"]); !reflect.DeepEqual(got, want) {
 		t.Errorf("gameplay.json = %v, want %v", got, want)
 	}
@@ -382,5 +382,16 @@ func TestSettings_AppearanceNoticeIsRebuiltFromTheScreenpackAndLifebarPartsAndCl
 	s.NoteScreenpack(nil)
 	if len(s.Notices()) != 0 {
 		t.Errorf("notices = %q, want none", s.Notices())
+	}
+}
+
+func TestSettings_DifficultyIsReadAndOutOfRangeIsRefused(t *testing.T) {
+	s := LoadSettings(configFS(map[string]string{"gameplay.json": `{"rounds": 3, "timeLimitSeconds": 99, "difficulty": 7}`}), "linux", nil, nil)
+	if s.Gameplay.Difficulty != 7 {
+		t.Errorf("difficulty = %d, want 7", s.Gameplay.Difficulty)
+	}
+	s = LoadSettings(configFS(map[string]string{"gameplay.json": `{"rounds": 3, "difficulty": 9}`}), "linux", nil, nil)
+	if s.Gameplay.Difficulty != DefaultAILevel || len(s.Notices()) != 1 {
+		t.Errorf("difficulty 9: %d with notices %q, want the defaults and a notice", s.Gameplay.Difficulty, s.Notices())
 	}
 }

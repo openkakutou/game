@@ -21,13 +21,16 @@ type RunOptions struct {
 	NoJoy bool
 	// Fight is -fight, a fight.def used instead of the selected lifebar.
 	Fight string
+	// AILevel is -ailevel, the CPU level of this run clamped to 1-8
+	// (main.lua:154-156); 0 when absent.
+	AILevel int
 	// Screenpack is -r: Ikemen GO names a motif folder or system.def; here
 	// it names a screenpack folder, used instead of the selected one.
 	Screenpack string
 }
 
 // runFlags are the flags RunOptionsFrom reads.
-var runFlags = []string{"-setvolume", "-togglelifebars", "-maxpowermode", "-nojoy", "-fight", "-r"}
+var runFlags = []string{"-setvolume", "-togglelifebars", "-maxpowermode", "-nojoy", "-fight", "-r", "-ailevel"}
 
 // RunOptionsFrom reads the run options of cl. err names an option whose
 // value cannot be used.
@@ -37,6 +40,13 @@ func RunOptionsFrom(cl CommandLine) (RunOptions, error) {
 	_, o.HideLifebars = f["-togglelifebars"]
 	_, o.MaxPowerMode = f["-maxpowermode"]
 	_, o.NoJoy = f["-nojoy"]
+	if raw, given := f["-ailevel"]; given {
+		n, err := strconv.Atoi(raw)
+		if err != nil {
+			return o, fmt.Errorf("-ailevel %q: must be a level from 1 to 8", raw)
+		}
+		o.AILevel = min(max(n, 1), 8)
+	}
 	raw, given := f["-setvolume"]
 	if !given {
 		return o, nil

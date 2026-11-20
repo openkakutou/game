@@ -27,7 +27,7 @@ The diagram shows what the game does with its arguments: two characters skip the
 |---|---|
 | `<p1> <p2>` | The first two names, before any option, are player 1 and player 2. |
 | `-p1 <char>`, `-p2 <char>` | Player 1, player 2. |
-| `-p<n>.ai <level>` | Player 1 or 2 is played by the CPU when the level is above 0. The level itself is not used yet: the CPU opponent has a single behaviour. |
+| `-p<n>.ai <level>` | Player 1 or 2 is played by the CPU at that level (Ikemen GO's 1 to 8) when it is above 0. |
 | `-p<n>.life <life>` | Player n's life for round 1, 1 to 1000. |
 | `-p<n>.power <power>` | Player n's power for round 1, 0 to 3000. |
 | `-rounds <num>` | Rounds to win the match (default 2, so best of 3). |
@@ -51,6 +51,7 @@ The diagram shows what the game does with its arguments: two characters skip the
 | `-nosound` | No sound at all. |
 | `-setvolume <num>` | Master volume 0 to 100 (clamped) for this run, until the audio options are changed; ignored with `-nosound`. |
 | `-nojoy` | Gamepads are not opened: keyboard only. |
+| `-ailevel <level>` | CPU level of this run, clamped to 1-8, instead of the Difficulty option. |
 | `-togglelifebars` | Matches show no life or power bars. |
 | `-maxpowermode` | Every match starts with both power bars full (round 1, as Ikemen GO; it wins over `-p<n>.power`). |
 | `-fight <path>` | Lifebar of this run: a `fight.def`, found as given, then under `lifebars/` and `common/`. Not found: the selected lifebar stays, with a notice. |
@@ -72,4 +73,4 @@ Each one is accepted and named in a notice (`... is not supported yet, ignored`)
 | `-storyboard`, `-loadmotif` | Storyboards are not played; `-loadmotif` only keeps the menus (no quick versus), as in Ikemen GO. |
 | `-ip`, `-tcpport`, `-udpport` | No netplay. |
 | `-log` | No match statistics file. |
-| `-ailevel`, `-speed`, `-framerate`, `-stresstest`, `-speedtest`, `-debug`, `-debugdump`, `-config` | Not implemented yet. |
+| `-speed`, `-framerate`, `-stresstest`, `-speedtest`, `-debug`, `-debugdump`, `-config` | Not implemented yet. |

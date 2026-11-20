@@ -229,16 +229,19 @@ func TestTick_DrainsSoundCuesOnce(t *testing.T) {
 	}
 }
 
-func TestTick_CPUMakesPlayer2AttackWhenInReachOfAnIdlePlayer1(t *testing.T) {
+func TestTick_TheCPUDrivesPlayer2(t *testing.T) {
 	c := loaded(t)
 	id, _ := start(t, c, strings.Replace(startReq, `"viewWidth"`, `"p2cpu":true,"viewWidth"`, 1))
+	if s := c.matches[id]; s.cpu == nil || s.cpu.Level != game.DefaultAILevel {
+		t.Fatalf("p2cpu: CPU = %+v, want one at Ikemen GO's default level", s.cpu)
+	}
+	// A draw that always wins jams every button: P2 presses a and attacks.
+	c.matches[id].cpu = game.NewCPU(game.DefaultAILevel, func(lo, _ int) int { return lo })
 	attacked := false
 	for i := 0; i < 300 && !attacked; i++ {
 		out := decode(t, c.Tick(id, idle))
 		attacked = out["fighters"].([]any)[1].(map[string]any)["stateNo"] == 200.0
 	}
-	// In reach of an idle P1, the CPU presses attack 10% of ticks: P2 enters
-	// the attack state 200 well within 300 ticks.
 	if !attacked {
 		t.Error("the CPU never made P2 attack")
 	}

@@ -58,7 +58,9 @@ const (
 // Options offered on the setup screen.
 var (
 	RoundOptions = []int{1, 3, 5}
-	TimeOptions  = []int{0, 30, 60, 99} // seconds; 0 = no limit
+	// DifficultyOptions are Ikemen GO's AI levels.
+	DifficultyOptions = []int{1, 2, 3, 4, 5, 6, 7, 8}
+	TimeOptions       = []int{0, 30, 60, 99} // seconds; 0 = no limit
 )
 
 // VersusTicks is how long the VS screen shows before the match starts:
@@ -111,6 +113,9 @@ type Flow struct {
 	MaxPowerMode bool
 	// HideLifebars is -togglelifebars: matches show no life or power bars.
 	HideLifebars bool
+	// RunAILevel is -ailevel: the CPU level of this run, 0 for the
+	// Difficulty setting.
+	RunAILevel int
 	// CommonSounds is common/common.snd, read by F-prefixed PlaySnd cues.
 	CommonSounds *CommonSounds
 	// Settings are the persisted settings; the host replaces the defaults
@@ -502,6 +507,15 @@ func (f *Flow) back() {
 	f.toMenu()
 }
 
+// AILevel is the level a CPU side plays at: -ailevel, else the Difficulty
+// setting.
+func (f *Flow) AILevel() float64 {
+	if f.RunAILevel > 0 {
+		return float64(f.RunAILevel)
+	}
+	return float64(f.Settings.Gameplay.Difficulty)
+}
+
 // SelectCells is the character select's cell count: the visible characters,
 // then the random cell when the screenpack draws one.
 func (f *Flow) SelectCells() int {
@@ -694,16 +708,21 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 	f.Stage, f.StageDefPath = st, se.DefPath
 	setup := f.Setup()
 	setup.MaxPowerMode = f.MaxPowerMode
+	for i, cpu := range setup.CPU {
+		if cpu && setup.AILevel[i] <= 0 {
+			setup.AILevel[i] = f.AILevel()
+		}
+	}
 	m, err := NewMatch(f.Fighters[0], f.Fighters[1], st, setup)
 	if err != nil {
 		f.fail(fmt.Sprintf("Could not start the match: %v", err))
 		return
 	}
 	f.Match, f.Screen, f.RoundOverTicks = m, ScreenMatch, 0
-	for i, cpu := range f.Setup().CPU {
+	for i, level := range setup.AILevel {
 		f.cpus[i] = nil
-		if cpu {
-			f.cpus[i] = NewCPU(nil)
+		if level > 0 {
+			f.cpus[i] = NewCPU(level, nil)
 		}
 	}
 }
@@ -818,5 +837,5 @@ func (f *Flow) decideCPU(i int, cpu *CPU) {
 		f.Dummy.Decide(self, opponent, &f.cpuIn[i])
 		return
 	}
-	cpu.Decide(self, opponent, &f.cpuIn[i])
+	cpu.Decide(&f.cpuIn[i])
 }

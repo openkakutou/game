@@ -25,8 +25,7 @@ func (c *Core) Tick(id int, inputs string) string {
 		return fail("the round is over: call nextRound")
 	}
 	if s.cpu != nil {
-		self, other := s.match.State.Fighters[1].Position, s.match.State.Fighters[0].Position
-		s.cpu.Decide(self, other, &s.in[1])
+		s.cpu.Decide(&s.in[1])
 	}
 	if err := s.match.Step(s.in); err != nil {
 		return fail("the match stopped: %v", err)
