@@ -179,6 +179,10 @@ for shot_name in 1-select-p1 2-select-p2 3-stage 13-options 14-options-audio 15-
 done
 [ "$(identify -format %k "$out/6b-pause.png")" -gt 200 ] || { echo "6b-pause: too few colours for the screenpack pause menu"; exit 1; }
 
+# The error screen (a capture taken 5 frames in, so still fading in) is the
+# screenpack's too: its text and fading background make hundreds of colours
+# where the old bitmap one had 4.
+[ "$(identify -format %k "$out/8-error.png")" -gt 200 ] || { echo "8-error: too few colours for the screenpack error screen"; exit 1; }
 for f in "$out"/*.png; do
   colors=$(identify -format %k "$f")
   echo "$(basename "$f"): $colors colors"

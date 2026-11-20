@@ -40,8 +40,8 @@ func (f *Flow) DrainMenuCues(dst []MenuCue) []MenuCue {
 	return dst
 }
 
-// PackScreen is the name of the screenpack screen the flow shows ("" for the
-// error screen and for a match that is not paused), as format.md names them.
+// PackScreen is the name of the screenpack screen the flow shows ("" for a
+// match that is not paused), as format.md names them.
 func (f *Flow) PackScreen() string {
 	switch f.Screen {
 	case ScreenTitle, ScreenMainMenu:
@@ -56,6 +56,8 @@ func (f *Flow) PackScreen() string {
 		return "versus"
 	case ScreenResult:
 		return "results"
+	case ScreenError:
+		return "error"
 	case ScreenOptions, ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo,
 		ScreenOptionsControls, ScreenOptionsBindings:
 		return "options"

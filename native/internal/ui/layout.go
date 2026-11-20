@@ -21,8 +21,9 @@ type rect struct{ x, y, w, h float32 }
 // Layout turns screens of a Pack into draw lists. It keeps no per-frame
 // state, only a scratch slice reused between frames.
 type Layout struct {
-	pack *Pack
-	rows []Row
+	pack    *Pack
+	rows    []Row
+	wrapped wrapCache
 }
 
 // NewLayout returns a layout over pack.

@@ -23,12 +23,6 @@ type slots struct {
 // noSlots is for a menu whose values all take the menu's valueStyle.
 var noSlots = slots{column: -1}
 
-// twoSlotColumns are where the right edges of a row's key and button columns
-// lie, as fractions of valueOffset's x.
-// shortcut: the format has no offset for a second value; these keep both columns inside a
-// 110-unit cursor bar, apart at 4:3 and 16:9. Upgrade when the format gets one.
-var twoSlotColumns = [2]float32{0.75, 1.25}
-
 // menu draws a vertical menu: its first entry is placed by the menu's layout
 // (the pivot of a row as wide as the widest label, on the anchor), and each
 // next one is spacing units below. Labels are aligned inside that width by
@@ -72,7 +66,7 @@ func (l *Layout) menu(dst *DrawList, view View, sc scope, m *screenpack.Menu, ro
 			}
 		}
 		if rows[i].Flagged {
-			style.style.Color = warningColor
+			style = l.flagged(sc, m, style, view)
 		}
 		af := alignFactor(style.style.Align)
 		style.emit(dst, rows[i].Label, line.x+(line.w-style.width(rows[i].Label))*af, line.y+pitch/2, 1)
@@ -80,20 +74,46 @@ func (l *Layout) menu(dst *DrawList, view View, sc scope, m *screenpack.Menu, ro
 	}
 }
 
-// values draws a row's values, aligned against the points valueOffset to the
-// right of ref (the label's reference x): the first column's, and the
-// second's when the row has two.
-func (l *Layout) values(dst *DrawList, view View, sc scope, m *screenpack.Menu, row Row, onCursor bool, ref, centerY float32, sl slots) {
-	if m.ValueOffset == nil {
-		return
+// flagged is the look of a row the game flags as a problem: the menu's
+// flaggedStyle when it has one, else the style the row would have, tinted
+// with the root file's warningColor.
+func (l *Layout) flagged(sc scope, m *screenpack.Menu, style styled, view View) styled {
+	if m.FlaggedStyle != "" {
+		if flagged, ok := l.styled(sc, m.FlaggedStyle, view); ok {
+			return flagged
+		}
 	}
+	style.style.Color = l.pack.warning(sc)
+	return style
+}
+
+// valueOffset is where value column v of a row with count values lies from
+// the labels' reference point, in units: the menu's valueOffsets pair for the
+// column when the row has several values and the menu lists one per column;
+// else valueOffset places the last value and the others are spread evenly
+// between the label and it. ok is false when the menu places no values.
+func valueOffset(m *screenpack.Menu, v, count int) (offset [2]float64, ok bool) {
+	if count > 1 && len(m.ValueOffsets) >= count {
+		return m.ValueOffsets[v], true
+	}
+	if m.ValueOffset == nil {
+		return offset, false
+	}
+	share := float64(v+1) / float64(count)
+	return [2]float64{m.ValueOffset[0] * share, m.ValueOffset[1] * share}, true
+}
+
+// values draws a row's values, each aligned against the point its offset
+// puts right of ref (the label's reference x).
+func (l *Layout) values(dst *DrawList, view View, sc scope, m *screenpack.Menu, row Row, onCursor bool, ref, centerY float32, sl slots) {
 	unit := view.unit()
-	columns := [2]float32{1, 0}
+	count := 1
 	if row.Values[1] != "" {
-		columns = twoSlotColumns
+		count = 2
 	}
 	for v, text := range row.Values {
-		if text == "" {
+		offset, placed := valueOffset(m, v, count)
+		if text == "" || !placed {
 			continue
 		}
 		id, from := m.ValueStyle, sc
@@ -111,9 +131,8 @@ func (l *Layout) values(dst *DrawList, view View, sc scope, m *screenpack.Menu, 
 			continue
 		}
 		if row.Flagged {
-			style.style.Color = warningColor
+			style = l.flagged(from, m, style, view)
 		}
-		edge := ref + float32(m.ValueOffset[0])*unit*columns[v]
-		style.emit(dst, text, edge-style.width(text)*alignFactor(style.style.Align), centerY+float32(m.ValueOffset[1])*unit, 1)
+		style.emit(dst, text, ref+float32(offset[0])*unit-style.width(text)*alignFactor(style.style.Align), centerY+float32(offset[1])*unit, 1)
 	}
 }

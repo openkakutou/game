@@ -210,6 +210,8 @@ func screenBase(s *screenpack.Screens, screen string) *screenpack.Screen {
 		return &s.CharacterSelect.Screen
 	case "stageSelect":
 		return &s.StageSelect.Screen
+	case "error":
+		return &s.Error.Screen
 	}
 	return nil
 }
@@ -340,4 +342,17 @@ func (p *Pack) Music(screen string) (m MenuMusic, ok bool) {
 		m.Volume = float32(*music.Volume)
 	}
 	return m, true
+}
+
+// defaultWarningColor is the format's own default for the root file's
+// warningColor, which the library leaves empty when the file omits it.
+const defaultWarningColor = "#dc3c3c"
+
+// warning is the color that tints what the game flags as a problem, from the
+// root file of the pack a part comes from.
+func (p *Pack) warning(sc scope) string {
+	if color := p.screenpack(sc.src).WarningColor; color != "" {
+		return color
+	}
+	return defaultWarningColor
 }

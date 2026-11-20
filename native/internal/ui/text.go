@@ -88,7 +88,7 @@ func (s styled) emit(dst *DrawList, text string, left, centerY, alpha float32) {
 // replaces the style's color; "" keeps it.
 func (l *Layout) text(dst *DrawList, view View, sc scope, lay *screenpack.Layout, style screenpack.StyleID, text string, parent rect, alpha float32, tint string) {
 	s, ok := l.styled(sc, style, view)
-	if !ok {
+	if !ok || text == "" {
 		return
 	}
 	if tint != "" {
@@ -109,8 +109,3 @@ func alignFactor(align string) float32 {
 	}
 	return 0
 }
-
-// warningColor tints what the game flags (a binding shared by two actions, a
-// settings notice): the format has no warning style, so it is the one color
-// the layout sets itself.
-const warningColor = "#dc3c3c"

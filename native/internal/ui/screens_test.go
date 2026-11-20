@@ -63,10 +63,11 @@ func TestOptions_BindingsPutTheKeyAndTheButtonInTwoColumnsAndHighlightTheChosenO
 	rows := []ui.Row{{Label: "A", Values: [2]string{"F", "a"}}, {Label: "Back"}}
 	m := newMeasurer(t, 36)
 	list := drawOptions(l, ui.OptionsState{Rows: rows, Controls: true, Column: 0})
-	// The key's right edge is 0.75 x 288 = 216 px, the button's 1.25 x 288 = 360 px.
+	// No valueOffsets: valueOffset [40,0] places the last value (288 px) and
+	// the first is spread evenly between the label and it: 1/2 x 288 = 144 px.
 	key, button := only(t, list, "F"), only(t, list, "a")
-	near(t, "key x", key.X, 216-m.width("F"))
-	near(t, "button x", button.X, 360-m.width("a"))
+	near(t, "key x", key.X, 144-m.width("F"))
+	near(t, "button x", button.X, 288-m.width("a"))
 	if key.Color != yellow || button.Color != skyBlue {
 		t.Errorf("colors key %+v button %+v, want the active style's yellow and the slot style's blue", key.Color, button.Color)
 	}

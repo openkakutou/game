@@ -12,3 +12,6 @@ Step 3b of item 060 (split from 064). The web still loads `character.wasm` and `
 ## Acceptance Criteria
 - [ ] `src/wasm/bridge.ts` and `src/wasm/stage-bridge.ts` are gone; no `character`/`stage` WASM download remains in scripts and workflows
 - [ ] Web visual tests pass, updated only where the old web drawing diverged from native
+
+## Notes
+- Item 030 (2026-11-20, ADR 025) draws every native screen through the cgo-free `native/internal/ui` draw list: the web can draw the same screens from it through the core.

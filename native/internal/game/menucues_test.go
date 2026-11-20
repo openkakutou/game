@@ -73,11 +73,11 @@ func TestMenuCues_ThePauseMenuSpeaksAsThePauseScreenAndOpeningItIsSilent(t *test
 	wantCues(t, "pause confirm", cuesOf(f), MenuCue{SoundConfirm, "pause"})
 }
 
-func TestMenuCues_AScreenThatFailsSoundsErrorFromNoScreen(t *testing.T) {
+func TestMenuCues_AScreenThatFailsSoundsErrorFromTheErrorScreen(t *testing.T) {
 	f := newTestFlow(t)
 	cuesOf(f)
 	f.fail("boom")
-	wantCues(t, "fail", cuesOf(f), MenuCue{SoundError, ""})
+	wantCues(t, "fail", cuesOf(f), MenuCue{SoundError, "error"})
 }
 
 func TestMenuCues_ARefusedBindingAndAConflictSoundError(t *testing.T) {
@@ -148,8 +148,8 @@ func TestMusic_MenuScreensNameTheirPackScreenAndTheMatchTakesOver(t *testing.T) 
 		}
 	}
 	f.Screen = ScreenError
-	if got := menu(); got != "" {
-		t.Errorf("error screen = %q, want no music", got)
+	if got := menu(); got != "error" {
+		t.Errorf("error screen = %q, want the error screen (whose music the pack decides)", got)
 	}
 }
 

@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done
 ---
 # Render the game's screens from an OpenKakutou screenpack
 
@@ -21,3 +21,7 @@ Blocked on the `screenpack` repo's first release (roadmap backlog `019`).
 - 2026-11-20 — part 4: menu sounds (move/confirm/cancel/error cues from the core), screen music (root/per screen, null, same-file continuity, handed to the stage music in matches), screen fade-in; menu sounds on their own channel group. Reviewed; 3 findings fixed (sounds cut at a match change, failing music retried every frame, silent pause close). Shortcuts: loopStartMs, out transitions, non-fade screen transitions.
 - Next: error screen (format gap, screenpack 009); random cell and palette text (need flow support); stage preview; first-frame portrait decode spread over frames for big rosters.
 - Open points from part 1: `blinkMs` read as the half-period (format.md does not say; settle in the screenpack docs); no game version string to show (`TitleState.Version`); WOFF2 fonts refused (x/image/opentype); shortcuts left: rect radius, tiled `scroll`, kerning, horizontal menus, text-element transitions, full-atlas glyph drop; single texts placed in a box of their own width (align only matters between menu entries — check against format.md); `ui` imports `game` for `ResolvePath` (watch for a cycle when the core needs `ui` for the web, item 067).
+- 2026-11-20 — part 5: screenpack v0.7.0 (screenpack ADR 002): error screen from the pack (wrapped message), `valueOffsets`, `flaggedStyle`/`warningColor`.
+
+## Done (2026-11-20)
+Native: every screen drawn from the resolved pack (built-in default or `screenpacks/default`), with sounds, music and fade-in; native smoke checks cover each screen. Web: through the core (items 065, 067) — web visual baselines come with them. Choosing another screenpack: items 040/041. Remaining shortcuts: item 070.

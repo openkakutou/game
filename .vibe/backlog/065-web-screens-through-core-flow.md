@@ -13,3 +13,4 @@ Step 4 of item 060. Character select, stage select, match setup, results and rem
 
 ## Notes
 - Item 032 (2026-11-20) made the native flow walk a mode's steps (ADR 021), VS screen included: the web gets the same screen types by following that flow here.
+- Item 030 (2026-11-20, ADR 025) draws every native screen through the cgo-free `native/internal/ui` draw list: the web can draw the same screens from it through the core.

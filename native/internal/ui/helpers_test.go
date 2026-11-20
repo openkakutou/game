@@ -30,6 +30,7 @@ const rootJSON = `{
     "slot":    { "font": "body", "size": 5, "color": "#00aaff", "align": "right" },
     "hot":     { "font": "body", "size": 5, "color": "#ffff00", "align": "right" },
     "wait":    { "font": "body", "size": 5, "color": "#ff00ff", "align": "right" },
+    "flag":    { "font": "body", "size": 5, "color": "#12ab34", "align": "left" },
     "fancy":   { "font": "body", "size": 5, "color": "#00ff00",
                  "outline": { "color": "#0000ff", "width": 0.5 },
                  "shadow": { "color": "#00000080", "offset": [1, 1] } }

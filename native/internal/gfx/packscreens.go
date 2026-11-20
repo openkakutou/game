@@ -22,6 +22,7 @@ const (
 	packSetup
 	packVersus
 	packResult
+	packError
 )
 
 // packScreenOf is the screenpack screen drawing f's screen: none for the
@@ -43,6 +44,8 @@ func packScreenOf(f *game.Flow) packScreen {
 		return packVersus
 	case game.ScreenResult:
 		return packResult
+	case game.ScreenError:
+		return packError
 	case game.ScreenMatch:
 		if f.Paused {
 			return packPause
@@ -74,6 +77,8 @@ func (r *Renderer) drawPack(f *game.Flow, kind packScreen) {
 		r.layoutVersus(f, view, ms)
 	case packResult:
 		r.layoutResult(f, view, ms)
+	case packError:
+		r.layoutError(f, view, ms)
 	}
 	r.painter.draw(&r.list)
 	r.win.EndPixels()
@@ -222,4 +227,16 @@ func (r *Renderer) layoutResult(f *game.Flow, view ui.View, ms int) {
 		WinnerChar: f.Picks[f.ResultWinner], Portraits: r.portraits,
 		Entries: f.ResultItems(), Cursor: f.ResultCursor, ElapsedMs: ms,
 	})
+}
+
+const errorTitle = "Something went wrong"
+
+// layoutError says what went wrong and what Enter does: quit, or back to the
+// main menu for an error a mode caused.
+func (r *Renderer) layoutError(f *game.Flow, view ui.View, ms int) {
+	hint := "Press Enter to quit"
+	if f.ErrorReturnsToMenu() {
+		hint = "Press Enter to return to the main menu"
+	}
+	r.layout.Error(&r.list, view, ui.ErrorState{Title: errorTitle, Message: f.Message, Hint: hint, ElapsedMs: ms})
 }

@@ -97,31 +97,11 @@ func (r *Renderer) Draw(f *game.Flow) {
 		return
 	}
 	w.Rect(0, 0, VW, VH, darkBg)
-	switch f.Screen {
-	case game.ScreenMatch:
+	if f.Screen == game.ScreenMatch {
 		r.drawMatch(f)
 		if kind == packPause {
 			r.drawPack(f, packPause)
 		}
-	case game.ScreenError:
-		w.TextCentered(70, 2, red, "Something went wrong")
-		r.wrapped(100, f.Message)
-		leave := "Press enter to quit"
-		if f.ErrorReturnsToMenu() {
-			leave = "Press enter to return to the main menu"
-		}
-		w.TextCentered(200, 1, grey, leave)
-	}
-}
-
-func (r *Renderer) wrapped(y float32, msg string) {
-	const perLine = 50
-	runes := []rune(msg)
-	for len(runes) > 0 {
-		n := min(perLine, len(runes))
-		r.win.TextCentered(y, 1, white, string(runes[:n]))
-		runes = runes[n:]
-		y += 12
 	}
 }
 

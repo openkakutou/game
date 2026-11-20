@@ -63,7 +63,7 @@ func (l *Layout) hint(dst *DrawList, view View, part *screenpack.TextPart, promp
 	step := float32(style.style.Size) * noticeLines * view.unit()
 	for i, n := range notices {
 		above := rect{screen.x, screen.y - float32(i+1)*step, screen.w, screen.h}
-		l.text(dst, view, sc, &part.Layout, part.Style, n, above, 1, warningColor)
+		l.text(dst, view, sc, &part.Layout, part.Style, n, above, 1, l.pack.warning(sc))
 	}
 }
 
