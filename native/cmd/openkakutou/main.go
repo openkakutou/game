@@ -20,6 +20,7 @@ import (
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/game/native/internal/gfx"
 	"github.com/openkakutou/game/native/internal/host"
+	"github.com/openkakutou/game/native/internal/ui"
 )
 
 func main() {
@@ -101,6 +102,10 @@ func run() error {
 	for _, n := range modeNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
+	pack, packNotices := ui.LoadPack(fsys)
+	for _, n := range packNotices {
+		fmt.Fprintln(os.Stderr, "openkakutou:", n)
+	}
 	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), modes)
 	hud, lifebarNotices := game.SelectLifebar(fsys)
 	flow.Settings = settings
@@ -132,7 +137,7 @@ func run() error {
 		}
 	}
 	applyVideo(width, height)
-	renderer := gfx.NewRenderer(win)
+	renderer := gfx.NewRenderer(win, pack)
 
 	var aud *audio.Player // nil plays nothing (-nosound)
 	if _, off := cl.Flags["-nosound"]; !off {

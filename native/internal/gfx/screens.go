@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"time"
 
 	"github.com/openkakutou/character/air"
 	"github.com/openkakutou/engine/v2/match"
 	"github.com/openkakutou/engine/v2/round"
 	"github.com/openkakutou/game/native/internal/game"
+	"github.com/openkakutou/game/native/internal/ui"
 	"github.com/openkakutou/sff"
 	"github.com/openkakutou/stage"
 )
@@ -56,23 +58,51 @@ type Renderer struct {
 	stageScale, shift float64
 	// lifebar draws the flow's lifebar, when it has one.
 	lifebar *lifebarHUD
+	// The screenpack screens: layout, the reused draw list and its painter.
+	layout  *ui.Layout
+	list    ui.DrawList
+	painter *listPainter
+	// titleSince is when the title screen last appeared, for its transitions.
+	titleSince time.Time
+	onTitle    bool
 }
 
-// NewRenderer builds a renderer for win.
-func NewRenderer(win *Window) *Renderer {
-	return &Renderer{win: win, sprites: map[spriteKey]*Texture{}, stageAxis: map[spriteKey][2]int{}}
+// NewRenderer builds a renderer for win drawing the screens of pack.
+func NewRenderer(win *Window, pack *ui.Pack) *Renderer {
+	return &Renderer{
+		win: win, sprites: map[spriteKey]*Texture{}, stageAxis: map[spriteKey][2]int{},
+		layout: ui.NewLayout(pack), painter: newListPainter(win, pack),
+	}
+}
+
+// drawTitle draws the screenpack's title screen: the "press start" phase on
+// the game's title, the menu phase on its main menu.
+func (r *Renderer) drawTitle(f *game.Flow) {
+	state := ui.TitleState{Phase: ui.PhasePressStart, ElapsedMs: int(time.Since(r.titleSince).Milliseconds())}
+	if f.Screen == game.ScreenMainMenu {
+		state.Phase, state.Entries, state.Cursor = ui.PhaseMenu, f.MainMenuItems(), f.MenuCursor
+	}
+	width, height := r.win.BeginPixels()
+	r.list.Reset()
+	r.layout.Title(&r.list, ui.View{W: width, H: height}, state)
+	r.painter.draw(&r.list)
+	r.win.EndPixels()
 }
 
 // Draw renders the current screen of f.
 func (r *Renderer) Draw(f *game.Flow) {
 	w := r.win
+	onTitle := f.Screen == game.ScreenTitle || f.Screen == game.ScreenMainMenu
+	if onTitle && !r.onTitle {
+		r.titleSince = time.Now()
+	}
+	r.onTitle = onTitle
+	if onTitle {
+		r.drawTitle(f)
+		return
+	}
 	w.Rect(0, 0, VW, VH, darkBg)
 	switch f.Screen {
-	case game.ScreenTitle:
-		w.TextCentered(80, 4, gold, "OpenKakutou")
-		w.TextCentered(150, 1, grey, "Press Enter or Start")
-	case game.ScreenMainMenu:
-		r.drawList(f, "Main menu", "", f.MainMenuItems(), f.MenuCursor, nil)
 	case game.ScreenSelect:
 		r.drawList(f, "Select your fighter", fmt.Sprintf("Player %d", f.Picking+1), names(f.Chars), f.Cursor, nil)
 	case game.ScreenStage:

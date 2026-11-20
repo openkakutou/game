@@ -127,15 +127,40 @@ func (w *Window) BeginFrame() {
 	gl.Viewport(0, 0, dw, dh)
 	gl.ClearColor(0, 0, 0, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
-	gl.Viewport((dw-vw)/2, (dh-vh)/2, vw, vh)
 	w.view = [4]int32{(dw - vw) / 2, (dh - vh) / 2, vw, vh}
-	gl.MatrixMode(gl.PROJECTION)
-	gl.LoadIdentity()
-	gl.Ortho(0, VW, VH, 0, -1, 1)
-	gl.MatrixMode(gl.MODELVIEW)
-	gl.LoadIdentity()
+	w.useVirtualSpace()
 	w.nverts = 0
 	w.verts = w.verts[:0]
+}
+
+// useVirtualSpace draws in the letterboxed VWxVH space.
+func (w *Window) useVirtualSpace() {
+	gl.Viewport(w.view[0], w.view[1], w.view[2], w.view[3])
+	w.setOrtho(VW, VH)
+}
+
+func (w *Window) setOrtho(width, height float64) {
+	gl.MatrixMode(gl.PROJECTION)
+	gl.LoadIdentity()
+	gl.Ortho(0, width, height, 0, -1, 1)
+	gl.MatrixMode(gl.MODELVIEW)
+	gl.LoadIdentity()
+}
+
+// BeginPixels switches to window pixels over the whole window, for screens
+// laid out for any aspect ratio, and returns its size; EndPixels goes back
+// to the virtual space. Queued geometry is flushed at each switch.
+func (w *Window) BeginPixels() (width, height int) {
+	w.Flush()
+	gl.Viewport(0, 0, w.W, w.H)
+	w.setOrtho(float64(w.W), float64(w.H))
+	return int(w.W), int(w.H)
+}
+
+// EndPixels leaves the window pixel space.
+func (w *Window) EndPixels() {
+	w.Flush()
+	w.useVirtualSpace()
 }
 
 // Flush draws every batched colored quad in one call.
@@ -200,6 +225,16 @@ func NewTexture(px []color.RGBA, width, height int) *Texture {
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
 	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, int32(width), int32(height), 0, gl.RGBA, gl.UNSIGNED_BYTE, unsafe.Pointer(&px[0]))
 	return &Texture{id: id, W: width, H: height}
+}
+
+// smoothAndRepeat makes the texture linearly filtered and repeating, as
+// screenpack images are scaled to any size and may tile.
+func (t *Texture) smoothAndRepeat() {
+	gl.BindTexture(gl.TEXTURE_2D, t.id)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 }
 
 // Delete frees the texture.

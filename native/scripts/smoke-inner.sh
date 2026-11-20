@@ -48,6 +48,16 @@ grep -q 'audio: skipping sound 5,0' "$out/run.log" || { echo "PlaySnd never reac
 sky=$(convert "$out/5-match.png" -format '%[hex:u.p{200,300}]' info:)
 [ "$sky" = "5A96E6" ] || { echo "stage background layer missing: top-left pixel is $sky, want 5A96E6"; exit 1; }
 
+# The title and the main menu are drawn from the built-in screenpack (the
+# fixture has no screenpacks/), not the old flat backdrop: the logo's orange
+# underline (#FF5C38, at the window centre, 640x231 in a 1280x800 display) is
+# in both, and the gradient background and text give them hundreds of colours.
+for shot_name in 0a-title 0b-main-menu; do
+  logo=$(convert "$out/$shot_name.png" -format '%[hex:u.p{640,231}]' info:)
+  [ "$logo" = "FF5C38" ] || { echo "$shot_name: the screenpack logo is missing: pixel is $logo, want FF5C38"; exit 1; }
+  [ "$(identify -format %k "$out/$shot_name.png")" -gt 200 ] || { echo "$shot_name: too few colours for a screenpack screen"; exit 1; }
+done
+
 # 1b. Player 2 set to CPU on the setup screen: the CPU must walk on its own.
 ./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 &
 pid=$!
