@@ -375,7 +375,8 @@ const defaultVictoryMs = 8000
 // VictoryDurationMs is how long the victory screen shows before the game
 // returns to the main menu.
 func (p *Pack) VictoryDurationMs() int {
-	if ms := p.resolved.Screens.Victory.DurationMs; ms != nil {
+	ms := p.resolved.Screens.Victory.DurationMs
+	if ms != nil {
 		return *ms
 	}
 	return defaultVictoryMs

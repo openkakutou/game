@@ -205,13 +205,16 @@ func (f *Flow) SelectCursors() [2]SideCursor {
 // SortRosters orders the character and stage lists by a screenpack's sort
 // rules (see SortEntries) and moves the picks and the stage choice to the
 // entries they named, so a pack applied from the pause menu leaves a match's
-// fighters as they were.
+// fighters, and an arcade ladder's opponents, as they were.
 func (f *Flow) SortRosters(charBy string, charDescending bool, stageBy string, stageDescending bool) {
 	chars, stages := slices.Clone(f.Chars), slices.Clone(f.Stages)
 	SortEntries(f.Chars, charBy, charDescending)
 	SortEntries(f.Stages, stageBy, stageDescending)
 	for i, pick := range f.Picks {
 		f.Picks[i] = movedIndex(chars, f.Chars, pick)
+	}
+	for i, opponent := range f.ladder {
+		f.ladder[i] = movedIndex(chars, f.Chars, opponent)
 	}
 	f.StageNo = movedIndex(stages, f.Stages, f.StageNo)
 	f.applyRoster()
@@ -223,7 +226,8 @@ func movedIndex(before, after []Entry, i int) int {
 	if i < 0 || i >= len(before) {
 		return i
 	}
-	if at := slices.Index(after, before[i]); at >= 0 {
+	at := slices.Index(after, before[i])
+	if at >= 0 {
 		return at
 	}
 	return i

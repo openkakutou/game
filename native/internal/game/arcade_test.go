@@ -433,3 +433,17 @@ func TestRosterNotices_ANamedFinalThatIsNotInstalledIsReported(t *testing.T) {
 		t.Errorf("notices = %q, want none for an installed final (ignoring case)", got)
 	}
 }
+
+func TestArcade_ReSortingTheRosterMidLadderKeepsTheSameOpponents(t *testing.T) {
+	// Same draw as the first ladder case: opponents a, e, d, then the boss.
+	f, _ := arcadeFlow(t, ladderSrc(`"count": 3, "final": "boss"`, "", "nextOpponent", "continue", arcadeFlowSteps...), scripted(t, 1, 2, 1, 2))
+	pick(f, 1)
+	f.SortRosters("folder", true, "folder", false) // a screenpack applied from the pause menu
+	var got []string
+	for _, i := range f.ladder {
+		got = append(got, f.Chars[i].Name)
+	}
+	if want := []string{"a", "e", "d", "boss"}; !slices.Equal(got, want) {
+		t.Errorf("ladder after re-sort = %v, want %v", got, want)
+	}
+}
