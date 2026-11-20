@@ -25,9 +25,9 @@ var noSlots = slots{column: -1}
 
 // twoSlotColumns are where the right edges of a row's key and button columns
 // lie, as fractions of valueOffset's x.
-// shortcut: the format has no offset for a second value; these keep the two
-// columns apart at 4:3 and 16:9. Upgrade when the format gets one.
-var twoSlotColumns = [2]float32{0.65, 1.5}
+// shortcut: the format has no offset for a second value; these keep both columns inside a
+// 110-unit cursor bar, apart at 4:3 and 16:9. Upgrade when the format gets one.
+var twoSlotColumns = [2]float32{0.75, 1.25}
 
 // menu draws a vertical menu: its first entry is placed by the menu's layout
 // (the pivot of a row as wide as the widest label, on the anchor), and each
