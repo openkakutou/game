@@ -25,8 +25,8 @@ func TestDrainCues_ReturnsQueuedSoundsOnceInSideOrderAcrossTicks(t *testing.T) {
 	m.queueCues([2][]evaluator.SoundEvent{nil, {ev(0, 0)}})
 	got := m.DrainCues(nil)
 	want := []Cue{
-		{match.SideP1, 5, 0}, {match.SideP1, 5, 1}, {match.SideP2, 20, 3},
-		{match.SideP2, 0, 0},
+		{match.SideP1, 5, 0, false}, {match.SideP1, 5, 1, false}, {match.SideP2, 20, 3, false},
+		{match.SideP2, 0, 0, false},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("cues = %v, want %v", got, want)
@@ -44,7 +44,7 @@ func TestDrainCues_TruncatesDstAndReusesItsCapacity(t *testing.T) {
 		dst[i] = Cue{Group: 99}
 	}
 	got := m.DrainCues(dst)
-	if len(got) != 1 || got[0] != (Cue{match.SideP1, 1, 2}) {
+	if len(got) != 1 || got[0] != (Cue{match.SideP1, 1, 2, false}) {
 		t.Fatalf("got %v, want only the pending cue", got)
 	}
 	if &got[0] != &dst[0] {

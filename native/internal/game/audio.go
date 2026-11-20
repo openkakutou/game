@@ -12,13 +12,16 @@ import (
 type Cue struct {
 	Side          match.Side
 	Group, Sample int
+	// Common is true for an F-prefixed PlaySnd: the sample is read from
+	// common/common.snd, not from the character's own sounds.
+	Common bool
 }
 
 // queueCues appends one tick's PlaySnd events, side 0 first.
 func (m *Match) queueCues(sounds [2][]evaluator.SoundEvent) {
 	for side, evs := range sounds {
 		for _, e := range evs {
-			m.cues = append(m.cues, Cue{Side: match.Side(side), Group: e.Group, Sample: e.Sample})
+			m.cues = append(m.cues, Cue{Side: match.Side(side), Group: e.Group, Sample: e.Sample, Common: e.Common})
 		}
 	}
 }

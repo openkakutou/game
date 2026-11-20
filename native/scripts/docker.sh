@@ -15,5 +15,5 @@ exec docker run --rm \
   -e SDL_AUDIODRIVER=dummy \
   --user "$(id -u):$(id -g)" \
   -e HOME=/tmp -e GOMODCACHE=/src/native/.cache/go-mod -e GOCACHE=/src/native/.cache/go-build \
-  -v "$here":/src/native -w /src/native \
+  -v "$here":/src/native -v "$here/../common":/src/common:ro -w /src/native \
   "$image" "$@"

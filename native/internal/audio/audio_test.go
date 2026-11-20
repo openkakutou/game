@@ -277,7 +277,7 @@ func TestUpdate_CueWithKnownSamplePlaysOnAChannel(t *testing.T) {
 	if n := mix.Playing(-1); n != 1 {
 		t.Errorf("playing channels = %d, want 1; warnings %v", n, *warns)
 	}
-	if c := p.chunks[chunkKey{0, 5, 0}]; c == nil {
+	if c := p.chunks[chunkKey{0, 5, 0, false}]; c == nil {
 		t.Error("the decoded sample must be cached")
 	}
 }
@@ -285,10 +285,10 @@ func TestUpdate_CueWithKnownSamplePlaysOnAChannel(t *testing.T) {
 // playUntilCached drives attacks until a sample is audible and cached.
 func playUntilCached(t *testing.T, p *Player, f *game.Flow) {
 	t.Helper()
-	for i := 0; i < 60 && (mix.Playing(-1) == 0 || p.chunks[chunkKey{0, 5, 0}] == nil); i++ {
+	for i := 0; i < 60 && (mix.Playing(-1) == 0 || p.chunks[chunkKey{0, 5, 0, false}] == nil); i++ {
 		attackFrames(p, f, 1)
 	}
-	if mix.Playing(-1) == 0 || p.chunks[chunkKey{0, 5, 0}] == nil {
+	if mix.Playing(-1) == 0 || p.chunks[chunkKey{0, 5, 0, false}] == nil {
 		t.Fatal("test setup: a sample should be playing and cached")
 	}
 }
@@ -319,7 +319,7 @@ func TestUpdate_RematchWithAnotherSampleBankPlaysTheNewSampleNotTheCachedOne(t *
 	f := matchFlow(t)
 	withSample(f, 0) // 1 s sample
 	playUntilCached(t, p, f)
-	if ms := p.chunks[chunkKey{0, 5, 0}].LengthInMs(); ms < 990 || ms > 1010 {
+	if ms := p.chunks[chunkKey{0, 5, 0, false}].LengthInMs(); ms < 990 || ms > 1010 {
 		t.Fatalf("test setup: first chunk = %d ms, want about 1000", ms)
 	}
 	oldOwner := p.owner
@@ -343,7 +343,7 @@ func TestUpdate_RematchWithAnotherSampleBankPlaysTheNewSampleNotTheCachedOne(t *
 		t.Fatalf("playing channels = %d right after the rematch, want 0", n)
 	}
 	playUntilCached(t, p, f)
-	if ms := p.chunks[chunkKey{0, 5, 0}].LengthInMs(); ms < 490 || ms > 510 {
+	if ms := p.chunks[chunkKey{0, 5, 0, false}].LengthInMs(); ms < 490 || ms > 510 {
 		t.Errorf("cached chunk = %d ms, want about 500 (the new bank), not the previous match's 1000", ms)
 	}
 	if n := mix.Playing(-1); n != 1 {
@@ -389,7 +389,7 @@ func TestUpdate_UndecodableSampleIsSkippedAndCachedAsFailure(t *testing.T) {
 	if mix.Playing(-1) != 0 || len(*warns) != 1 {
 		t.Errorf("playing=%d warnings=%v, want silence and one warning", mix.Playing(-1), *warns)
 	}
-	if c, ok := p.chunks[chunkKey{0, 5, 0}]; !ok || c != nil {
+	if c, ok := p.chunks[chunkKey{0, 5, 0, false}]; !ok || c != nil {
 		t.Errorf("failure must be cached as a nil chunk, got %v ok=%v", c, ok)
 	}
 }

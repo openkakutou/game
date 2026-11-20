@@ -107,6 +107,8 @@ type Flow struct {
 	// screens show (see VisibleChars, VisibleStages).
 	charView, stageView []int
 	Loader              Loader
+	// CommonSounds is common/common.snd, read by F-prefixed PlaySnd cues.
+	CommonSounds *CommonSounds
 	// Settings are the persisted settings; the host replaces the defaults
 	// with LoadSettings' result.
 	Settings *Settings
@@ -222,7 +224,7 @@ type Flow struct {
 // in the main menu. An empty roster or stage list goes straight to an error
 // screen instead of an unusable menu.
 func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader, modes []mode.Mode) *Flow {
-	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, Modes: modes, Settings: NewSettings()}
+	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, Modes: modes, Settings: NewSettings(), CommonSounds: NewCommonSounds(fsys)}
 	for _, m := range modes {
 		f.menuLabels = append(f.menuLabels, m.Name)
 	}

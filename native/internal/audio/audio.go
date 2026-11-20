@@ -28,10 +28,12 @@ const (
 	menuGroup    = 2
 )
 
-// chunkKey identifies one character sample.
+// chunkKey identifies one character sample, or one common sample when
+// common is true (side is then ignored).
 type chunkKey struct {
 	side          match.Side
 	group, sample int
+	common        bool
 }
 
 // Player owns the mixer. The zero value and a nil *Player are silent no-ops,
@@ -358,11 +360,14 @@ func (p *Player) loadMenuChunk(asset ui.Asset) *mix.Chunk {
 }
 
 func (p *Player) playCue(f *game.Flow, c game.Cue) {
-	key := chunkKey{c.Side, c.Group, c.Sample}
+	key := chunkKey{c.Side, c.Group, c.Sample, c.Common}
+	if c.Common {
+		key.side = 0
+	}
 	chunk, seen := p.chunks[key]
 	if !seen {
 		var err error
-		if chunk, err = loadChunk(f.Fighters[c.Side], c); err != nil {
+		if chunk, err = loadChunk(f, c); err != nil {
 			p.warnf("audio: skipping sound %d,%d of player %d: %v", c.Group, c.Sample, int(c.Side)+1, err)
 			chunk = nil
 		}
@@ -381,8 +386,8 @@ func (p *Player) playCue(f *game.Flow, c game.Cue) {
 	}
 }
 
-func loadChunk(fighter *game.Fighter, c game.Cue) (*mix.Chunk, error) {
-	snd, ok := fighter.FindSound(c.Group, c.Sample)
+func loadChunk(f *game.Flow, c game.Cue) (*mix.Chunk, error) {
+	snd, ok := f.FindCueSound(c)
 	if !ok {
 		return nil, fmt.Errorf("no such sample")
 	}
