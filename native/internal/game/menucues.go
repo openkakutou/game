@@ -14,6 +14,8 @@ const (
 	// countdown second, the game over when it ends.
 	SoundTick     MenuSound = "tick"
 	SoundGameOver MenuSound = "gameOver"
+	// SoundRandom is the character select's random pick.
+	SoundRandom MenuSound = "random"
 )
 
 // MenuCue is a menu sound the player should hear, and the screenpack screen

@@ -1,6 +1,7 @@
 package audio
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -118,13 +119,15 @@ func TestUpdate_AMatchStopsTheMenuMusicForTheStageMusicAndTheNextMenuResumesIt(t
 	p, _, _ := menuPlayer(t, builtInPack())
 	title := titleFlow(t)
 	p.Update(title)
-	menuTrack := p.music
+	// The file's bytes, not the track pointer: the mixer may give the stage
+	// track the address the freed menu track had.
+	menuData := p.musicData
 	if !p.menuPlaying {
 		t.Fatal("the menu music is not playing")
 	}
 	m := matchFlow(t)
 	p.Update(m)
-	if p.menuPlaying || p.owner == nil || p.music == nil || p.music == menuTrack {
+	if p.menuPlaying || p.owner == nil || p.music == nil || bytes.Equal(p.musicData, menuData) {
 		t.Errorf("in a match: menuPlaying=%v owner=%v music=%v, want the stage music alone", p.menuPlaying, p.owner, p.music)
 	}
 	if got := mix.VolumeMusic(-1); got != 128 {

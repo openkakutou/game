@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The desktop game's character select has a random cell after the last character, when the screenpack draws one: it picks a character at random.
 - In the desktop game, screenpack panels and menu cursors have rounded corners, tiled backgrounds scroll, and menu music loops from its loop point, as the screenpack format describes.
 - The desktop game accepts Ikemen GO's -setvolume, -nojoy, -togglelifebars, -maxpowermode, -fight (a lifebar file) and -r (a screenpack) command-line options for the current run.
 - In the desktop game, a lifebar's names and timer are printed in the lifebar's own MUGEN / Ikemen GO bitmap fonts (.fnt and .def), in their colors; a font that cannot be read is reported and replaced by the built-in font.

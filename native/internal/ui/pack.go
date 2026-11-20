@@ -387,6 +387,12 @@ func (p *Pack) SelectColumns() int {
 	return p.resolved.Screens.CharacterSelect.Grid.Columns
 }
 
+// HasRandomCell reports whether the character grid draws a random cell.
+func (p *Pack) HasRandomCell() bool {
+	g := p.resolved.Screens.CharacterSelect.Grid
+	return g != nil && g.Random != nil
+}
+
 // Sort is the order rule of a select screen's roster ("characterSelect" or
 // "stageSelect"): what to sort by (folder, displayName or author) and
 // whether descending. A screen without a rule sorts by folder.

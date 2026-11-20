@@ -155,8 +155,11 @@ type Flow struct {
 	// GridColumns is how many cells a row of the character select grid has
 	// (the screenpack's); 0 means a single row of every character.
 	GridColumns int
-	Picks       [2]int // chosen roster indexes
-	StageNo     int
+	// RandomCell adds a cell after the characters that picks one of them at
+	// random (the screenpack's grid random element).
+	RandomCell bool
+	Picks      [2]int // chosen roster indexes
+	StageNo    int
 
 	// RoundIdx and TimeIdx index roundOpts and timeOpts: RoundOptions and
 	// TimeOptions plus the rules' own value when they lack it.
@@ -499,13 +502,27 @@ func (f *Flow) back() {
 	f.toMenu()
 }
 
+// SelectCells is the character select's cell count: the visible characters,
+// then the random cell when the screenpack draws one.
+func (f *Flow) SelectCells() int {
+	if f.RandomCell && len(f.charView) > 0 {
+		return len(f.charView) + 1
+	}
+	return len(f.charView)
+}
+
 func (f *Flow) navSelect(n Nav) {
 	sides := f.Mode.Flow[f.Step].Sides
 	switch n {
 	case NavUp, NavDown, NavLeft, NavRight:
-		f.Cursor = gridMove(f.Cursor, n, f.GridColumns, len(f.charView))
+		f.Cursor = gridMove(f.Cursor, n, f.GridColumns, f.SelectCells())
 	case NavConfirm:
-		f.Picks[f.Picking] = f.charView[f.Cursor]
+		if f.Cursor >= len(f.charView) {
+			f.Picks[f.Picking] = f.charView[f.Rand(len(f.charView))]
+			f.cue(SoundRandom)
+		} else {
+			f.Picks[f.Picking] = f.charView[f.Cursor]
+		}
 		if f.pickPos < len(sides)-1 {
 			f.setPicker(f.pickPos + 1)
 			return

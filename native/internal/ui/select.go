@@ -39,8 +39,8 @@ type SelectState struct {
 // CharacterSelect adds the character select to dst: background, title, the
 // grid of cells with their small portraits and the sides' cursors, then each
 // shown side's large portrait and name, foreground.
+// The random cell, when the grid has one, follows the last character.
 // shortcut: the palette part is not drawn; the game has no palette choice yet.
-// The random cell is not drawn either: the game has no random pick.
 func (l *Layout) CharacterSelect(dst *DrawList, view View, s SelectState) {
 	c := l.pack.resolved.Screens.CharacterSelect
 	screen, from := view.rect(), len(dst.Ops)
@@ -93,7 +93,12 @@ func (l *Layout) grid(dst *DrawList, view View, c *screenpack.CharacterSelect, s
 	box := place(screen, &g.Layout,
 		float32(g.Columns)*cell.w+float32(g.Columns-1)*gap[0],
 		float32(g.Rows)*cell.h+float32(g.Rows-1)*gap[1], unit)
-	totalRows := (len(s.Cells) + g.Columns - 1) / g.Columns
+	count := len(s.Cells)
+	random := g.Random != nil && count > 0
+	if random {
+		count++ // the random cell follows the characters (Flow.SelectCells)
+	}
+	totalRows := (count + g.Columns - 1) / g.Columns
 	first := max(0, min(s.Focus/g.Columns-g.Rows/2, totalRows-g.Rows))
 	sc := l.pack.scope("characterSelect", "grid")
 	slot := func(index int) (rect, bool) {
@@ -107,6 +112,13 @@ func (l *Layout) grid(dst *DrawList, view View, c *screenpack.CharacterSelect, s
 		for col := range g.Columns {
 			index := (first+row)*g.Columns + col
 			at, _ := slot(index)
+			if random && index == len(s.Cells) {
+				if g.Cell != nil {
+					l.element(dst, view, sc, g.Cell, at, s.ElapsedMs)
+				}
+				l.element(dst, view, sc, g.Random, at, s.ElapsedMs)
+				continue
+			}
 			if index >= len(s.Cells) {
 				if g.EmptyCell != nil {
 					l.element(dst, view, sc, g.EmptyCell, at, s.ElapsedMs)

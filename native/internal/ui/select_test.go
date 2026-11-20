@@ -395,3 +395,36 @@ func TestPack_ExposesTheGridColumnsAndTheSortRuleOfTheSelectScreens(t *testing.T
 		t.Errorf("stage sort = %q %v, want displayName ascending", by, desc)
 	}
 }
+
+const randomGridPart = `"grid": { "anchor": "topLeft", "pivot": "topLeft", "columns": 3, "rows": 2,
+	"cellSize": [10, 10], "spacing": [2, 2],
+	"cell": { "type": "rect", "color": "#ff0000" }, "emptyCell": { "type": "rect", "color": "#0000ff" },
+	"random": { "type": "rect", "color": "#00ff00" } }`
+
+func TestCharacterSelect_TheRandomCellFollowsTheLastCharacter(t *testing.T) {
+	// 4 characters, then the random cell in slot 5 (column 1, row 1), then one empty slot.
+	list := drawSelect(selectLayout(t, randomGridPart), ui.SelectState{Roster: roster(4), Cells: cells(4), Portraits: portraits{missing: -1}})
+	random := rectOps(list, ui.Color{G: 1, A: 1})
+	if len(random) != 1 {
+		t.Fatalf("random cells = %+v, want 1", random)
+	}
+	near(t, "random x", random[0].X, 86.4)
+	near(t, "random y", random[0].Y, 86.4)
+	if n := len(rectOps(list, red)); n != 5 {
+		t.Errorf("cell backgrounds = %d, want the 4 characters' and the random cell's", n)
+	}
+	if n := len(rectOps(list, ui.Color{B: 1, A: 1})); n != 1 {
+		t.Errorf("empty cells = %d, want 1", n)
+	}
+	if n := len(portraitOps(list, false)); n != 4 {
+		t.Errorf("small portraits = %d, want 4: the random cell has none", n)
+	}
+}
+
+func TestPack_HasRandomCellOnlyWhenTheGridDrawsOne(t *testing.T) {
+	with, _ := ui.LoadPack(screenGame(t, "characterSelect", randomGridPart, nil), "default")
+	without, _ := ui.LoadPack(screenGame(t, "characterSelect", gridPart, nil), "default")
+	if !with.HasRandomCell() || without.HasRandomCell() {
+		t.Errorf("random cell: with %v, without %v; want true, false", with.HasRandomCell(), without.HasRandomCell())
+	}
+}
