@@ -130,10 +130,12 @@ func (f *Flow) navBindings(n Nav) {
 			f.leaveBindings()
 			return
 		}
-		if f.rowSlot().action >= 0 {
-			b.phase = bindWaiting
-			b.prompt = bindPrompts[b.device]
+		if f.rowSlot().action < 0 {
+			f.cue(SoundError) // the device has no such action
+			return
 		}
+		b.phase = bindWaiting
+		b.prompt = bindPrompts[b.device]
 	case NavCancel:
 		f.leaveBindings()
 	}
@@ -179,8 +181,10 @@ func (f *Flow) Bind(d Device, name string) {
 		f.Settings.ControlsGen++
 		f.endBinding()
 		f.refreshBindingRows()
+		f.cue(SoundConfirm)
 		return
 	}
+	f.cue(SoundError)
 	b.phase, b.name, b.holder = bindConflict, name, holder
 	b.prompt = name + " is Player " + string(rune('1'+holder.player)) + " " + actionLabel(actions(d)[holder.action]) + ": Enter swaps, Esc keeps"
 }

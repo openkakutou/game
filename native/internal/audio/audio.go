@@ -1,16 +1,19 @@
-// Package audio plays what the game package describes: the stage music and
-// the fighters' PlaySnd effects, through SDL2_mixer. Any audio failure means
+// Package audio plays what the game package describes: the stage music, the
+// fighters' PlaySnd effects, and the screenpack's menu music and sounds,
+// through SDL2_mixer. Any audio failure means
 // silence plus one logged warning, never a crash or a stall.
 package audio
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"runtime"
 
 	"github.com/openkakutou/engine/v2/match"
 	"github.com/openkakutou/game/native/internal/game"
+	"github.com/openkakutou/game/native/internal/ui"
 	"github.com/veandco/go-sdl2/mix"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -31,8 +34,21 @@ type chunkKey struct {
 type Player struct {
 	open  bool
 	warnf func(format string, a ...any)
-	owner *game.Match
-	music *mix.Music
+	// infof logs what loaded for the first time (menu music and sounds).
+	infof func(format string, a ...any)
+	// pack names the menu music and sounds; nil plays none.
+	pack    *ui.Pack
+	volumes game.Audio
+	// menuMusic is what the menu music is, while menuPlaying: the screens
+	// naming the same file keep it playing.
+	menuMusic   ui.MenuMusic
+	menuPlaying bool
+	// menuChunks are the pack's menu sounds, loaded on first use (a nil chunk
+	// records a failed load, warned once); menuCues is the drained queue.
+	menuChunks map[ui.Asset]*mix.Chunk
+	menuCues   []game.MenuCue
+	owner      *game.Match
+	music      *mix.Music
 	// musicData is the music file's bytes, which the mixer streams from.
 	musicData []byte
 	chunks    map[chunkKey]*mix.Chunk // a nil chunk records a failed load (warned once)
@@ -49,7 +65,7 @@ var openAudio = mix.OpenAudio
 
 // New opens the mixer. On failure it logs one warning and returns a silent Player.
 func New() *Player {
-	p := &Player{warnf: log.Printf, chunks: map[chunkKey]*mix.Chunk{}}
+	p := &Player{warnf: log.Printf, infof: log.Printf, chunks: map[chunkKey]*mix.Chunk{}, menuChunks: map[ui.Asset]*mix.Chunk{}}
 	if err := mix.Init(mix.INIT_OGG | mix.INIT_MP3 | mix.INIT_FLAC); err != nil {
 		p.warnf("audio: some music decoders are unavailable: %v", err)
 	}
@@ -63,14 +79,32 @@ func New() *Player {
 	return p
 }
 
+// SetPack gives the player the screenpack whose menu music and sounds it plays.
+func (p *Player) SetPack(pack *ui.Pack) {
+	if p != nil {
+		p.pack = pack
+	}
+}
+
 // SetVolumes applies the settings' volumes: the master multiplies the music
 // and the effects volume of every channel.
 func (p *Player) SetVolumes(a game.Audio) {
 	if p == nil || !p.open {
 		return
 	}
-	mix.VolumeMusic(mixerVolume(a.Master, a.Music))
+	p.volumes = a
+	p.applyMusicVolume()
 	mix.Volume(-1, mixerVolume(a.Master, a.Effects))
+}
+
+// applyMusicVolume sets the music volume: master times music, and for the
+// menu music times the screenpack's own volume for it.
+func (p *Player) applyMusicVolume() {
+	v := mixerVolume(p.volumes.Master, p.volumes.Music)
+	if p.menuPlaying {
+		v = int(float32(v) * p.menuMusic.Volume)
+	}
+	mix.VolumeMusic(v)
 }
 
 // mixerVolume is the mixer's 0 to 128 volume of two percentages multiplied.
@@ -92,6 +126,7 @@ func (p *Player) Update(f *game.Flow) {
 	if p == nil || !p.open {
 		return
 	}
+	p.playMenuCues(f)
 	next, path, changed := game.MusicChange(p.owner, f)
 	if changed {
 		p.stopAll()
@@ -101,6 +136,8 @@ func (p *Player) Update(f *game.Flow) {
 		}
 	}
 	if p.owner == nil {
+		_, _, menu := f.Music()
+		p.syncMenuMusic(menu)
 		return
 	}
 	p.holdForPause(f.Paused)
@@ -128,14 +165,21 @@ func (p *Player) holdForPause(paused bool) {
 
 func (p *Player) stopAll() {
 	p.holdForPause(false)
-	mix.HaltMusic()
+	p.stopMusic()
 	mix.HaltChannel(-1)
+	p.freeChunks()
+}
+
+// stopMusic halts and frees the music, whoever owns it; effects play on.
+func (p *Player) stopMusic() {
+	p.menuPlaying = false
+	p.applyMusicVolume()
+	mix.HaltMusic()
 	if p.music != nil {
 		p.music.Free()
 		p.music = nil
 		p.musicData = nil
 	}
-	p.freeChunks()
 }
 
 func (p *Player) freeChunks() {
@@ -153,6 +197,12 @@ func (p *Player) startMusic(fsys fs.FS, path string) {
 		p.warnf("audio: cannot load music %q: %v", path, err)
 		return
 	}
+	p.playMusic(path, data)
+}
+
+// playMusic loads a music file's bytes and plays it in a loop; any failure is
+// one warning and silence.
+func (p *Player) playMusic(path string, data []byte) {
 	rw, err := sdl.RWFromMem(data)
 	if err != nil {
 		p.warnf("audio: cannot load music %q: %v", path, err)
@@ -170,6 +220,101 @@ func (p *Player) startMusic(fsys fs.FS, path string) {
 	}
 	p.music = m
 	p.musicData = data
+}
+
+// syncMenuMusic makes the music the one the pack gives the menu screen: it
+// starts a track when none plays or the screen names another file, lets a
+// track go on when the new screen names the same file, and stops it when the
+// screen has no music (music null) or there is no screen.
+// shortcut: loopStartMs is ignored, the track loops from its start (SDL_mixer
+// loops from the LOOPSTART tag of the Ogg file itself when it has one);
+// upgrade by restarting the track at the position on its finished hook.
+func (p *Player) syncMenuMusic(screen string) {
+	want, ok := ui.MenuMusic{}, false
+	if p.pack != nil && screen != "" && !p.NoMusic {
+		want, ok = p.pack.Music(screen)
+	}
+	if !ok {
+		if p.menuPlaying {
+			p.stopMusic()
+		}
+		return
+	}
+	if p.menuPlaying && p.menuMusic.Asset == want.Asset {
+		if p.menuMusic != want {
+			p.menuMusic = want
+			p.applyMusicVolume()
+		}
+		return
+	}
+	p.stopMusic()
+	data, err := p.readAsset(want.Asset)
+	if err != nil {
+		p.warnf("audio: cannot load music %q: %v", want.Asset.Path, err)
+		return
+	}
+	p.playMusic(want.Asset.Path, data)
+	if p.music == nil {
+		return
+	}
+	p.menuPlaying, p.menuMusic = true, want
+	p.applyMusicVolume()
+	p.infof("audio: menu music loaded: %s", want.Asset.Path)
+}
+
+// readAsset reads a pack file.
+func (p *Player) readAsset(a ui.Asset) ([]byte, error) {
+	file, err := p.pack.Open(a)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return io.ReadAll(file)
+}
+
+// playMenuCues plays the menu sounds the flow queued, whatever screen is
+// shown: each is the pack's file for that sound on that screen, loaded the
+// first time it is heard.
+func (p *Player) playMenuCues(f *game.Flow) {
+	p.menuCues = f.DrainMenuCues(p.menuCues)
+	if p.pack == nil {
+		return
+	}
+	for _, c := range p.menuCues {
+		asset, ok := p.pack.Sound(c.Screen, string(c.Sound))
+		if !ok {
+			continue
+		}
+		chunk, seen := p.menuChunks[asset]
+		if !seen {
+			chunk = p.loadMenuChunk(asset)
+			p.menuChunks[asset] = chunk
+		}
+		if chunk != nil {
+			chunk.Play(-1, 0) // every channel busy: the sound is dropped
+		}
+	}
+}
+
+func (p *Player) loadMenuChunk(asset ui.Asset) *mix.Chunk {
+	data, err := p.readAsset(asset)
+	if err != nil {
+		p.warnf("audio: cannot load sound %q: %v", asset.Path, err)
+		return nil
+	}
+	rw, err := sdl.RWFromMem(data)
+	if err != nil {
+		p.warnf("audio: cannot load sound %q: %v", asset.Path, err)
+		return nil
+	}
+	chunk, err := mix.LoadWAVRW(rw, true)
+	runtime.KeepAlive(data) // the RWops reads data until LoadWAVRW returns
+	if err != nil {
+		p.warnf("audio: cannot load sound %q: %v", asset.Path, err)
+		return nil
+	}
+	p.infof("audio: menu sound loaded: %s", asset.Path)
+	return chunk
 }
 
 func (p *Player) playCue(f *game.Flow, c game.Cue) {
@@ -215,6 +360,12 @@ func (p *Player) Close() {
 		return
 	}
 	p.stopAll()
+	for k, c := range p.menuChunks {
+		if c != nil {
+			c.Free()
+		}
+		delete(p.menuChunks, k)
+	}
 	p.owner = nil
 	p.open = false
 	mix.CloseAudio()

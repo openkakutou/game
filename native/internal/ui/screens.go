@@ -30,7 +30,7 @@ type OptionsState struct {
 // the game's options are a list of pages, each a screen of its own.
 func (l *Layout) Options(dst *DrawList, view View, s OptionsState) {
 	o := l.pack.resolved.Screens.Options
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("options", ""), o.Background, screen, s.ElapsedMs)
 	if o.Title != nil {
 		l.text(dst, view, l.pack.scope("options", "title"), &o.Title.Layout, o.Title.Style, s.Title, screen, 1, "")
@@ -46,6 +46,7 @@ func (l *Layout) Options(dst *DrawList, view View, s OptionsState) {
 		l.hint(dst, view, o.Hint, s.Prompt, s.Notices, screen)
 	}
 	l.elements(dst, view, l.pack.scope("options", ""), o.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &o.Screen, s.ElapsedMs)
 }
 
 // hint draws the prompt in the hint part and each notice one step above the
@@ -78,7 +79,7 @@ type PauseState struct {
 // title and the menu.
 func (l *Layout) Pause(dst *DrawList, view View, s PauseState) {
 	p := l.pack.resolved.Screens.Pause
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("pause", ""), p.Background, screen, s.ElapsedMs)
 	if p.Dim != nil {
 		dst.Ops = append(dst.Ops, Op{Kind: OpRect, X: screen.x, Y: screen.y, W: screen.w, H: screen.h, Color: parseColor(p.Dim.Color, 1)})
@@ -90,6 +91,7 @@ func (l *Layout) Pause(dst *DrawList, view View, s PauseState) {
 		l.menu(dst, view, l.pack.scope("pause", "menu"), p.Menu, l.labels(s.Entries), s.Cursor, screen, s.ElapsedMs, noSlots)
 	}
 	l.elements(dst, view, l.pack.scope("pause", ""), p.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &p.Screen, s.ElapsedMs)
 }
 
 // MatchSetupState is what the game shows on the match setup screen.
@@ -104,7 +106,7 @@ type MatchSetupState struct {
 // their values.
 func (l *Layout) MatchSetup(dst *DrawList, view View, s MatchSetupState) {
 	m := l.pack.resolved.Screens.MatchSetup
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("matchSetup", ""), m.Background, screen, s.ElapsedMs)
 	if m.Title != nil {
 		l.text(dst, view, l.pack.scope("matchSetup", "title"), &m.Title.Layout, m.Title.Style, s.Title, screen, 1, "")
@@ -113,6 +115,7 @@ func (l *Layout) MatchSetup(dst *DrawList, view View, s MatchSetupState) {
 		l.menu(dst, view, l.pack.scope("matchSetup", "menu"), m.Menu, s.Rows, s.Cursor, screen, s.ElapsedMs, noSlots)
 	}
 	l.elements(dst, view, l.pack.scope("matchSetup", ""), m.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &m.Screen, s.ElapsedMs)
 }
 
 // VersusState is what the game shows on the VS screen.
@@ -129,7 +132,7 @@ type VersusState struct {
 // the stage.
 func (l *Layout) Versus(dst *DrawList, view View, s VersusState) {
 	v := l.pack.resolved.Screens.Versus
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("versus", ""), v.Background, screen, s.ElapsedMs)
 	if v.Portrait != nil {
 		mirror := v.Portrait.MirrorP2 == nil || *v.Portrait.MirrorP2
@@ -149,6 +152,7 @@ func (l *Layout) Versus(dst *DrawList, view View, s VersusState) {
 		l.text(dst, view, l.pack.scope("versus", "stage"), &v.Stage.Layout, v.Stage.Style, s.Stage, screen, 1, "")
 	}
 	l.elements(dst, view, l.pack.scope("versus", ""), v.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &v.Screen, s.ElapsedMs)
 }
 
 // ResultsState is what the game shows on the results screen.
@@ -167,7 +171,7 @@ type ResultsState struct {
 // message, the score and the menu.
 func (l *Layout) Results(dst *DrawList, view View, s ResultsState) {
 	r := l.pack.resolved.Screens.Results
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("results", ""), r.Background, screen, s.ElapsedMs)
 	if r.Winner != nil {
 		l.portrait(dst, view, r.Winner.Portrait, s.Portraits, s.WinnerChar, false, screen)
@@ -185,4 +189,5 @@ func (l *Layout) Results(dst *DrawList, view View, s ResultsState) {
 		l.menu(dst, view, l.pack.scope("results", "menu"), r.Menu, l.labels(s.Entries), s.Cursor, screen, s.ElapsedMs, noSlots)
 	}
 	l.elements(dst, view, l.pack.scope("results", ""), r.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &r.Screen, s.ElapsedMs)
 }

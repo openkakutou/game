@@ -152,6 +152,7 @@ func run() error {
 	}
 	defer aud.Close()
 	fmt.Println("audio:", aud.Driver())
+	aud.SetPack(pack)
 	aud.SetVolumes(settings.Audio)
 	audioGen, videoGen, windowGen := settings.AudioGen, settings.VideoGen, settings.WindowGen
 
@@ -173,6 +174,7 @@ func run() error {
 		}
 		if settings.AudioGen != audioGen {
 			audioGen = settings.AudioGen
+			aud.SetPack(pack)
 			aud.SetVolumes(settings.Audio)
 		}
 		if settings.VideoGen != videoGen {

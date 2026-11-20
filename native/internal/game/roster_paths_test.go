@@ -132,7 +132,7 @@ func TestMusic_FindsMusicFileWhateverItsCase(t *testing.T) {
 	f.FS = os.DirFS(dir)
 	f.StageDefPath = "a.def"
 	f.Stage.MusicFile = "theme.ogg"
-	if p, _ := f.Music(); p != "Theme.OGG" {
+	if p, _, _ := f.Music(); p != "Theme.OGG" {
 		t.Fatalf("got %q", p)
 	}
 }
@@ -219,12 +219,12 @@ func TestMusic_FallsBackToTheContentRootAndPrefersBesideTheDef(t *testing.T) {
 	f.FS = os.DirFS(root)
 	f.StageDefPath = "stages/a.def"
 	f.Stage.MusicFile = "sound/theme.ogg"
-	if p, _ := f.Music(); p != "sound/Theme.OGG" {
+	if p, _, _ := f.Music(); p != "sound/Theme.OGG" {
 		t.Fatalf("root fallback: got %q", p)
 	}
 	touch(t, filepath.Join(root, "stages", "sound", "theme.ogg"))
 	f.Stage.MusicFile = "sound/Theme.ogg"
-	if p, _ := f.Music(); p != "stages/sound/theme.ogg" {
+	if p, _, _ := f.Music(); p != "stages/sound/theme.ogg" {
 		t.Fatalf("beside def should win: got %q", p)
 	}
 }
@@ -246,7 +246,7 @@ func TestMusic_RejectsAbsoluteSymlinkedAndEscapingRefs(t *testing.T) {
 		f.FS = os.DirFS(root)
 		f.StageDefPath = "stages/a.def"
 		f.Stage.MusicFile = ref
-		if p, _ := f.Music(); p != "" {
+		if p, _, _ := f.Music(); p != "" {
 			t.Errorf("%q offered as %q", ref, p)
 		}
 	}

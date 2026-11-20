@@ -123,7 +123,7 @@ func TestOptions_OpenedFromThePauseMenuReturnsToThePausedMatch(t *testing.T) {
 	if f.Screen != ScreenOptions {
 		t.Fatalf("screen = %v, want Options", f.Screen)
 	}
-	if _, owner := f.Music(); owner != m {
+	if _, owner, _ := f.Music(); owner != m {
 		t.Error("the match must keep the music while Options is open over it")
 	}
 	f.Navigate(NavCancel)

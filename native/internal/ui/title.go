@@ -25,7 +25,7 @@ type TitleState struct {
 // menu, the version, foreground.
 func (l *Layout) Title(dst *DrawList, view View, s TitleState) {
 	t := l.pack.resolved.Screens.Title
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("title", ""), t.Background, screen, s.ElapsedMs)
 	if t.Logo != nil {
 		l.element(dst, view, l.pack.scope("title", "logo"), t.Logo, screen, s.ElapsedMs)
@@ -42,6 +42,7 @@ func (l *Layout) Title(dst *DrawList, view View, s TitleState) {
 		l.text(dst, view, l.pack.scope("title", "version"), &t.Version.Layout, t.Version.Style, s.Version, screen, 1, "")
 	}
 	l.elements(dst, view, l.pack.scope("title", ""), t.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &t.Screen, s.ElapsedMs)
 }
 
 // pressStart draws the prompt, hidden for blinkMs out of every 2*blinkMs.

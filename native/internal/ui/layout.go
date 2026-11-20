@@ -20,9 +20,6 @@ type rect struct{ x, y, w, h float32 }
 
 // Layout turns screens of a Pack into draw lists. It keeps no per-frame
 // state, only a scratch slice reused between frames.
-// shortcut: a screen's own `transition` (how it enters and leaves) is not
-// applied by any screen; only element transitions are. Upgrade with the
-// screen-change work, which knows when a screen is entered and left.
 type Layout struct {
 	pack *Pack
 	rows []Row
@@ -129,4 +126,25 @@ func hexDigit(c byte) int {
 		return int(c-'A') + 10
 	}
 	return 0
+}
+
+// fadeIn applies the "in" transition of a screen to the ops it added to dst
+// from index from on: a fade multiplies their opacity by the eased progress
+// elapsedMs after the screen appeared, so the whole screen (a pause menu over
+// the match too) rises from nothing.
+// shortcut: only the fade kind is applied to a whole screen, and never the
+// "out" transition: a screen change is immediate, and playing an "out" would
+// need the flow to keep the old screen for its duration without delaying the
+// input that left it. Upgrade with a flow that can hold a screen while it leaves.
+func fadeIn(dst *DrawList, from int, base *screenpack.Screen, elapsedMs int) {
+	if base.Transition == nil || base.Transition.In == nil || base.Transition.In.Kind != "fade" {
+		return
+	}
+	p := progress(base.Transition.In, elapsedMs)
+	if p >= 1 {
+		return
+	}
+	for i := from; i < len(dst.Ops); i++ {
+		dst.Ops[i].Color.A *= p
+	}
 }

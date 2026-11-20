@@ -169,7 +169,7 @@ func toMatchWith(t *testing.T, l Loader) *Flow {
 
 func TestMusic_FollowsTheFlowAcrossMatchResultSelectRematchAndError(t *testing.T) {
 	f := newTestFlow(t)
-	if p, o := f.Music(); o != nil || p != "" {
+	if p, o, _ := f.Music(); o != nil || p != "" {
 		t.Fatalf("select screen: %q, %v; want nothing", p, o)
 	}
 	_, path, changed := MusicChange(nil, f)
@@ -233,7 +233,7 @@ func TestMusic_FollowsTheFlowAcrossMatchResultSelectRematchAndError(t *testing.T
 func TestMusic_StageWithoutMusicHasOwnerAndEmptyPath(t *testing.T) {
 	f := toMatch(t)
 	f.Stage.MusicFile = ""
-	if p, o := f.Music(); o != f.Match || p != "" {
+	if p, o, _ := f.Music(); o != f.Match || p != "" {
 		t.Errorf("got %q, %v; want empty path with owner set", p, o)
 	}
 }
@@ -247,7 +247,7 @@ func TestMusic_FailedMatchStartLeavesNoOwner(t *testing.T) {
 	if f.Screen != ScreenError {
 		t.Fatalf("screen = %v, want error", f.Screen)
 	}
-	if p, o := f.Music(); o != nil || p != "" {
+	if p, o, _ := f.Music(); o != nil || p != "" {
 		t.Errorf("got %q, %v; want no music on the error screen", p, o)
 	}
 }

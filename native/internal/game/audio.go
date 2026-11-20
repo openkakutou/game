@@ -81,29 +81,35 @@ func WAVBytes(s character.Sound) []byte {
 	return out
 }
 
-// Music reports who owns the stage music: the current match while the match
-// or result screen is shown, or Options is open over the paused match, else nil. path is the stage's music file (relative
-// paths resolved beside the stage .def, then from the content root; "" when rejected), or "" when there is none
-// or no owner.
-func (f *Flow) Music() (path string, owner *Match) {
+// Music reports who owns the music. The stage music belongs to the current
+// match while the match or result screen is shown, or Options is open over
+// the paused match: owner is the match and path the stage's music file
+// (relative paths resolved beside the stage .def, then from the content root;
+// "" when rejected or when there is none). On any other screen with a
+// screenpack screen, menu names that screen, whose music (or silence) the
+// pack decides; the error screen has none. Only one of owner and menu is set.
+func (f *Flow) Music() (path string, owner *Match, menu string) {
 	overPausedMatch := f.inOptions() && f.options.fromPause
 	if (f.Screen != ScreenMatch && f.Screen != ScreenResult && !overPausedMatch) || f.Match == nil {
-		return "", nil
+		if f.Screen == ScreenMatch || f.Screen == ScreenResult {
+			return "", nil, ""
+		}
+		return "", nil, f.PackScreen()
 	}
 	if f.Stage == nil || f.Stage.MusicFile == "" {
-		return "", f.Match
+		return "", f.Match, ""
 	}
 	// Memoized: Music runs every frame and path.Join allocates.
 	if f.musicFrom != [2]string{f.StageDefPath, f.Stage.MusicFile} {
 		f.musicFrom = [2]string{f.StageDefPath, f.Stage.MusicFile}
 		f.musicPath = joinResolved(f.FS, stageBases(f.StageDefPath), f.Stage.MusicFile)
 	}
-	return f.musicPath, f.Match
+	return f.musicPath, f.Match, ""
 }
 
 // MusicChange compares the current music owner with prev (pointer identity):
 // changed means the player must stop and, if path is non-empty, start path.
 func MusicChange(prev *Match, f *Flow) (next *Match, path string, changed bool) {
-	path, next = f.Music()
+	path, next, _ = f.Music()
 	return next, path, next != prev
 }

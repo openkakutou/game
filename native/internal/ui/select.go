@@ -40,7 +40,7 @@ type SelectState struct {
 // The random cell is not drawn either: the game has no random pick.
 func (l *Layout) CharacterSelect(dst *DrawList, view View, s SelectState) {
 	c := l.pack.resolved.Screens.CharacterSelect
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("characterSelect", ""), c.Background, screen, s.ElapsedMs)
 	if c.Title != nil {
 		l.text(dst, view, l.pack.scope("characterSelect", "title"), &c.Title.Layout, c.Title.Style, s.Title, screen, 1, "")
@@ -70,6 +70,7 @@ func (l *Layout) CharacterSelect(dst *DrawList, view View, s SelectState) {
 		}
 	}
 	l.elements(dst, view, l.pack.scope("characterSelect", ""), c.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &c.Screen, s.ElapsedMs)
 }
 
 // grid draws the grid's slots: a cell and its small portrait for each
@@ -195,7 +196,7 @@ type StageSelectState struct {
 // the hovered stage's name and the arrows toward the other stages.
 func (l *Layout) StageSelect(dst *DrawList, view View, s StageSelectState) {
 	st := l.pack.resolved.Screens.StageSelect
-	screen := view.rect()
+	screen, from := view.rect(), len(dst.Ops)
 	l.elements(dst, view, l.pack.scope("stageSelect", ""), st.Background, screen, s.ElapsedMs)
 	if st.Title != nil {
 		l.text(dst, view, l.pack.scope("stageSelect", "title"), &st.Title.Layout, st.Title.Style, s.Title, screen, 1, "")
@@ -218,4 +219,5 @@ func (l *Layout) StageSelect(dst *DrawList, view View, s StageSelectState) {
 		}
 	}
 	l.elements(dst, view, l.pack.scope("stageSelect", ""), st.Foreground, screen, s.ElapsedMs)
+	fadeIn(dst, from, &st.Screen, s.ElapsedMs)
 }

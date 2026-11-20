@@ -190,26 +190,51 @@ func (p *Pack) scope(screen, part string) scope {
 	return sc
 }
 
-// screenStyles are a screen's own text styles; it grows with each screen
-// the game draws from the pack.
-func screenStyles(s *screenpack.Screens, screen string) map[screenpack.StyleID]screenpack.TextStyle {
+// screenBase is the fields every screen file has, of the named screen; nil
+// for an unknown name.
+func screenBase(s *screenpack.Screens, screen string) *screenpack.Screen {
 	switch screen {
 	case "title":
-		return s.Title.TextStyles
+		return &s.Title.Screen
 	case "options":
-		return s.Options.TextStyles
+		return &s.Options.Screen
 	case "pause":
-		return s.Pause.TextStyles
+		return &s.Pause.Screen
 	case "matchSetup":
-		return s.MatchSetup.TextStyles
+		return &s.MatchSetup.Screen
 	case "versus":
-		return s.Versus.TextStyles
+		return &s.Versus.Screen
 	case "results":
-		return s.Results.TextStyles
+		return &s.Results.Screen
 	case "characterSelect":
-		return s.CharacterSelect.TextStyles
+		return &s.CharacterSelect.Screen
 	case "stageSelect":
-		return s.StageSelect.TextStyles
+		return &s.StageSelect.Screen
+	}
+	return nil
+}
+
+// screenStyles are a screen's own text styles.
+func screenStyles(s *screenpack.Screens, screen string) map[screenpack.StyleID]screenpack.TextStyle {
+	if base := screenBase(s, screen); base != nil {
+		return base.TextStyles
+	}
+	return nil
+}
+
+// screenMenu is the menu part of the named screen, nil when it has none.
+func screenMenu(s *screenpack.Screens, screen string) *screenpack.Menu {
+	switch screen {
+	case "title":
+		return s.Title.Menu
+	case "options":
+		return s.Options.Menu
+	case "pause":
+		return s.Pause.Menu
+	case "matchSetup":
+		return s.MatchSetup.Menu
+	case "results":
+		return s.Results.Menu
 	}
 	return nil
 }
@@ -242,4 +267,77 @@ func (p *Pack) Sort(screen string) (by string, descending bool) {
 		return "folder", false
 	}
 	return rule.By, rule.Descending
+}
+
+// Sound is the file of a menu sound (move, confirm, cancel or error) heard on
+// a screen: the screen's menu overrides the screen, which overrides the root
+// file of its pack, which the default pack's backs up. screen "" is no
+// screen, so the root files only. ok is false when no file names the sound.
+func (p *Pack) Sound(screen, name string) (a Asset, ok bool) {
+	src := screenpack.FromPack
+	if screen != "" {
+		if a, ok := p.screenSound(screen, name); ok {
+			return a, true
+		}
+		src = p.scope(screen, "").src
+	}
+	if file, found := p.screenpack(src).Sounds[name]; found {
+		return Asset{src, string(file)}, true
+	}
+	if file, found := p.resolved.Default.Sounds[name]; found {
+		return Asset{screenpack.FromDefault, string(file)}, true
+	}
+	return Asset{}, false
+}
+
+// screenSound looks a sound up in a screen's menu, then in the screen itself.
+func (p *Pack) screenSound(screen, name string) (Asset, bool) {
+	menu := p.scope(screen, "menu").src
+	if m := screenMenu(&p.screenpack(menu).Screens, screen); m != nil {
+		if file, found := m.Sounds[name]; found {
+			return Asset{menu, string(file)}, true
+		}
+	}
+	src := p.scope(screen, "").src
+	if base := screenBase(&p.screenpack(src).Screens, screen); base != nil {
+		if file, found := base.Sounds[name]; found {
+			return Asset{src, string(file)}, true
+		}
+	}
+	return Asset{}, false
+}
+
+// MenuMusic is the music of a screen: Volume (0 to 1) multiplies the player's
+// music volume, and the track loops from LoopStartMs.
+type MenuMusic struct {
+	Asset       Asset
+	Volume      float32
+	LoopStartMs int
+}
+
+// Music is the music the named screen plays: its own, else the pack's root
+// music, and none when the screen says `"music": null` or nothing names one.
+// Two screens that name the same file have equal Asset, which the player
+// takes as "keep playing".
+func (p *Pack) Music(screen string) (m MenuMusic, ok bool) {
+	sc := p.scope(screen, "")
+	sp := p.screenpack(sc.src)
+	var music *screenpack.Music
+	if base := screenBase(&sp.Screens, screen); base != nil {
+		if base.Silent {
+			return MenuMusic{}, false
+		}
+		music = base.Music
+	}
+	if music == nil {
+		music = sp.Music
+	}
+	if music == nil {
+		return MenuMusic{}, false
+	}
+	m = MenuMusic{Asset: Asset{sc.src, string(music.File)}, Volume: 1, LoopStartMs: music.LoopStartMs}
+	if music.Volume != nil {
+		m.Volume = float32(*music.Volume)
+	}
+	return m, true
 }

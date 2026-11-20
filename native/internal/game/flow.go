@@ -155,6 +155,8 @@ type Flow struct {
 	RoundOverTicks int
 	// ResultWinner is the match winner shown on the result screen.
 	ResultWinner match.Side
+	// menuCues are the menu sounds not yet drained by the host.
+	menuCues []MenuCue
 	// ResultCursor is the highlighted entry of ResultItems.
 	ResultCursor int
 	// Message is the error text shown on ScreenError.
@@ -276,6 +278,7 @@ func withOption(options []int, value int) []int {
 
 func (f *Flow) fail(msg string) {
 	f.Screen, f.Message = ScreenError, msg
+	f.cue(SoundError)
 }
 
 // HasPlayer2Row is whether the setup screen lets the player choose who plays
@@ -300,8 +303,8 @@ func (f *Flow) Setup() Setup {
 
 func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
 
-// Navigate applies a menu input to the current screen.
-func (f *Flow) Navigate(n Nav) {
+// navigate applies a menu input to the current screen.
+func (f *Flow) navigate(n Nav) {
 	switch f.Screen {
 	case ScreenTitle:
 		f.navTitle(n)
