@@ -16,3 +16,6 @@ Cross-repo: an unmodified real common1 needs engine#035.
 - [ ] Hit sparks and common sounds come from `common/`
 - [ ] Replacing a file in `common/` changes the game accordingly
 - [ ] `common/LICENSES.md` lists the source and license of every shipped file; no file ships without a verified license
+
+## Notes
+- 050 done (2026-11-20): `common/` holds the generated fightfx and common.snd. This item also checks 050's last criterion: a real character's hit sparks and common sounds play from them in a match (needs engine Explod/spark support, item 024 / engine#029, for the sparks to show).

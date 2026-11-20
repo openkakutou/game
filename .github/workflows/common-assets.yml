@@ -1,0 +1,35 @@
+name: Common assets
+
+# The generator of common/ (fightfx, common.snd): its files must still resolve
+# every number of tools/common-assets/CENSUS.md, byte for byte the same.
+on:
+  push:
+    branches: [main]
+    paths: ['tools/common-assets/**', 'common/**', '.github/workflows/common-assets.yml']
+  pull_request:
+    paths: ['tools/common-assets/**', 'common/**', '.github/workflows/common-assets.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/common-assets/go.mod
+          cache-dependency-path: tools/common-assets/go.sum
+      - name: Vet and test
+        working-directory: tools/common-assets
+        run: go vet ./... && go test ./...
+      - name: Committed files match the generator
+        working-directory: tools/common-assets
+        run: |
+          mkdir -p "$RUNNER_TEMP/common"
+          go run . CENSUS.md "$RUNNER_TEMP/common"
+          for f in fightfx.sff fightfx.air common.snd; do cmp "$RUNNER_TEMP/common/$f" "../../common/$f"; done
