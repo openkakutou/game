@@ -302,6 +302,8 @@ func screenBase(s *screenpack.Screens, screen string) *screenpack.Screen {
 		return &s.Options.Screen
 	case "pause":
 		return &s.Pause.Screen
+	case "moveList":
+		return &s.MoveList.Screen
 	case "matchSetup":
 		return &s.MatchSetup.Screen
 	case "versus":
@@ -349,6 +351,15 @@ func (p *Pack) style(sc scope, id screenpack.StyleID) screenpack.TextStyle {
 		return st
 	}
 	return p.screenpack(sc.src).TextStyles[id]
+}
+
+// MoveListWindow is how many lines of the move list the screen shows at once.
+func (p *Pack) MoveListWindow() int {
+	list := p.resolved.Screens.MoveList.List
+	if list == nil {
+		return 0
+	}
+	return list.VisibleLines
 }
 
 // SelectColumns is how many cells a row of the character select grid has.

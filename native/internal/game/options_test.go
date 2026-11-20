@@ -114,7 +114,7 @@ func TestOptions_CancelOnOptionsReturnsToTheMainMenuOnOptions(t *testing.T) {
 
 func TestOptions_OpenedFromThePauseMenuReturnsToThePausedMatch(t *testing.T) {
 	f := pausedMatch(t)
-	navAll(f, NavPause, NavDown, NavDown, NavDown) // pause menu, Options
+	navAll(f, NavPause, NavDown, NavDown, NavDown, NavDown) // pause menu, Options
 	if got := f.PauseItems()[f.PauseCursor].Label(); got != "Options" {
 		t.Fatalf("pause cursor on %q", got)
 	}
@@ -127,18 +127,18 @@ func TestOptions_OpenedFromThePauseMenuReturnsToThePausedMatch(t *testing.T) {
 		t.Error("the match must keep the music while Options is open over it")
 	}
 	f.Navigate(NavCancel)
-	if f.Screen != ScreenMatch || !f.Paused || f.Match != m || f.PauseCursor != 3 {
+	if f.Screen != ScreenMatch || !f.Paused || f.Match != m || f.PauseCursor != 4 {
 		t.Errorf("screen = %v paused = %v sameMatch = %v cursor = %d", f.Screen, f.Paused, f.Match == m, f.PauseCursor)
 	}
 }
 
-func TestPause_QuickVersusMenuHasOptionsBeforeExit(t *testing.T) {
+func TestPause_QuickVersusMenuHasMoveListAndOptionsBeforeExit(t *testing.T) {
 	f := &Flow{quick: &Setup{}}
 	var labels []string
 	for _, it := range f.PauseItems() {
 		labels = append(labels, it.Label())
 	}
-	if want := []string{"Continue", "Restart", "Options", "Exit"}; !sameStrings(labels, want) {
+	if want := []string{"Continue", "Restart", "Move List", "Options", "Exit"}; !sameStrings(labels, want) {
 		t.Errorf("labels = %q, want %q", labels, want)
 	}
 }

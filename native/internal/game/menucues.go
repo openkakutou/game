@@ -62,6 +62,9 @@ func (f *Flow) PackScreen() string {
 		ScreenOptionsControls, ScreenOptionsBindings, ScreenOptionsAppearance:
 		return "options"
 	case ScreenMatch:
+		if f.moveList.open {
+			return "moveList"
+		}
 		if f.Paused {
 			return "pause"
 		}
@@ -76,7 +79,8 @@ type navState struct {
 	step, cursor, menuCursor, setupRow, roundIdx, timeIdx     int
 	pauseCursor, resultCursor, optionsCursor, picking, pickAt int
 	picks                                                     [2]int
-	stageNo                                                   int
+	stageNo, moveSide, moveTop                                int
+	moveOpen                                                  bool
 	player2CPU, paused, quit                                  bool
 	gameplay                                                  Gameplay
 	audio                                                     Audio
@@ -92,6 +96,7 @@ func (f *Flow) navState() navState {
 		screen: f.Screen, step: f.Step, cursor: f.Cursor, menuCursor: f.MenuCursor, setupRow: f.SetupRow,
 		roundIdx: f.RoundIdx, timeIdx: f.TimeIdx, pauseCursor: f.PauseCursor, resultCursor: f.ResultCursor,
 		optionsCursor: f.options.cursor, picking: f.Picking, pickAt: f.pickPos, picks: f.Picks, stageNo: f.StageNo,
+		moveOpen: f.moveList.open, moveSide: f.moveList.side, moveTop: f.MoveListTop(),
 		player2CPU: f.Player2CPU, paused: f.Paused, quit: f.Quit,
 		gameplay: s.Gameplay, audio: s.Audio, video: s.Video, controls: s.Controls,
 		bindDevice: f.options.bind.device, bindPhase: f.options.bind.phase,
@@ -102,7 +107,13 @@ func (f *Flow) navState() navState {
 // move for an arrow that moved a cursor or a value, confirm and cancel for an
 // input that changed something, nothing when it did not, and whatever a
 // screen queued itself (an error for a refused action) instead.
-func (f *Flow) Navigate(n Nav) {
+func (f *Flow) Navigate(n Nav) { f.NavigateBy(n, 0) }
+
+// NavigateBy is Navigate for an input of the player (0 or 1) whose controller
+// sent it; the keyboard is player 0. The player who pauses is the one whose
+// move list opens first.
+func (f *Flow) NavigateBy(n Nav, player int) {
+	f.actor = player
 	before, screen, queued := f.navState(), f.PackScreen(), len(f.menuCues)
 	f.navigate(n)
 	if len(f.menuCues) > queued || f.navState() == before {

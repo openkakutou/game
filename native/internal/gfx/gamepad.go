@@ -110,7 +110,7 @@ func (g *Gamepads) navigate(f *game.Flow, b *Bindings, skip bool) {
 			continue
 		}
 		for _, n := range g.navs {
-			f.Navigate(n)
+			f.NavigateBy(n, p)
 		}
 	}
 }

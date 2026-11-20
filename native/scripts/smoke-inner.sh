@@ -28,7 +28,6 @@ key Return; shot 4-setup
 key Return; shot 4b-versus       # start (cursor is on "Start"): the VS screen
 key Return                       # skip the VS screen: the match
 sleep 2; shot 5-match
-sleep 3; shot 5b-match-idle-later          # nobody plays: the fighters only idle
 xdotool keydown f; sleep 1; xdotool keyup f; shot 6-match-attack
 key Escape; sleep 0.5; shot 6b-pause      # pause menu over the frozen match
 sleep 1; shot 6c-pause-held
@@ -81,8 +80,11 @@ kill $pid; wait $pid 2>/dev/null || true
 cmp -s "$out/5-match.png" "$out/10-match-cpu.png" && { echo "CPU did not move"; exit 1; }
 
 # 1b2. Watch: the second mode of the main menu. The player picks both
-# fighters and the stage; both CPUs then move on their own, so two captures a
-# few seconds apart differ, and differ from the match where nobody plays.
+# fighters and the stage, and the match runs with nobody pressing a key: two
+# captures a few seconds apart differ. That both sides are CPU-driven is
+# checked by the game tests (TestWatchMode_...): comparing with the idle
+# match capture was flaky under load (same frame when the CPUs had not moved
+# yet).
 ./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/watch.log" 2>&1 &
 pid=$!
 sleep 2
@@ -95,7 +97,6 @@ sleep 3; shot 29-watch-match-b
 kill -0 $pid
 kill $pid; wait $pid 2>/dev/null || true
 cmp -s "$out/28-watch-match-a.png" "$out/29-watch-match-b.png" && { echo "the two CPUs did not move in Watch"; exit 1; }
-cmp -s "$out/5b-match-idle-later.png" "$out/29-watch-match-b.png" && { echo "Watch looks like the idle match"; exit 1; }
 ! grep -q "built-in Watch mode" "$out/watch.log" || { echo "Watch was not read from modes/:"; cat "$out/watch.log"; exit 1; }
 
 # 1c. Options: the first launch wrote the default settings files; Options >
@@ -160,18 +161,33 @@ sed -n '/"linux"/,/"p2"/p' "$content/config/controls.json" | grep -q '"a": "U"' 
 portraits="$out/content-portraits"
 cp -r testdata/content "$portraits"
 mkdir -p "$portraits/chars/kfm"
-cp testdata/reference/chars/kfm/kfm.def testdata/reference/chars/kfm/kfm.sff "$portraits/chars/kfm/"
+cp testdata/reference/chars/kfm/* "$portraits/chars/kfm/"
+cp -r testdata/reference/common "$portraits/common"   # his states need common1.cns to start a match
 ./dist/openkakutou-linux-amd64 -content "$portraits" -width 960 -height 720 >"$out/portraits.log" 2>&1 &
 pid=$!
 sleep 2
 key Return; key Return                     # title, Versus: the select, on the fighter
 shot 21-select-no-portrait
 key Right; shot 22-select-portrait         # Kung Fu Man
+# 1e2. Move list: Kung Fu Man (no movelist file) on both sides; the pause menu's
+# Move List (4th entry) shows the commands of his .cmd over the match.
+key Return; key Return; key Return         # P1, P2, stage
+key Return; key Return                     # Start, skip the VS screen
+sleep 2
+key Escape; key Down; key Down; key Down; key Return; sleep 0.5; shot 23-movelist
 kill -0 $pid
 kill $pid; wait $pid 2>/dev/null || true
 before=$(convert "$out/21-select-no-portrait.png" -format '%[hex:u.p{342,288}]' info:)
 after=$(convert "$out/22-select-portrait.png" -format '%[hex:u.p{342,288}]' info:)
 [ "$before" != "$after" ] || { echo "Kung Fu Man's large portrait is not drawn: pixel 342x288 is still $after"; exit 1; }
+
+# The move list is the screenpack's: a long list (his .cmd has more than the 14
+# visible lines) shows the scrollbar, whose thumb (#FF5C38) sits at the top of
+# the track at pixel 1089x200 of the 1280x800 display; text and the dimmed match
+# give hundreds of colours.
+thumb=$(convert "$out/23-movelist.png" -format '%[hex:u.p{1089,200}]' info:)
+[ "$thumb" = "FF5C38" ] || { echo "23-movelist: the scrollbar thumb is missing: pixel is $thumb, want FF5C38"; exit 1; }
+[ "$(identify -format %k "$out/23-movelist.png")" -gt 200 ] || { echo "23-movelist: too few colours for the move list"; exit 1; }
 
 # 1f. Appearance: a second screenpack, alt, is the built-in one with its
 # background image replaced by a flat #204060. Options > Appearance >

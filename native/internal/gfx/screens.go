@@ -110,7 +110,7 @@ func (r *Renderer) Draw(f *game.Flow) {
 	if kind != r.packKind {
 		r.packKind, r.packSince = kind, time.Now()
 	}
-	if kind != packNone && kind != packPause {
+	if kind != packNone && kind != packPause && kind != packMoveList {
 		r.drawPack(f, kind)
 		if sample != nil {
 			r.drawSample(f, sample)
@@ -120,8 +120,8 @@ func (r *Renderer) Draw(f *game.Flow) {
 	w.Rect(0, 0, VW, VH, darkBg)
 	if f.Screen == game.ScreenMatch {
 		r.drawMatch(f)
-		if kind == packPause {
-			r.drawPack(f, packPause)
+		if kind == packPause || kind == packMoveList {
+			r.drawPack(f, kind)
 		}
 	}
 }

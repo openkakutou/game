@@ -19,6 +19,7 @@ const (
 	packSelect
 	packStage
 	packPause
+	packMoveList
 	packSetup
 	packVersus
 	packResult
@@ -47,6 +48,9 @@ func packScreenOf(f *game.Flow) packScreen {
 	case game.ScreenError:
 		return packError
 	case game.ScreenMatch:
+		if f.MoveListOpen() {
+			return packMoveList
+		}
 		if f.Paused {
 			return packPause
 		}
@@ -73,6 +77,8 @@ func (r *Renderer) drawPack(f *game.Flow, kind packScreen) {
 		r.layoutStage(f, view, ms)
 	case packPause:
 		r.layoutPause(f, view, ms)
+	case packMoveList:
+		r.layoutMoveList(f, view, ms)
 	case packSetup:
 		r.layoutSetup(f, view, ms)
 	case packVersus:
@@ -117,6 +123,12 @@ func (r *Renderer) layoutPause(f *game.Flow, view ui.View, ms int) {
 		r.labels = append(r.labels, item.Label())
 	}
 	r.layout.Pause(&r.list, view, ui.PauseState{Title: "PAUSE", Entries: r.labels, Cursor: f.PauseCursor, ElapsedMs: ms})
+}
+
+// layoutMoveList shows the list of the character of the side the flow chose,
+// over the match.
+func (r *Renderer) layoutMoveList(f *game.Flow, view ui.View, ms int) {
+	r.layout.MoveList(&r.list, view, ui.MoveListState{Title: f.MoveListTitle(), Lines: f.MoveListLines(), Top: f.MoveListTop(), ElapsedMs: ms})
 }
 
 // setupRows are the setup screen's rows, built again only when the choices

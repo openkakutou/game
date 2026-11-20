@@ -6,11 +6,12 @@ type PauseItem int
 // Pause menu entries, named as Ikemen GO's default [Pause Menu]
 // (resources/defaultMotif.ini: menu.itemname.back = Continue,
 // characterchange = Character Change, exit = Exit). Restart and Options are
-// OpenKakutou's.
+// OpenKakutou's; Move List is Ikemen GO's menu.itemname.commandlist.
 const (
 	PauseContinue PauseItem = iota
 	PauseRestart
 	PauseCharacterChange
+	PauseMoveList
 	PauseOptions
 	PauseExit
 )
@@ -24,6 +25,8 @@ func (p PauseItem) Label() string {
 		return "Restart"
 	case PauseCharacterChange:
 		return "Character Change"
+	case PauseMoveList:
+		return "Move List"
 	case PauseOptions:
 		return "Options"
 	}
@@ -31,8 +34,8 @@ func (p PauseItem) Label() string {
 }
 
 var (
-	pauseItems      = []PauseItem{PauseContinue, PauseRestart, PauseCharacterChange, PauseOptions, PauseExit}
-	quickPauseItems = []PauseItem{PauseContinue, PauseRestart, PauseOptions, PauseExit}
+	pauseItems      = []PauseItem{PauseContinue, PauseRestart, PauseCharacterChange, PauseMoveList, PauseOptions, PauseExit}
+	quickPauseItems = []PauseItem{PauseContinue, PauseRestart, PauseMoveList, PauseOptions, PauseExit}
 )
 
 // PauseItems are the entries the pause menu offers: a quick versus match has
@@ -47,6 +50,10 @@ func (f *Flow) PauseItems() []PauseItem {
 // navPause handles a menu input while the match is paused: Start or cancel
 // closes the menu, as Ikemen GO's menu.cancel.key.
 func (f *Flow) navPause(n Nav) {
+	if f.moveList.open {
+		f.navMoveList(n)
+		return
+	}
 	items := f.PauseItems()
 	switch n {
 	case NavUp:
@@ -63,6 +70,10 @@ func (f *Flow) navPause(n Nav) {
 func (f *Flow) choosePause(item PauseItem) {
 	if item == PauseOptions {
 		f.openOptions(true) // the match stays paused underneath
+		return
+	}
+	if item == PauseMoveList {
+		f.openMoveList()
 		return
 	}
 	f.Paused = false

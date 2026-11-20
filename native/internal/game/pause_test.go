@@ -97,7 +97,7 @@ func TestPause_RestartStartsTheSameMatchFresh(t *testing.T) {
 func TestPause_ExitGoesBackToTheMainMenuAndItemsDependOnTheMode(t *testing.T) {
 	f := pausedMatch(t)
 	items := f.PauseItems()
-	if len(items) != 5 || items[2].Label() != "Character Change" || items[3].Label() != "Options" || items[4].Label() != "Exit" {
+	if len(items) != 6 || items[2].Label() != "Character Change" || items[3].Label() != "Move List" || items[4].Label() != "Options" || items[5].Label() != "Exit" {
 		t.Fatalf("items = %v", items)
 	}
 	f.Navigate(NavPause)

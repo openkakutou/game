@@ -172,6 +172,13 @@ type Flow struct {
 	Paused bool
 	// PauseCursor is the highlighted PauseItems entry.
 	PauseCursor int
+	// pauser is the player who opened the pause menu, whose character the
+	// move list shows first; actor is the player whose input is being handled.
+	pauser, actor int
+	moveList      moveListState
+	// MoveListWindow is how many lines the move list shows at once (the
+	// screenpack's visibleLines), which bounds its scrolling.
+	MoveListWindow int
 	// lastChars/lastStage are what the running match was started with, for
 	// Restart.
 	lastChars [2]Entry
@@ -355,7 +362,7 @@ func (f *Flow) navMatch(n Nav) {
 		return
 	}
 	if n == NavPause {
-		f.Paused, f.PauseCursor = true, 0
+		f.Paused, f.PauseCursor, f.pauser = true, 0, f.actor
 	}
 }
 
