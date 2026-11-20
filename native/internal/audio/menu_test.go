@@ -236,3 +236,52 @@ func TestUpdate_OnAMenuWithNothingNewDoesNotAllocate(t *testing.T) {
 		t.Errorf("%v allocations per frame, want 0", allocs)
 	}
 }
+
+func TestUpdate_AMenuSoundThatStartsOrLeavesAMatchIsStillPlayingAfterTheOwnerChange(t *testing.T) {
+	p, warns, _ := menuPlayer(t, builtInPack())
+	f := matchFlow(t)
+	p.Update(f)
+	tickUntil(t, f, func() bool { return f.Screen == game.ScreenResult })
+	p.Update(f)
+	mix.HaltChannel(-1)         // the sounds of the walk to the match are over
+	f.Navigate(game.NavConfirm) // Rematch: a new match takes the music over
+	p.Update(f)
+	if p.owner != f.Match || mix.Playing(-1) != 1 {
+		t.Errorf("rematch: owner ok=%v playing=%d, want the confirm sound on one channel (warnings %v)", p.owner == f.Match, mix.Playing(-1), *warns)
+	}
+
+	mix.HaltChannel(-1)
+	f.Navigate(game.NavPause)
+	p.Update(f)
+	f.Navigate(game.NavDown)
+	f.Navigate(game.NavDown)
+	f.Navigate(game.NavConfirm) // Character Change: leaves the match
+	p.Update(f)
+	if p.owner != nil || mix.Playing(-1) < 1 {
+		t.Errorf("leaving the match: owner=%v playing=%d, want the confirm sound still playing", p.owner, mix.Playing(-1))
+	}
+}
+
+func TestUpdate_AMenuMusicThatCannotBeLoadedIsWarnedOnceNotEveryFrame(t *testing.T) {
+	broken := packWith(t, map[string]func([]byte) []byte{
+		"sounds/theme.ogg": func([]byte) []byte { return []byte("not an ogg file") },
+	})
+	p, warns, infos := menuPlayer(t, broken)
+	f := titleFlow(t)
+	for range 60 {
+		p.Update(f)
+	}
+	if len(*warns) != 1 || !strings.Contains((*warns)[0], "sounds/theme.ogg") {
+		t.Fatalf("warnings = %q, want exactly one naming sounds/theme.ogg", *warns)
+	}
+	if mix.PlayingMusic() || len(*infos) != 0 {
+		t.Errorf("a broken theme must stay silent and unannounced (infos %q)", *infos)
+	}
+	// After a match the same screen may try the file once more.
+	p.Update(matchFlow(t))
+	p.Update(f)
+	p.Update(f)
+	if len(*warns) != 2 {
+		t.Errorf("warnings = %d after returning from a match, want one more attempt (2 in all)", len(*warns))
+	}
+}

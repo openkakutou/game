@@ -19,8 +19,13 @@ import (
 )
 
 const (
-	sampleRate  = 44100
-	mixChannels = 16 // maximum simultaneous effects
+	sampleRate   = 44100
+	mixChannels  = 16 // maximum simultaneous fighter effects
+	menuChannels = 4  // maximum simultaneous menu sounds
+	// The two channel groups: a match ending or starting halts the fighters'
+	// effects only, so the menu sound that caused it is heard.
+	fighterGroup = 1
+	menuGroup    = 2
 )
 
 // chunkKey identifies one character sample.
@@ -43,6 +48,10 @@ type Player struct {
 	// naming the same file keep it playing.
 	menuMusic   ui.MenuMusic
 	menuPlaying bool
+	// menuFailed is a menu music that could not be loaded: it is not tried
+	// again (nor warned about) until a match has come and gone.
+	menuFailed   ui.Asset
+	menuFailedOK bool
 	// menuChunks are the pack's menu sounds, loaded on first use (a nil chunk
 	// records a failed load, warned once); menuCues is the drained queue.
 	menuChunks map[ui.Asset]*mix.Chunk
@@ -74,7 +83,9 @@ func New() *Player {
 		mix.Quit()
 		return p
 	}
-	mix.AllocateChannels(mixChannels)
+	mix.AllocateChannels(mixChannels + menuChannels)
+	mix.GroupChannels(0, mixChannels-1, fighterGroup)
+	mix.GroupChannels(mixChannels, mixChannels+menuChannels-1, menuGroup)
 	p.open = true
 	return p
 }
@@ -126,15 +137,16 @@ func (p *Player) Update(f *game.Flow) {
 	if p == nil || !p.open {
 		return
 	}
-	p.playMenuCues(f)
 	next, path, changed := game.MusicChange(p.owner, f)
 	if changed {
 		p.stopAll()
+		p.menuFailedOK = false
 		p.owner = next
 		if path != "" && !p.NoMusic {
 			p.startMusic(f.FS, path)
 		}
 	}
+	p.playMenuCues(f)
 	if p.owner == nil {
 		_, _, menu := f.Music()
 		p.syncMenuMusic(menu)
@@ -166,7 +178,7 @@ func (p *Player) holdForPause(paused bool) {
 func (p *Player) stopAll() {
 	p.holdForPause(false)
 	p.stopMusic()
-	mix.HaltChannel(-1)
+	mix.HaltGroup(fighterGroup)
 	p.freeChunks()
 }
 
@@ -240,6 +252,9 @@ func (p *Player) syncMenuMusic(screen string) {
 		}
 		return
 	}
+	if p.menuFailedOK && p.menuFailed == want.Asset {
+		return
+	}
 	if p.menuPlaying && p.menuMusic.Asset == want.Asset {
 		if p.menuMusic != want {
 			p.menuMusic = want
@@ -251,10 +266,12 @@ func (p *Player) syncMenuMusic(screen string) {
 	data, err := p.readAsset(want.Asset)
 	if err != nil {
 		p.warnf("audio: cannot load music %q: %v", want.Asset.Path, err)
+		p.menuFailed, p.menuFailedOK = want.Asset, true
 		return
 	}
 	p.playMusic(want.Asset.Path, data)
 	if p.music == nil {
+		p.menuFailed, p.menuFailedOK = want.Asset, true
 		return
 	}
 	p.menuPlaying, p.menuMusic = true, want
@@ -290,9 +307,14 @@ func (p *Player) playMenuCues(f *game.Flow) {
 			chunk = p.loadMenuChunk(asset)
 			p.menuChunks[asset] = chunk
 		}
-		if chunk != nil {
-			chunk.Play(-1, 0) // every channel busy: the sound is dropped
+		if chunk == nil {
+			continue
 		}
+		channel := mix.GroupAvailable(menuGroup)
+		if channel < 0 {
+			channel = mix.GroupOldest(menuGroup) // all busy: the oldest sound makes room
+		}
+		chunk.Play(channel, 0)
 	}
 }
 
@@ -331,8 +353,13 @@ func (p *Player) playCue(f *game.Flow, c game.Cue) {
 	if chunk == nil {
 		return
 	}
-	if _, err := chunk.Play(-1, 0); err != nil {
-		p.dropped++ // every channel is busy: drop the effect silently
+	channel := mix.GroupAvailable(fighterGroup)
+	if channel < 0 {
+		p.dropped++ // every fighter channel is busy: drop the effect silently
+		return
+	}
+	if _, err := chunk.Play(channel, 0); err != nil {
+		p.dropped++
 	}
 }
 
@@ -366,6 +393,7 @@ func (p *Player) Close() {
 		}
 		delete(p.menuChunks, k)
 	}
+	mix.HaltChannel(-1)
 	p.owner = nil
 	p.open = false
 	mix.CloseAudio()

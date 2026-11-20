@@ -172,3 +172,13 @@ func TestMusic_TheStageMusicOwnsTheMatchPauseAndResultsAndMenuMusicResumesAfter(
 		t.Errorf("after the results: owner %v menu %q, want the menu music back", owner, menu)
 	}
 }
+
+func TestMenuCues_ClosingThePauseMenuWithStartSoundsCancelLikeCancelDoes(t *testing.T) {
+	for _, closer := range []Nav{NavPause, NavCancel} {
+		f := toMatch(t)
+		f.Navigate(NavPause) // opens it, silently
+		cuesOf(f)
+		f.Navigate(closer)
+		wantCues(t, "closing the pause menu", cuesOf(f), MenuCue{SoundCancel, "pause"})
+	}
+}

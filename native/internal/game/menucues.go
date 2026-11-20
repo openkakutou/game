@@ -114,8 +114,11 @@ func (f *Flow) Navigate(n Nav) {
 	case NavCancel:
 		f.cueOn(SoundCancel, screen)
 	case NavPause:
-		if before.screen != ScreenMatch { // the title's start; in a match it opens the pause menu
+		switch {
+		case before.screen != ScreenMatch: // the title's start
 			f.cueOn(SoundConfirm, screen)
+		case before.paused: // start closes the pause menu like cancel; opening it is silent
+			f.cueOn(SoundCancel, screen)
 		}
 	}
 }

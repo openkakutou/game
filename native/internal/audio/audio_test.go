@@ -103,8 +103,8 @@ func TestNew_OpensMixerWithStereo44kAnd16Channels(t *testing.T) {
 	if err != nil || freq != 44100 || ch != 2 {
 		t.Errorf("spec = %d Hz, %d ch, err %v; want 44100 Hz, 2 ch", freq, ch, err)
 	}
-	if n := mix.AllocateChannels(-1); n != 16 {
-		t.Errorf("channels = %d, want 16", n)
+	if n := mix.AllocateChannels(-1); n != 20 { // 16 for the fighters, 4 for the menu sounds
+		t.Errorf("channels = %d, want 20", n)
 	}
 	if len(*warns) != 0 {
 		t.Errorf("warnings on a healthy open: %v", *warns)
