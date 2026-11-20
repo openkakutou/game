@@ -112,14 +112,18 @@ func (l *lifebarHUD) step(m *game.Match) {
 		// The engine exposes no move type: a drop in life stands in for
 		// Ikemen GO's getHit, which freezes the trailing fill.
 		hit := h < l.health[i]
-		l.meters[i].Step(lifeFraction(h), hit, l.hud.Life[i].Mid.Shown())
+		l.meters[i].Step(lifeFraction(h, m.LifeMax[i]), hit, l.hud.Life[i].Mid.Shown())
 		l.health[i] = h
 	}
 	l.tick = tick
 }
 
-func lifeFraction(h int) float64 {
-	return float64(min(max(h, 0), game.DefaultHealth)) / game.DefaultHealth
+// lifeFraction is how full a bar of life h is, for a fighter of life lifeMax.
+func lifeFraction(h, lifeMax int) float64 {
+	if lifeMax <= 0 {
+		return 0
+	}
+	return float64(min(max(h, 0), lifeMax)) / float64(lifeMax)
 }
 
 // draw paints the match's lifebar.

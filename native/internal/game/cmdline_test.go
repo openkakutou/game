@@ -117,7 +117,7 @@ func TestQuickVersusFrom_UnsupportedOptionsAreNamedNotFatal(t *testing.T) {
 func TestQuickVersusFrom_InvalidValuesAreErrorsNamingTheOption(t *testing.T) {
 	for _, args := range [][]string{
 		{"-rounds", "0"}, {"-rounds", "x"}, {"-time", "0"}, {"-time", "-2"},
-		{"-p1.ai", "-1"}, {"-p1.life", "0"}, {"-p2.life", "1001"}, {"-p1.power", "3001"},
+		{"-p1.ai", "-1"}, {"-p1.life", "0"}, {"-p2.life", "x"}, {"-p1.power", "3001"},
 	} {
 		_, _, _, err := QuickVersusFrom(ParseArgs(append([]string{"kfm", "kfm"}, args...)))
 		if err == nil || !strings.Contains(err.Error(), args[0]) {

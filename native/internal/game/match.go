@@ -175,6 +175,9 @@ type Match struct {
 	AnimTime [2]int
 	// LastRound is the outcome of the round that just ended (OutcomeNone while fighting).
 	LastRound round.RoundResult
+	// LifeMax is each fighter's life, its character's [Data] life (Ikemen GO
+	// lifeMax): the life a round starts with and the bars' full length.
+	LifeMax [2]int
 	// Over/Winner report that the match is decided.
 	Over   bool
 	Winner match.Side
@@ -217,6 +220,11 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 	for i, f := range []*Fighter{p1, p2} {
 		m.programs[i] = f.Program
 		m.missing[i] = f.Missing
+		m.LifeMax[i] = f.Program.Constants.Lookup("data.life").Int()
+		if m.LifeMax[i] <= 0 {
+			m.LifeMax[i] = DefaultHealth
+		}
+		m.starting[i].Health = m.LifeMax[i]
 	}
 	if err := m.reset(1); err != nil {
 		return nil, err
@@ -294,8 +302,9 @@ func (m *Match) reset(roundNo int) error {
 func (m *Match) applyStart() {
 	for i, start := range m.Setup.Start {
 		if start.Life > 0 {
-			m.State.Fighters[i].Health = start.Life
-			m.runtimes[i].Context.Health = start.Life
+			life := min(start.Life, m.LifeMax[i]) // Clamp(ocd.life, 0, lifeMax), system.go:4419
+			m.State.Fighters[i].Health = life
+			m.runtimes[i].Context.Health = life
 		}
 		power := start.Power
 		if m.Setup.MaxPowerMode {

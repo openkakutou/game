@@ -388,7 +388,7 @@ func (r *Renderer) drawBuiltInBars(f *game.Flow) {
 	m := f.Match
 	for i := 0; i < 2; i++ {
 		fs := m.State.Fighters[i]
-		frac := float32(max(0, fs.Health)) / game.DefaultHealth
+		frac := float32(lifeFraction(fs.Health, m.LifeMax[i]))
 		pow := float32(fs.Power) / game.MaxPower
 		col := blue
 		if i == 1 {

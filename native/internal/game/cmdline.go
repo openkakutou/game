@@ -84,7 +84,7 @@ Quick VS options (start one match without menus, then quit):
 <p1> <p2>               The first two names are player 1 and player 2
 -p1 <char> -p2 <char>   Loads player 1 / player 2, eg. -p1 kfm
 -p<n>.ai <level>        Player n (1 or 2) is played by the CPU at <level> (1-8) when level > 0
--p<n>.life <life>       Sets player n's life to <life> (1-1000) for round 1
+-p<n>.life <life>       Sets player n's life to <life> (at most its life) for round 1
 -p<n>.power <power>     Sets player n's power to <power> (0-3000) for round 1
 -time <num>             Round time in seconds (-1 to disable)
 -rounds <num>           Rounds to win the match
@@ -197,7 +197,7 @@ func QuickVersusFrom(cl CommandLine) (q QuickVersus, ok bool, notices []string, 
 			q.CPU[i] = level > 0
 			q.AILevel[i] = float64(level)
 		}
-		if life, given := intFlag(p+".life", func(n int) bool { return n >= 1 && n <= DefaultHealth }, fmt.Sprintf("between 1 and %d", DefaultHealth)); given {
+		if life, given := intFlag(p+".life", func(n int) bool { return n >= 1 }, "1 or more (the character's life caps it)"); given {
 			q.Start[i].Life = life
 		}
 		if power, given := intFlag(p+".power", func(n int) bool { return n >= 0 && n <= MaxPower }, fmt.Sprintf("between 0 and %d", MaxPower)); given {
