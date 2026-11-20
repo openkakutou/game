@@ -49,10 +49,11 @@ func matchFlow(t *testing.T) *game.Flow {
 	fsys := os.DirFS(content)
 	chars, _ := game.DiscoverCharacters(fsys, "chars")
 	stages, _ := game.DiscoverStages(fsys, "stages")
-	versus, err := mode.Versus()
+	builtins, err := mode.BuiltIn()
 	if err != nil {
 		t.Fatal(err)
 	}
+	versus := builtins[0] // versus.jsonc, first in file-name order
 	f := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys), []mode.Mode{versus})
 	f.Navigate(game.NavConfirm) // title -> main menu
 	f.Navigate(game.NavConfirm) // Versus

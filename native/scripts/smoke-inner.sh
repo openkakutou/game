@@ -20,7 +20,7 @@ shot() { import -window root "$out/$1.png"; }
 key() { xdotool key --clearmodifiers "$@"; sleep 0.4; }
 shot 0a-title
 key Return; shot 0b-main-menu    # title -> main menu
-key Return                       # Versus, the only mode of the fixture
+key Return                       # Versus, the first mode of the fixture
 shot 1-select-p1
 key Return; shot 2-select-p2
 key Right Return; shot 3-stage
@@ -28,6 +28,7 @@ key Return; shot 4-setup
 key Return; shot 4b-versus       # start (cursor is on "Start"): the VS screen
 key Return                       # skip the VS screen: the match
 sleep 2; shot 5-match
+sleep 3; shot 5b-match-idle-later          # nobody plays: the fighters only idle
 xdotool keydown f; sleep 1; xdotool keyup f; shot 6-match-attack
 key Escape; sleep 0.5; shot 6b-pause      # pause menu over the frozen match
 sleep 1; shot 6c-pause-held
@@ -49,6 +50,7 @@ for loaded in "menu music loaded: sounds/theme.ogg" "menu sound loaded: sounds/c
   grep -q "audio: $loaded" "$out/run.log" || { echo "missing in the log: audio: $loaded"; cat "$out/run.log"; exit 1; }
 done
 ! grep -q "built-in Versus mode" "$out/run.log" || { echo "the Versus mode was not read from modes/:"; cat "$out/run.log"; exit 1; }
+! grep -q "built-in Watch mode" "$out/run.log" || { echo "the Watch mode was not read from modes/:"; cat "$out/run.log"; exit 1; }
 
 # The stage's own sky sprite (#5A96E6) must be drawn, not the flat fallback backdrop.
 sky=$(convert "$out/5-match.png" -format '%[hex:u.p{200,300}]' info:)
@@ -78,6 +80,24 @@ kill -0 $pid
 kill $pid; wait $pid 2>/dev/null || true
 cmp -s "$out/5-match.png" "$out/10-match-cpu.png" && { echo "CPU did not move"; exit 1; }
 
+# 1b2. Watch: the second mode of the main menu. The player picks both
+# fighters and the stage; both CPUs then move on their own, so two captures a
+# few seconds apart differ, and differ from the match where nobody plays.
+./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/watch.log" 2>&1 &
+pid=$!
+sleep 2
+key Return; key Down; key Return           # title, Watch
+key Return; key Right Return; key Return   # P1, P2, stage
+key Return                                 # Start (no Player 2 row)
+key Return                                 # skip the VS screen
+sleep 2; shot 28-watch-match-a
+sleep 3; shot 29-watch-match-b
+kill -0 $pid
+kill $pid; wait $pid 2>/dev/null || true
+cmp -s "$out/28-watch-match-a.png" "$out/29-watch-match-b.png" && { echo "the two CPUs did not move in Watch"; exit 1; }
+cmp -s "$out/5b-match-idle-later.png" "$out/29-watch-match-b.png" && { echo "Watch looks like the idle match"; exit 1; }
+! grep -q "built-in Watch mode" "$out/watch.log" || { echo "Watch was not read from modes/:"; cat "$out/watch.log"; exit 1; }
+
 # 1c. Options: the first launch wrote the default settings files; Options >
 # Audio, Music one step down, Back, Quit must save config/audio.json with it.
 for f in gameplay audio video; do
@@ -88,7 +108,7 @@ grep -q '"music": 100' "$content/config/audio.json" || { echo "default audio.jso
 pid=$!
 sleep 2
 key Return                       # title -> main menu
-key Down Return; shot 13-options # Options
+key Down Down Return; shot 13-options # Options (after Versus, Watch)
 key Down Return; shot 14-options-audio
 key Down Left; shot 15-options-audio-music
 key Escape Escape                # leave Audio (saves), leave Options
@@ -107,7 +127,7 @@ grep -q '"a": "F"' "$content/config/controls.json" || { echo "default controls.j
 pid=$!
 sleep 2
 key Return                       # title -> main menu
-key Down Return                  # Options
+key Down Down Return             # Options (after Versus, Watch)
 key Down Down Down Return; shot 16-options-controls
 key Return; shot 17-controls-player1
 key Down Down Down Down Return; shot 18-controls-waiting   # the row of "a"
@@ -168,7 +188,7 @@ convert -size 8x8 xc:'#204060' "$alt/screenpacks/alt/images/background.png"
 pid=$!
 sleep 2
 key Return                       # title -> main menu
-key Down Return                  # Options
+key Down Down Return             # Options (after Versus, Watch)
 key Down Down Down Down Return; shot 23-appearance-default   # Appearance, drawn with the default pack
 key Right; shot 24-appearance-preview-alt                    # Screenpack: alt
 key Down; shot 25-appearance-lifebar-sample                  # Lifebar row: the sample

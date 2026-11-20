@@ -1,0 +1,28 @@
+// Watch: two CPUs fight each other (roadmap decision 030). The player
+// picks both fighters and the stage, then watches a best-of-N match; the
+// match setup has no Player 2 control row because both sides are CPU.
+{
+  "$schema": "mode.schema.json",
+  "formatVersion": 1,
+  "id": "watch",
+  "name": "Watch",
+  "flow": [
+    { "screen": "characterSelect", "params": { "sides": ["p1", "p2"] } },
+    { "screen": "stageSelect" },
+    { "screen": "matchSetup" },
+    { "screen": "versus" },
+    { "screen": "match" },
+    { "screen": "results" } // rematch or back to selection
+  ],
+  "rules": {
+    "sides": [
+      { "control": "cpu", "characters": 1 },
+      { "control": "cpu", "characters": 1 }
+    ],
+    "rounds": 3,
+    "timeLimitSeconds": 99,
+    "opponents": { "kind": "chosen" },
+    "onWin": "results",
+    "onLose": "results"
+  }
+}

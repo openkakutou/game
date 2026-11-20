@@ -274,10 +274,11 @@ func inMode(t *testing.T, f *Flow) *Flow {
 
 func versusMode(t *testing.T) mode.Mode {
 	t.Helper()
-	m, err := mode.Versus()
+	builtins, err := mode.BuiltIn()
 	if err != nil {
 		t.Fatal(err)
 	}
+	m := builtins[0] // versus.jsonc, first in file-name order
 	return m
 }
 

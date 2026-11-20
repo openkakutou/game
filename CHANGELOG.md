@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The desktop game has a Watch mode: pick two characters and a stage, and watch them fight each other under CPU control.
 - The desktop game lists every screenpack in the screenpacks folder and every lifebar in the lifebars folder; an Appearance page in the options picks them with a live preview, saved in the config folder, and a choice whose folder was removed falls back to the default with a message.
 - The desktop game's title screen, main menu, options and controls, pause menu, character and stage select, match setup, VS and results screens are now drawn from the OpenKakutou screenpack (background, fonts, menu cursor, value colors) instead of plain text; the character select is a grid showing each character's own portraits and display name; menus play the screenpack's sounds and music and fade in.
 - In the desktop game, each player can rebind their keyboard keys and gamepad buttons from Options > Controls; a key already in use is never taken silently (swap or cancel), and the bindings are saved in the game folder's config folder.

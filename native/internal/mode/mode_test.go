@@ -138,12 +138,16 @@ func TestParse_JSONCTrailingCommas_AreAccepted(t *testing.T) {
 	}
 }
 
-func TestVersus_EmbeddedModeParses(t *testing.T) {
-	m, err := Versus()
+func TestBuiltIn_ListsVersusThenWatchParsed(t *testing.T) {
+	modes, err := BuiltIn()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.ID != "versus" || len(m.Flow) != 6 || m.Flow[3].Screen != ScreenVersus {
-		t.Errorf("mode = %+v", m)
+	if len(modes) != 2 || modes[0].ID != "versus" || modes[1].ID != "watch" || modes[1].Name != "Watch" {
+		t.Fatalf("modes = %+v, want versus then watch", modes)
+	}
+	w := modes[1]
+	if w.Rules.Sides[0].Control != ControlCPU || w.Rules.Sides[1].Control != ControlCPU || len(w.Flow) != 6 || w.Flow[0].Screen != ScreenCharacterSelect {
+		t.Errorf("watch = %+v, want two cpu sides and a 6-step flow starting with character select", w)
 	}
 }

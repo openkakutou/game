@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 
@@ -13,33 +14,29 @@ import (
 // modesFolder is where the game folder holds its modes (roadmap decision 031).
 const modesFolder = "modes"
 
-// versusID is the id of the Versus mode, which the game always offers.
-const versusID = "versus"
-
-// builtinVersusNotice says why the built-in Versus mode is offered.
-const builtinVersusNotice = "modes/versus.jsonc not found or invalid, using the built-in Versus mode"
-
 // DiscoverModes reads every .json or .jsonc file of the game folder's modes
 // folder, in file-name order ignoring case. A file that is not a valid mode is
 // left out with a notice carrying the mode error, and so is a second file with
 // the id of an earlier one. A missing folder is not an error. When no mode has
-// the id "versus", the built-in Versus mode is added, with a notice, so the
-// game always has it.
+// the id of a built-in mode (Versus, Watch), that built-in mode is added after
+// the others, with a notice, so the game always has it.
 func DiscoverModes(fsys fs.FS) (modes []mode.Mode, notices []string) {
 	dir, err := ResolvePath(fsys, ".", modesFolder)
 	if err == nil {
 		modes, notices = readModes(fsys, dir)
 	}
-	for _, m := range modes {
-		if m.ID == versusID {
-			return modes, notices
-		}
-	}
-	builtin, err := mode.Versus()
+	builtIns, err := mode.BuiltIn()
 	if err != nil {
-		panic(fmt.Sprintf("the built-in versus mode is invalid: %v", err)) // guarded by mode's TestVersus_EmbeddedModeParses
+		panic(fmt.Sprintf("a built-in mode is invalid: %v", err)) // guarded by mode's TestBuiltIn_ListsVersusThenWatchParsed
 	}
-	return append(modes, builtin), append(notices, builtinVersusNotice)
+	for _, b := range builtIns {
+		if slices.ContainsFunc(modes, func(m mode.Mode) bool { return m.ID == b.ID }) {
+			continue
+		}
+		modes = append(modes, b)
+		notices = append(notices, fmt.Sprintf("modes/%s.jsonc not found or invalid, using the built-in %s mode", b.ID, b.Name))
+	}
+	return modes, notices
 }
 
 // readModes parses the mode files of dir, in file-name order.

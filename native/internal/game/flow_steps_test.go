@@ -328,3 +328,33 @@ func TestErrorBeforeAnyMode_StillQuits(t *testing.T) {
 		t.Error("cancel on a startup error should quit")
 	}
 }
+
+func TestWatchMode_BothSidesCPUDrivenWithoutAPlayer2RowAndPreselectedFromTheRules(t *testing.T) {
+	builtIns, err := mode.BuiltIn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fsys := os.DirFS(content)
+	chars, _ := DiscoverCharacters(fsys, "chars")
+	stages, _ := DiscoverStages(fsys, "stages")
+	f := inMode(t, NewFlow(fsys, chars, stages, DefaultLoader(fsys), builtIns[1:]))
+	for range 3 {
+		f.Navigate(NavConfirm) // P1 pick, P2 pick, stage
+	}
+	if f.Screen != ScreenSetup || f.HasPlayer2Row() {
+		t.Fatalf("screen=%v player2Row=%v, want setup without a Player 2 row", f.Screen, f.HasPlayer2Row())
+	}
+	if s := f.Setup(); s.Rounds != 3 || s.TimeLimitSeconds != 99 || s.CPU != [2]bool{true, true} {
+		t.Fatalf("setup preselects %+v, want 3 rounds, 99 seconds, both CPU", s)
+	}
+	f.Navigate(NavUp)
+	if f.SetupRow != SetupRowTime {
+		t.Errorf("Up from Start reached row %d, want the time row", f.SetupRow)
+	}
+	f.SetupRow = SetupRowStart
+	f.Navigate(NavConfirm) // Start
+	f.Navigate(NavConfirm) // skip the VS screen
+	if f.Screen != ScreenMatch || f.cpus[0] == nil || f.cpus[1] == nil {
+		t.Fatalf("screen=%v cpus=%v, want both fighters CPU-driven", f.Screen, f.cpus)
+	}
+}
