@@ -52,6 +52,25 @@ func SelectLifebar(fsys fs.FS, entries []lifebar.Entry, name string) (*HUDLifeba
 	if !strings.EqualFold(entry.Name, name) {
 		notices = append(notices, fmt.Sprintf("lifebar %q not found: %q used", name, entry.Name))
 	}
+	hud, more := loadLifebar(fsys, entry)
+	return hud, append(notices, more...)
+}
+
+// LoadLifebarDef loads the fight.def def names (Ikemen GO's -fight), found
+// as given, then under lifebars/ and common/ (FightScreen.resolvePath,
+// fightscreen.go:6024-6040, data/ being common/). It returns nil and a notice
+// when it cannot be read; the caller then keeps the selected lifebar.
+func LoadLifebarDef(fsys fs.FS, def string) (*HUDLifebar, []string) {
+	found := joinResolved(fsys, []string{".", "lifebars", CommonFolder(fsys)}, def)
+	if _, err := fs.Stat(fsys, found); err != nil || found == "" {
+		return nil, []string{fmt.Sprintf("-fight %q: not found", def)}
+	}
+	return loadLifebar(fsys, lifebar.Entry{Name: def, Def: found})
+}
+
+// loadLifebar reads entry's fight.def, its sprite file and its fonts.
+func loadLifebar(fsys fs.FS, entry lifebar.Entry) (*HUDLifebar, []string) {
+	var notices []string
 	src, err := fs.ReadFile(fsys, entry.Def)
 	if err != nil {
 		return nil, append(notices, fmt.Sprintf("lifebar %q: %v", entry.Name, err))

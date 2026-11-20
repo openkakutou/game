@@ -49,6 +49,12 @@ The diagram shows what the game does with its arguments: two characters skip the
 | `-width <num>`, `-height <num>` | Window size. |
 | `-nomusic` | No stage music. |
 | `-nosound` | No sound at all. |
+| `-setvolume <num>` | Master volume 0 to 100 (clamped) for this run, until the audio options are changed; ignored with `-nosound`. |
+| `-nojoy` | Gamepads are not opened: keyboard only. |
+| `-togglelifebars` | Matches show no life or power bars. |
+| `-maxpowermode` | Every match starts with both power bars full (round 1, as Ikemen GO; it wins over `-p<n>.power`). |
+| `-fight <path>` | Lifebar of this run: a `fight.def`, found as given, then under `lifebars/` and `common/`. Not found: the selected lifebar stays, with a notice. |
+| `-r <name>` | Screenpack of this run. Ikemen GO names a motif folder or `system.def`; OpenKakutou screenpacks have their own format, so `<name>` is a `screenpacks/` folder (an unknown one falls back to `default` with a notice). |
 | `-content <folder>` | OpenKakutou only: the folder holding `chars/`, `stages/` and `common/` (default: the program's folder). |
 | `-frames <num>`, `-capture <file.png>` | OpenKakutou only: quit after that many frames, saving the last one (tests). |
 
@@ -63,7 +69,7 @@ Each one is accepted and named in a notice (`... is not supported yet, ignored`)
 | `-p<n>.lifeMax`, `.dizzyPoints`, `.guardPoints` | The engine has no per-character max life, dizzy or guard points yet. |
 | `-p<n>.input` | No input remapping yet (backlog `022`). |
 | `-draws` | Draw games are not counted separately yet. |
-| `-r`, `-fight`, `-storyboard`, `-loadmotif` | Screenpacks, lifebars and storyboards are not loaded yet (backlog `030`, `039`). |
+| `-storyboard`, `-loadmotif` | Storyboards are not played; `-loadmotif` only keeps the menus (no quick versus), as in Ikemen GO. |
 | `-ip`, `-tcpport`, `-udpport` | No netplay. |
 | `-log` | No match statistics file. |
-| `-setvolume`, `-nojoy`, `-togglelifebars`, `-maxpowermode`, `-ailevel`, `-speed`, `-framerate`, `-stresstest`, `-speedtest`, `-debug`, `-debugdump`, `-config` | Not implemented yet. |
+| `-ailevel`, `-speed`, `-framerate`, `-stresstest`, `-speedtest`, `-debug`, `-debugdump`, `-config` | Not implemented yet. |

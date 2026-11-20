@@ -107,6 +107,10 @@ type Flow struct {
 	// screens show (see VisibleChars, VisibleStages).
 	charView, stageView []int
 	Loader              Loader
+	// MaxPowerMode is -maxpowermode, applied to every match of the run.
+	MaxPowerMode bool
+	// HideLifebars is -togglelifebars: matches show no life or power bars.
+	HideLifebars bool
 	// CommonSounds is common/common.snd, read by F-prefixed PlaySnd cues.
 	CommonSounds *CommonSounds
 	// Settings are the persisted settings; the host replaces the defaults
@@ -671,7 +675,9 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 		return
 	}
 	f.Stage, f.StageDefPath = st, se.DefPath
-	m, err := NewMatch(f.Fighters[0], f.Fighters[1], st, f.Setup())
+	setup := f.Setup()
+	setup.MaxPowerMode = f.MaxPowerMode
+	m, err := NewMatch(f.Fighters[0], f.Fighters[1], st, setup)
 	if err != nil {
 		f.fail(fmt.Sprintf("Could not start the match: %v", err))
 		return

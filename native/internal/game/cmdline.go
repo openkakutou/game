@@ -96,6 +96,12 @@ Other options:
 -height <num>           Sets the window height
 -nomusic                Disables music
 -nosound                Disables all sound effects and music
+-setvolume <num>        Sets the master volume to <num> (0-100) for this run
+-nojoy                  Disables gamepads
+-togglelifebars         Hides the life and power bars
+-maxpowermode           Fighters start the match with full power
+-fight <path>           Uses the lifebar <path> (a fight.def) for this run
+-r <name>               Uses the screenpack folder <name> for this run
 
 OpenKakutou only:
 -content <folder>       Folder holding chars/, stages/ and common/
@@ -152,7 +158,7 @@ func QuickVersusFrom(cl CommandLine) (q QuickVersus, ok bool, notices []string, 
 	}
 	slices.Sort(keys)
 	for _, k := range keys {
-		if !slices.Contains(handledFlags, k) {
+		if !slices.Contains(handledFlags, k) && !slices.Contains(runFlags, k) {
 			notices = append(notices, fmt.Sprintf("%s is not supported yet, ignored", k))
 		}
 	}

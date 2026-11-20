@@ -371,9 +371,11 @@ func spriteMeta(fighter *game.Fighter, fr air.Frame) (sff.Sprite, bool) {
 }
 
 func (r *Renderer) drawHUD(f *game.Flow) {
-	if f.Lifebar == nil {
+	switch {
+	case f.HideLifebars:
+	case f.Lifebar == nil:
 		r.drawBuiltInBars(f)
-	} else {
+	default:
 		r.drawLifebar(f)
 	}
 	r.drawBanner(f.Match)

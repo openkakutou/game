@@ -103,6 +103,8 @@ type Setup struct {
 	// Training refills a fighter's life after a second without a hit and ends
 	// no round (mode rule training).
 	Training bool
+	// MaxPowerMode starts round 1 with full power (-maxpowermode).
+	MaxPowerMode bool
 }
 
 // StartValues overrides a fighter's life and power when the match starts
@@ -280,9 +282,13 @@ func (m *Match) applyStart() {
 			m.State.Fighters[i].Health = start.Life
 			m.runtimes[i].Context.Health = start.Life
 		}
-		if start.Power > 0 {
-			m.State.Fighters[i].Power = start.Power
-			m.runtimes[i].Context.Power = start.Power
+		power := start.Power
+		if m.Setup.MaxPowerMode {
+			power = MaxPower
+		}
+		if power > 0 {
+			m.State.Fighters[i].Power = power
+			m.runtimes[i].Context.Power = power
 		}
 	}
 }

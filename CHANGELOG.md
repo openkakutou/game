@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The desktop game accepts Ikemen GO's -setvolume, -nojoy, -togglelifebars, -maxpowermode, -fight (a lifebar file) and -r (a screenpack) command-line options for the current run.
 - In the desktop game, a lifebar's names and timer are printed in the lifebar's own MUGEN / Ikemen GO bitmap fonts (.fnt and .def), in their colors; a font that cannot be read is reported and replaced by the built-in font.
 - In the desktop game, a character's sound on a numbered channel cuts its previous sound on that channel, low-priority sounds wait for the channel to be free, and up to 32 effects play at once, as in Ikemen GO.
 - The desktop game ships the common states characters rely on (Ikemen GO's, MIT-licensed) and plays the common hit and guard sounds from the game's own common sound file.

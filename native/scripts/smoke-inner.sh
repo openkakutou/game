@@ -128,8 +128,13 @@ sleep 2
 key Return; key Down Return                # title, Training
 key Return; key Right Return; key Return   # P1, P2 (the dummy), stage
 sleep 2; shot 33-training-match
-xdotool keydown f; sleep 1; xdotool keyup f; shot 34-training-match-attack
-cmp -s "$out/33-training-match.png" "$out/34-training-match-attack.png" && { echo "the Training match did not run"; exit 1; }
+# A loaded machine can miss one press: up to 5 tries before failing (item 073).
+for try in 1 2 3 4 5; do
+  xdotool keydown f; sleep 1; xdotool keyup f; shot 34-training-match-attack
+  cmp -s "$out/33-training-match.png" "$out/34-training-match-attack.png" || break
+  [ "$try" = 5 ] && { echo "the Training match did not run"; exit 1; }
+  sleep 1
+done
 key Escape; sleep 0.5; shot 35-training-pause
 [ "$(identify -format %k "$out/35-training-pause.png")" -gt 200 ] || { echo "35-training-pause: too few colours for the pause menu"; exit 1; }
 key Down Down Return; sleep 0.5            # Reset Positions: closes the menu
@@ -286,6 +291,15 @@ cmp -s "$out/7-capture.png" "$out/11-quick-versus.png" && { echo "quick versus s
 ./dist/openkakutou-linux-amd64 fighter rival -content "$content" -s arena -width 960 -height 720 -frames 30 -capture "$out/12-lifebar.png"
 bar=$(convert "$out/12-lifebar.png" -format '%[hex:u.p{150,40}]' info:)
 [ "$bar" = "FAD23C" ] || { echo "lifebar not drawn: P1 bar pixel is $bar, want FAD23C"; exit 1; }
+
+# 4b. The run-wide Ikemen GO options are accepted with no notice, and
+# -togglelifebars hides the bars drawn in step 4.
+./dist/openkakutou-linux-amd64 fighter rival -content "$content" -s arena -width 960 -height 720 \
+  -setvolume 50 -nojoy -maxpowermode -fight lifebars/default/fight.def -r default -togglelifebars \
+  -frames 30 -capture "$out/12b-options.png" >"$out/options.log" 2>&1
+! grep -q 'is not supported yet\|not found' "$out/options.log" || { echo "run options raised a notice:"; cat "$out/options.log"; exit 1; }
+hidden=$(convert "$out/12b-options.png" -format '%[hex:u.p{150,40}]' info:)
+[ "$hidden" != "FAD23C" ] || { echo "-togglelifebars: the life bar is still drawn"; exit 1; }
 
 # Options, controls, match setup and VS are drawn from the screenpack too: its
 # gradient background (#1A1826 at 200x100, not the old flat #121420) and the

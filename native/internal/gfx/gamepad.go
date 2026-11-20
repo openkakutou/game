@@ -22,6 +22,9 @@ func NewGamepads() *Gamepads {
 	return g
 }
 
+// NoGamepads never opens a controller: the keyboard is the only input.
+func NoGamepads() *Gamepads { return &Gamepads{navs: make([]game.Nav, 0, 8)} }
+
 // Close releases the open controllers.
 func (g *Gamepads) Close() {
 	if g == nil {

@@ -77,6 +77,10 @@ func run() error {
 	for _, n := range notices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
+	run, err := game.RunOptionsFrom(cl)
+	if err != nil {
+		return err
+	}
 	fsys := host.Open(root)
 	warn := func(msg string) { fmt.Fprintln(os.Stderr, "openkakutou:", msg) }
 	settings := game.LoadSettings(fsys, game.SettingsPlatform(runtime.GOOS), host.ConfigWriter(root), warn)
@@ -112,7 +116,12 @@ func run() error {
 		}
 		return p
 	}
-	pack, packNotices := ui.LoadPack(fsys, settings.Appearance.Screenpack)
+	// -r and -fight pick the screenpack and lifebar of this run only.
+	packName := settings.Appearance.Screenpack
+	if run.Screenpack != "" {
+		packName = run.Screenpack
+	}
+	pack, packNotices := ui.LoadPack(fsys, packName)
 	modes, modeNotices := game.DiscoverModes(fsys)
 	for _, n := range modeNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
@@ -126,7 +135,15 @@ func run() error {
 		warn(n)
 	}
 	hud, lifebarNotices := game.SelectLifebar(fsys, lifebars, settings.Appearance.Lifebar)
+	if run.Fight != "" {
+		fight, fightNotices := game.LoadLifebarDef(fsys, run.Fight)
+		lifebarNotices = append(lifebarNotices, fightNotices...)
+		if fight != nil {
+			hud = fight
+		}
+	}
 	flow.Settings = settings
+	flow.MaxPowerMode, flow.HideLifebars = run.MaxPowerMode, run.HideLifebars
 	flow.Rand = rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0)).IntN // the arcade ladder and stages
 	defer flow.SaveOpenConcern()                                             // a closed window keeps the changes of the open screen
 	settings.NoteScreenpack(packNotices)
@@ -167,10 +184,18 @@ func run() error {
 	defer aud.Close()
 	fmt.Println("audio:", aud.Driver())
 	aud.SetPack(pack)
-	aud.SetVolumes(settings.Audio)
+	// -setvolume sets the master volume until the player changes the audio options.
+	volumes := settings.Audio
+	if run.Volume >= 0 {
+		volumes.Master = run.Volume
+	}
+	aud.SetVolumes(volumes)
 	audioGen, videoGen, windowGen, appearanceGen := settings.AudioGen, settings.VideoGen, settings.WindowGen, settings.AppearanceGen
 
-	pads := gfx.NewGamepads()
+	pads := gfx.NoGamepads() // -nojoy: controllers are never opened
+	if !run.NoJoy {
+		pads = gfx.NewGamepads()
+	}
 	defer pads.Close()
 	bindings := gfx.NewBindings()
 	bindings.Update(settings) // the first PollEvents already reads the bound start
