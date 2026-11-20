@@ -7,8 +7,13 @@ xvfb=$!; trap 'kill $xvfb 2>/dev/null || true' EXIT
 export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1
 sleep 1
 
+# Every run uses a copy of the fixture: the game writes config/ files on first
+# launch and when the player changes a setting.
+content="$out/content"
+cp -r testdata/content "$content"
+
 # 1. Whole flow, driven by real key events.
-./dist/openkakutou-linux-amd64 -content testdata/content -width 960 -height 720 >"$out/run.log" 2>&1 &
+./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/run.log" 2>&1 &
 pid=$!
 sleep 2
 shot() { import -window root "$out/$1.png"; }
@@ -44,7 +49,7 @@ sky=$(convert "$out/5-match.png" -format '%[hex:u.p{200,300}]' info:)
 [ "$sky" = "5A96E6" ] || { echo "stage background layer missing: top-left pixel is $sky, want 5A96E6"; exit 1; }
 
 # 1b. Player 2 set to CPU on the setup screen: the CPU must walk on its own.
-./dist/openkakutou-linux-amd64 -content testdata/content -width 960 -height 720 &
+./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 &
 pid=$!
 sleep 2
 key Return; key Return                     # title, Versus
@@ -57,18 +62,37 @@ kill -0 $pid
 kill $pid; wait $pid 2>/dev/null || true
 cmp -s "$out/5-match.png" "$out/10-match-cpu.png" && { echo "CPU did not move"; exit 1; }
 
+# 1c. Options: the first launch wrote the default settings files; Options >
+# Audio, Music one step down, Back, Quit must save config/audio.json with it.
+for f in gameplay audio video; do
+  [ -f "$content/config/$f.json" ] || { echo "first launch did not write config/$f.json"; exit 1; }
+done
+grep -q '"music": 100' "$content/config/audio.json" || { echo "default audio.json is wrong:"; cat "$content/config/audio.json"; exit 1; }
+./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/options.log" 2>&1 &
+pid=$!
+sleep 2
+key Return                       # title -> main menu
+key Down Return; shot 13-options # Options
+key Down Return; shot 14-options-audio
+key Down Left; shot 15-options-audio-music
+key Escape Escape                # leave Audio (saves), leave Options
+key Down Return                  # Quit
+wait $pid || { echo "the game did not quit cleanly from the main menu:"; cat "$out/options.log"; exit 1; }
+grep -q '"music": 90' "$content/config/audio.json" || { echo "audio.json was not saved with music 90:"; cat "$content/config/audio.json"; exit 1; }
+grep -q '"master": 100' "$content/config/audio.json" || { echo "audio.json lost master:"; cat "$content/config/audio.json"; exit 1; }
+
 # 2. Deterministic in-program capture (the title screen) and error screen.
-./dist/openkakutou-linux-amd64 -content testdata/content -frames 5 -capture "$out/7-capture.png"
+./dist/openkakutou-linux-amd64 -content "$content" -frames 5 -capture "$out/7-capture.png"
 ./dist/openkakutou-linux-amd64 -content /nonexistent -frames 5 -capture "$out/8-error.png"
 
 # 3. Quick versus: two characters on the command line start the match with
 # no menu (Ikemen GO's command line), so frame 30 already shows the fight.
-./dist/openkakutou-linux-amd64 fighter rival -content testdata/content -s arena -rounds 1 -p2.ai 1 -frames 30 -capture "$out/11-quick-versus.png"
+./dist/openkakutou-linux-amd64 fighter rival -content "$content" -s arena -rounds 1 -p2.ai 1 -frames 30 -capture "$out/11-quick-versus.png"
 cmp -s "$out/7-capture.png" "$out/11-quick-versus.png" && { echo "quick versus showed the menu"; exit 1; }
 
 # 4. The HUD draws the content's lifebars/default (testdata, original art):
 # P1's full life bar is its yellow front sprite (#FAD23C), not the built-in bars.
-./dist/openkakutou-linux-amd64 fighter rival -content testdata/content -s arena -width 960 -height 720 -frames 30 -capture "$out/12-lifebar.png"
+./dist/openkakutou-linux-amd64 fighter rival -content "$content" -s arena -width 960 -height 720 -frames 30 -capture "$out/12-lifebar.png"
 bar=$(convert "$out/12-lifebar.png" -format '%[hex:u.p{150,40}]' info:)
 [ "$bar" = "FAD23C" ] || { echo "lifebar not drawn: P1 bar pixel is $bar, want FAD23C"; exit 1; }
 

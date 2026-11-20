@@ -150,3 +150,28 @@ func TestMapPaths_KeepsAPathInsideASymlinkedGameFolderWhenOnlyTheCoreLookupFinds
 		t.Errorf("-p1 = %q, want the game-folder name %q", got, "chars/KFM")
 	}
 }
+
+func TestConfigWriter_CreatesTheConfigFolderAndOverwritesTheFile(t *testing.T) {
+	root := t.TempDir()
+	write := ConfigWriter(root)
+	if err := write("config/audio.json", []byte("first")); err != nil {
+		t.Fatal(err)
+	}
+	if err := write("config/audio.json", []byte("second")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(filepath.Join(root, "config", "audio.json"))
+	if err != nil || string(got) != "second" {
+		t.Errorf("file = %q, %v, want %q", got, err, "second")
+	}
+}
+
+func TestConfigWriter_ReportsAFolderItCannotCreate(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "config"), []byte("a file"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ConfigWriter(root)("config/audio.json", []byte("x")); err == nil {
+		t.Error("writing under a config that is a file must fail")
+	}
+}

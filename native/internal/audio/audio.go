@@ -63,6 +63,21 @@ func New() *Player {
 	return p
 }
 
+// SetVolumes applies the settings' volumes: the master multiplies the music
+// and the effects volume of every channel.
+func (p *Player) SetVolumes(a game.Audio) {
+	if p == nil || !p.open {
+		return
+	}
+	mix.VolumeMusic(mixerVolume(a.Master, a.Music))
+	mix.Volume(-1, mixerVolume(a.Master, a.Effects))
+}
+
+// mixerVolume is the mixer's 0 to 128 volume of two percentages multiplied.
+func mixerVolume(master, part int) int {
+	return mix.MAX_VOLUME * master * part / 10000
+}
+
 // Driver names the SDL audio driver in use, or "off" when the mixer is not open.
 func (p *Player) Driver() string {
 	if p == nil || !p.open {

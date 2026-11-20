@@ -40,10 +40,10 @@ func TestTitle_CancelQuitsAndMovesAreIgnored(t *testing.T) {
 	}
 }
 
-func TestMainMenu_ListsTheModeNamesInOrderThenQuit(t *testing.T) {
+func TestMainMenu_ListsTheModeNamesInOrderThenOptionsAndQuit(t *testing.T) {
 	f := twoModeFlow(t)
 	got := f.MainMenuItems()
-	if want := []string{"Arcade", "Versus", "Quit"}; !sameStrings(got, want) {
+	if want := []string{"Arcade", "Versus", "Options", "Quit"}; !sameStrings(got, want) {
 		t.Fatalf("items = %q, want %q", got, want)
 	}
 }
@@ -52,8 +52,8 @@ func TestMainMenu_CursorWrapsBothWays(t *testing.T) {
 	f := twoModeFlow(t)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavUp)
-	if f.MenuCursor != 2 {
-		t.Fatalf("cursor = %d, want wrap to Quit (2)", f.MenuCursor)
+	if f.MenuCursor != 3 {
+		t.Fatalf("cursor = %d, want wrap to Quit (3)", f.MenuCursor)
 	}
 	f.Navigate(NavDown)
 	if f.MenuCursor != 0 {
@@ -74,6 +74,7 @@ func TestMainMenu_ConfirmOnAModeEntersItsFirstStep(t *testing.T) {
 func TestMainMenu_ConfirmOnQuitQuits(t *testing.T) {
 	f := newTitleFlow(t)
 	f.Navigate(NavConfirm)
+	f.Navigate(NavDown) // Options
 	f.Navigate(NavDown) // Quit
 	f.Navigate(NavConfirm)
 	if !f.Quit {

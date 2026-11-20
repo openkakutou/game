@@ -250,6 +250,8 @@ func TestMatchSetup_ControlCpuSideIsCPUDrivenWithoutARowAndHumanNever(t *testing
 
 func TestMatchSetup_RulesTimeMissingFromOptionsIsOfferedSortedAndPreselected(t *testing.T) {
 	f := flowFromSrc(t, modeSrc(steps(stepSelect, stepStage, stepSetup, stepMatch), "human", "human", 3, 45, "results", "results"))
+	f.Settings.Gameplay = Gameplay{Rounds: 3, TimeLimitSeconds: 45} // the setup preselects the gameplay settings
+	f.enterMode(0)
 	for range 3 {
 		f.Navigate(NavConfirm)
 	}

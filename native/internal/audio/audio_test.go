@@ -456,3 +456,21 @@ func TestDriver_ReportsTheDummyDriverWhenOpenAndOffWhenNot(t *testing.T) {
 		t.Errorf("nil player driver = %q, want off", got)
 	}
 }
+
+func TestSetVolumes_MasterMultipliesMusicAndEffects(t *testing.T) {
+	p, _ := newPlayer(t)
+	p.SetVolumes(game.Audio{Master: 50, Music: 50, Effects: 100})
+	if got := mix.VolumeMusic(-1); got != 32 {
+		t.Errorf("music volume = %d, want 32 (128 x 50%% x 50%%)", got)
+	}
+	if got := mix.Volume(0, -1); got != 64 {
+		t.Errorf("effects volume = %d, want 64 (128 x 50%% x 100%%)", got)
+	}
+	p.SetVolumes(game.Audio{Master: 100, Music: 0, Effects: 100})
+	if got := mix.VolumeMusic(-1); got != 0 {
+		t.Errorf("music volume = %d, want 0", got)
+	}
+	if got := mix.Volume(15, -1); got != 128 {
+		t.Errorf("effects volume of the last channel = %d, want 128", got)
+	}
+}

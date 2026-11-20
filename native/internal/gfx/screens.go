@@ -88,6 +88,8 @@ func (r *Renderer) Draw(f *game.Flow) {
 		}
 	case game.ScreenResult:
 		r.drawResult(f)
+	case game.ScreenOptions, game.ScreenOptionsGameplay, game.ScreenOptionsAudio, game.ScreenOptionsVideo:
+		r.drawOptions(f)
 	case game.ScreenError:
 		w.TextCentered(70, 2, red, "Something went wrong")
 		r.wrapped(100, f.Message)
@@ -111,6 +113,15 @@ func (r *Renderer) drawPause(f *game.Flow) {
 			c = gold
 		}
 		w.TextCentered(float32(110+i*16), 1, c, item.Label())
+	}
+}
+
+// drawOptions lists the rows of an options screen, then the settings notices
+// (files ignored or not saved) in red above the help line.
+func (r *Renderer) drawOptions(f *game.Flow) {
+	r.drawList(f, f.OptionsTitle(), "", f.OptionsItems(), f.OptionsCursor())
+	for i, notice := range f.Settings.Notices() {
+		r.win.TextCentered(float32(170+i*10), 1, red, notice)
 	}
 }
 

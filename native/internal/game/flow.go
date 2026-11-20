@@ -26,6 +26,10 @@ const (
 	ScreenVersus          // both picked characters, before the match
 	ScreenMatch
 	ScreenResult
+	ScreenOptions         // the settings concerns: Gameplay, Audio, Video, Back
+	ScreenOptionsGameplay // the rows of one concern, in Concern order
+	ScreenOptionsAudio
+	ScreenOptionsVideo
 	ScreenError
 )
 
@@ -90,14 +94,18 @@ func DefaultLoader(fsys fs.FS, stateDirs ...string) Loader {
 type Flow struct {
 	Chars, Stages []Entry
 	Loader        Loader
+	// Settings are the persisted settings; the host replaces the defaults
+	// with LoadSettings' result.
+	Settings *Settings
+	options  optionsState
 	// Modes are the installed modes, in main menu order; Mode is the one being
 	// played.
 	Modes []mode.Mode
 	Mode  mode.Mode
 	// MenuCursor is the highlighted main menu item: a mode's index in Modes,
-	// or len(Modes) for Quit.
+	// then len(Modes) for Options and len(Modes)+1 for Quit.
 	MenuCursor int
-	menuLabels []string // mode names, then "Quit"
+	menuLabels []string // mode names, then "Options" and "Quit"
 	// Step is the index in Mode.Flow of the step being shown.
 	Step int
 
@@ -161,11 +169,11 @@ type Flow struct {
 // in the main menu. An empty roster or stage list goes straight to an error
 // screen instead of an unusable menu.
 func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader, modes []mode.Mode) *Flow {
-	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, Modes: modes}
+	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, Modes: modes, Settings: NewSettings()}
 	for _, m := range modes {
 		f.menuLabels = append(f.menuLabels, m.Name)
 	}
-	f.menuLabels = append(f.menuLabels, "Quit")
+	f.menuLabels = append(f.menuLabels, "Options", "Quit")
 	switch {
 	case len(chars) == 0:
 		f.fail("No characters found. Put character folders in the characters folder.")
@@ -177,17 +185,21 @@ func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader, modes []mode.Mode) *Fl
 	return f
 }
 
-// MainMenuItems are the main menu's labels: each mode's name, then Quit.
+// MainMenuItems are the main menu's labels: each mode's name, then Options and Quit.
 func (f *Flow) MainMenuItems() []string { return f.menuLabels }
 
 // enterMode starts the mode Modes[i] afresh, at its first step.
 func (f *Flow) enterMode(i int) {
 	m := f.Modes[i]
 	f.Mode, f.MenuCursor = m, i
-	f.roundOpts = withOption(RoundOptions, m.Rules.Rounds)
-	f.timeOpts = withOption(TimeOptions, m.Rules.TimeLimitSeconds)
-	f.RoundIdx = slices.Index(f.roundOpts, m.Rules.Rounds)
-	f.TimeIdx = slices.Index(f.timeOpts, m.Rules.TimeLimitSeconds)
+	rounds, timeLimit := m.Rules.Rounds, m.Rules.TimeLimitSeconds
+	if hasMatchSetup(m) {
+		rounds, timeLimit = f.Settings.Gameplay.Rounds, f.Settings.Gameplay.TimeLimitSeconds
+	}
+	f.roundOpts = withOption(RoundOptions, rounds)
+	f.timeOpts = withOption(TimeOptions, timeLimit)
+	f.RoundIdx = slices.Index(f.roundOpts, rounds)
+	f.TimeIdx = slices.Index(f.timeOpts, timeLimit)
 	f.Picks, f.StageNo, f.Player2CPU = [2]int{}, 0, false
 	f.Match, f.Paused = nil, false
 	if len(m.Flow) == 0 {
@@ -197,7 +209,12 @@ func (f *Flow) enterMode(i int) {
 	f.enter(0, false)
 }
 
-// toMenu shows the main menu, its cursor on the mode being played.
+// hasMatchSetup is whether m's flow has a matchSetup step, whose preselected
+// values are the gameplay settings; a mode without one keeps its rules.
+func hasMatchSetup(m mode.Mode) bool {
+	return slices.ContainsFunc(m.Flow, func(s mode.Step) bool { return s.Screen == mode.ScreenMatchSetup })
+}
+
 // ErrorReturnsToMenu is true when the error screen came from a mode the
 // player chose from the main menu: leaving it goes back there. Errors before
 // any mode (content missing) and in quick versus quit.
@@ -205,6 +222,7 @@ func (f *Flow) ErrorReturnsToMenu() bool {
 	return f.quick == nil && f.Mode.ID != ""
 }
 
+// toMenu shows the main menu, its cursor on the mode being played.
 func (f *Flow) toMenu() {
 	f.Match, f.Paused = nil, false
 	f.Screen = ScreenMainMenu
@@ -226,11 +244,14 @@ func (f *Flow) navMainMenu(n Nav) {
 	case NavDown:
 		f.MenuCursor = wrap(f.MenuCursor, 1, len(f.menuLabels))
 	case NavConfirm:
-		if f.MenuCursor == len(f.Modes) {
+		switch f.MenuCursor {
+		case len(f.Modes):
+			f.openOptions(false)
+		case len(f.Modes) + 1:
 			f.Quit = true
-			return
+		default:
+			f.enterMode(f.MenuCursor)
 		}
-		f.enterMode(f.MenuCursor)
 	case NavCancel:
 		f.Screen = ScreenTitle
 	}
@@ -289,6 +310,10 @@ func (f *Flow) Navigate(n Nav) {
 		f.navVersus(n)
 	case ScreenResult:
 		f.navResult(n)
+	case ScreenOptions:
+		f.navOptions(n)
+	case ScreenOptionsGameplay, ScreenOptionsAudio, ScreenOptionsVideo:
+		f.navConcern(n)
 	case ScreenError:
 		if n != NavCancel && n != NavConfirm {
 			return

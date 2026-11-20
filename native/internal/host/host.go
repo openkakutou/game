@@ -27,6 +27,19 @@ func ContentRoot(exePath string) string {
 	return dir
 }
 
+// ConfigWriter is the writer of the settings files (game.WriteFunc): it
+// stores name, a slash-separated name relative to the game folder root,
+// creating its folder.
+func ConfigWriter(root string) game.WriteFunc {
+	return func(name string, data []byte) error {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(p, data, 0o644)
+	}
+}
+
 // absDir is the reserved top-level directory under which Open serves the
 // whole disk, read-only: "@abs/<volume>/<rest>", where <volume> is the
 // drive letter on Windows ("C") and "-" on other systems (rest is then the

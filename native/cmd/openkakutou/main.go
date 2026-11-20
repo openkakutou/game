@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -52,14 +53,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	width, err := intFlag(cl.Flags, "-width", 960, 1)
-	if err != nil {
-		return err
-	}
-	height, err := intFlag(cl.Flags, "-height", 720, 1)
-	if err != nil {
-		return err
-	}
 	capture := cl.Flags["-capture"]
 
 	root := cl.Flags["-content"]
@@ -83,6 +76,17 @@ func run() error {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
 	}
 	fsys := host.Open(root)
+	warn := func(msg string) { fmt.Fprintln(os.Stderr, "openkakutou:", msg) }
+	settings := game.LoadSettings(fsys, game.SettingsPlatform(runtime.GOOS), host.ConfigWriter(root), warn)
+	// -width and -height override the saved window size for this run only.
+	width, err := intFlag(cl.Flags, "-width", settings.Video.WindowWidth, 1)
+	if err != nil {
+		return err
+	}
+	height, err := intFlag(cl.Flags, "-height", settings.Video.WindowHeight, 1)
+	if err != nil {
+		return err
+	}
 
 	// A missing folder is reported on the error screen, naming it.
 	var chars, stages []game.Entry
@@ -99,6 +103,7 @@ func run() error {
 	}
 	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), modes)
 	hud, lifebarNotices := game.SelectLifebar(fsys)
+	flow.Settings = settings
 	flow.Lifebar = hud
 	for _, n := range lifebarNotices {
 		fmt.Fprintln(os.Stderr, "openkakutou:", n)
@@ -119,6 +124,13 @@ func run() error {
 	}
 	defer win.Close()
 	fmt.Println("renderer:", win.Renderer())
+	applyVideo := func(w, h int) {
+		v := settings.Video
+		if err := win.ApplyVideo(v.Fullscreen, v.VSync, int32(w), int32(h)); err != nil {
+			warn(err.Error())
+		}
+	}
+	applyVideo(width, height)
 	renderer := gfx.NewRenderer(win)
 
 	var aud *audio.Player // nil plays nothing (-nosound)
@@ -128,6 +140,8 @@ func run() error {
 	}
 	defer aud.Close()
 	fmt.Println("audio:", aud.Driver())
+	aud.SetVolumes(settings.Audio)
+	audioGen, videoGen := settings.AudioGen, settings.VideoGen
 
 	pads := gfx.NewGamepads()
 	defer pads.Close()
@@ -141,6 +155,14 @@ func run() error {
 		gfx.Held(&held, pads)
 		for i := 0; i < ticks; i++ {
 			flow.Tick(held)
+		}
+		if settings.AudioGen != audioGen {
+			audioGen = settings.AudioGen
+			aud.SetVolumes(settings.Audio)
+		}
+		if settings.VideoGen != videoGen {
+			videoGen = settings.VideoGen
+			applyVideo(settings.Video.WindowWidth, settings.Video.WindowHeight)
 		}
 		aud.Update(flow)
 		win.BeginFrame()

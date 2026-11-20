@@ -5,11 +5,13 @@ type PauseItem int
 
 // Pause menu entries, named as Ikemen GO's default [Pause Menu]
 // (resources/defaultMotif.ini: menu.itemname.back = Continue,
-// characterchange = Character Change, exit = Exit). Restart is OpenKakutou's.
+// characterchange = Character Change, exit = Exit). Restart and Options are
+// OpenKakutou's.
 const (
 	PauseContinue PauseItem = iota
 	PauseRestart
 	PauseCharacterChange
+	PauseOptions
 	PauseExit
 )
 
@@ -22,13 +24,15 @@ func (p PauseItem) Label() string {
 		return "Restart"
 	case PauseCharacterChange:
 		return "Character Change"
+	case PauseOptions:
+		return "Options"
 	}
 	return "Exit"
 }
 
 var (
-	pauseItems      = []PauseItem{PauseContinue, PauseRestart, PauseCharacterChange, PauseExit}
-	quickPauseItems = []PauseItem{PauseContinue, PauseRestart, PauseExit}
+	pauseItems      = []PauseItem{PauseContinue, PauseRestart, PauseCharacterChange, PauseOptions, PauseExit}
+	quickPauseItems = []PauseItem{PauseContinue, PauseRestart, PauseOptions, PauseExit}
 )
 
 // PauseItems are the entries the pause menu offers: a quick versus match has
@@ -57,6 +61,10 @@ func (f *Flow) navPause(n Nav) {
 }
 
 func (f *Flow) choosePause(item PauseItem) {
+	if item == PauseOptions {
+		f.openOptions(true) // the match stays paused underneath
+		return
+	}
 	f.Paused = false
 	switch item {
 	case PauseRestart:

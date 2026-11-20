@@ -50,7 +50,7 @@ type Window struct {
 }
 
 // NewWindow opens a window (hidden if headless is true is not needed:
-// Xvfb provides a display) with an OpenGL 2.1 context and vsync on.
+// Xvfb provides a display) with an OpenGL 2.1 context; ApplyVideo sets vsync and fullscreen.
 func NewWindow(title string, w, h int32) (*Window, error) {
 	if err := sdl.Init(sdl.INIT_VIDEO); err != nil {
 		return nil, fmt.Errorf("initializing SDL: %w", err)
@@ -72,12 +72,37 @@ func NewWindow(title string, w, h int32) (*Window, error) {
 	if err := gl.Init(); err != nil {
 		return nil, fmt.Errorf("loading OpenGL: %w", err)
 	}
-	sdl.GLSetSwapInterval(1)
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.EnableClientState(gl.VERTEX_ARRAY)
 	gl.EnableClientState(gl.COLOR_ARRAY)
 	return &Window{win: win, ctx: ctx, W: w, H: h, verts: make([]float32, 0, 6*6*4096)}, nil
+}
+
+// ApplyVideo applies the video settings: fullscreen (the desktop's own
+// resolution), vsync, and, when windowed, the window size.
+func (w *Window) ApplyVideo(fullscreen, vsync bool, width, height int32) error {
+	var flags uint32
+	if fullscreen {
+		flags = sdl.WINDOW_FULLSCREEN_DESKTOP
+	}
+	// Only what differs is applied: a needless change re-maps the window.
+	if w.win.GetFlags()&sdl.WINDOW_FULLSCREEN_DESKTOP != flags {
+		if err := w.win.SetFullscreen(flags); err != nil {
+			return fmt.Errorf("changing fullscreen: %w", err)
+		}
+	}
+	if curW, curH := w.win.GetSize(); !fullscreen && (curW != width || curH != height) {
+		w.win.SetSize(width, height)
+	}
+	interval := 0
+	if vsync {
+		interval = 1
+	}
+	if err := sdl.GLSetSwapInterval(interval); err != nil {
+		return fmt.Errorf("changing vsync: %w", err)
+	}
+	return nil
 }
 
 // Close releases the window and SDL.

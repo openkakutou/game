@@ -82,11 +82,12 @@ func WAVBytes(s character.Sound) []byte {
 }
 
 // Music reports who owns the stage music: the current match while the match
-// or result screen is shown, else nil. path is the stage's music file (relative
+// or result screen is shown, or Options is open over the paused match, else nil. path is the stage's music file (relative
 // paths resolved beside the stage .def, then from the content root; "" when rejected), or "" when there is none
 // or no owner.
 func (f *Flow) Music() (path string, owner *Match) {
-	if (f.Screen != ScreenMatch && f.Screen != ScreenResult) || f.Match == nil {
+	overPausedMatch := f.inOptions() && f.options.fromPause
+	if (f.Screen != ScreenMatch && f.Screen != ScreenResult && !overPausedMatch) || f.Match == nil {
 		return "", nil
 	}
 	if f.Stage == nil || f.Stage.MusicFile == "" {
