@@ -13,6 +13,7 @@ func pausedMatch(t *testing.T) *Flow {
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
+	f.Navigate(NavConfirm)
 	if f.Screen != ScreenMatch {
 		t.Fatalf("screen = %v (%s)", f.Screen, f.Message)
 	}

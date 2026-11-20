@@ -135,3 +135,13 @@ func TestParse_JSONCTrailingCommas_AreAccepted(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestVersus_EmbeddedModeParses(t *testing.T) {
+	m, err := Versus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.ID != "versus" || len(m.Flow) != 6 || m.Flow[3].Screen != ScreenVersus {
+		t.Errorf("mode = %+v", m)
+	}
+}

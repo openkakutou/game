@@ -204,8 +204,7 @@ func quickFlow(t *testing.T) *Flow {
 	t.Helper()
 	fsys := os.DirFS(content)
 	stages, _ := DiscoverStages(fsys, "stages")
-	f := NewFlow(fsys, nil, stages, DefaultLoader(fsys))
-	return f
+	return NewFlow(fsys, nil, stages, DefaultLoader(fsys), versusMode(t))
 }
 
 func TestStartQuickVersus_StartsTheMatchWithoutMenus(t *testing.T) {

@@ -65,6 +65,8 @@ Title, main menu, options, pause and move list belong to the game itself, not to
 | `opponents.count` | integer ≥ 1 | Ladder length. Required for `ladder`, refused otherwise. |
 | `onWin`, `onLose` | `results`, `nextOpponent`, `continue` or `gameOver` | What follows a won or a lost match. |
 
+The native game does not run the `continue` and `victory` screens, nor the outcomes other than `results`, yet: they show an error screen naming them.
+
 ## Errors
 
 A mode that breaks a rule is refused with an error naming the file, the field as a JSON path, and the reason, e.g. `modes/arcade.jsonc: rules.rounds: must be odd (best of N)`. The WebAssembly build returns the same three parts as `{"ok": false, "error": {"file", "field", "reason"}}`.

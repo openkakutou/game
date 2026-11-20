@@ -74,6 +74,8 @@ func (r *Renderer) Draw(f *game.Flow) {
 		r.drawList(f, "Select a stage", "", names(f.Stages), f.Cursor)
 	case game.ScreenSetup:
 		r.drawSetup(f)
+	case game.ScreenVersus:
+		r.drawVersus(f)
 	case game.ScreenMatch:
 		r.drawMatch(f)
 		if f.Paused {
@@ -166,8 +168,13 @@ func (r *Renderer) drawSetup(f *game.Flow) {
 		p2 = "CPU"
 	}
 	rows := []string{fmt.Sprintf("Rounds   < best of %d >", s.Rounds), "Time     < " + time + " >", "Player 2 < " + p2 + " >", "Start match"}
+	shown := 0
 	for i, text := range rows {
-		y := float32(80 + i*24)
+		if i == game.SetupRowPlayer2 && !f.HasPlayer2Row() {
+			continue
+		}
+		y := float32(80 + shown*24)
+		shown++
 		col := grey
 		if i == f.SetupRow {
 			w.Rect(50, y-5, 220, 18, panel)
@@ -176,6 +183,15 @@ func (r *Renderer) drawSetup(f *game.Flow) {
 		w.Text(60, y, 1.5, col, text)
 	}
 	w.TextCentered(222, 1, grey, "Up/down row  Left/right change  Enter")
+}
+
+// drawVersus shows both picked characters, P1 above P2.
+func (r *Renderer) drawVersus(f *game.Flow) {
+	w := r.win
+	w.TextCentered(70, 2, blue, f.Chars[f.Picks[0]].Name)
+	w.TextCentered(110, 3, white, "VS")
+	w.TextCentered(150, 2, red, f.Chars[f.Picks[1]].Name)
+	w.TextCentered(222, 1, grey, "Enter continue  Esc back")
 }
 
 func (r *Renderer) drawResult(f *game.Flow) {

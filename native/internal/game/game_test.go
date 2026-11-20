@@ -8,6 +8,7 @@ import (
 	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/engine/v2/match"
 	"github.com/openkakutou/engine/v2/round"
+	"github.com/openkakutou/game/native/internal/mode"
 	"github.com/openkakutou/stage"
 )
 
@@ -251,8 +252,16 @@ func newTestFlow(t *testing.T) *Flow {
 	fsys := os.DirFS(content)
 	chars, _ := DiscoverCharacters(fsys, "chars")
 	stages, _ := DiscoverStages(fsys, "stages")
-	f := NewFlow(fsys, chars, stages, DefaultLoader(fsys))
-	return f
+	return NewFlow(fsys, chars, stages, DefaultLoader(fsys), versusMode(t))
+}
+
+func versusMode(t *testing.T) mode.Mode {
+	t.Helper()
+	m, err := mode.Versus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m
 }
 
 func TestFlow_FullPathSelectionToResultAndRematch(t *testing.T) {
@@ -279,6 +288,7 @@ func TestFlow_FullPathSelectionToResultAndRematch(t *testing.T) {
 	}
 	f.SetupRow = SetupRowStart
 	f.Navigate(NavConfirm)
+	f.Navigate(NavConfirm) // VS screen
 	if f.Screen != ScreenMatch || f.Match == nil {
 		t.Fatalf("screen=%v msg=%q", f.Screen, f.Message)
 	}
@@ -330,11 +340,11 @@ func TestFlow_MirrorMatchAllowed(t *testing.T) {
 }
 
 func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
-	f := NewFlow(os.DirFS("."), nil, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")))
+	f := NewFlow(os.DirFS("."), nil, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), versusMode(t))
 	if f.Screen != ScreenError || f.Message == "" {
 		t.Errorf("no characters: screen=%v", f.Screen)
 	}
-	f = NewFlow(os.DirFS("."), []Entry{{"c", "c.def"}}, nil, DefaultLoader(os.DirFS(".")))
+	f = NewFlow(os.DirFS("."), []Entry{{"c", "c.def"}}, nil, DefaultLoader(os.DirFS(".")), versusMode(t))
 	if f.Screen != ScreenError {
 		t.Errorf("no stages: screen=%v", f.Screen)
 	}
@@ -345,12 +355,13 @@ func TestFlow_EmptyRosterOrStagesShowsError(t *testing.T) {
 }
 
 func TestFlow_UnloadableCharacterShowsErrorNamingIt(t *testing.T) {
-	f := NewFlow(os.DirFS("."), []Entry{{"ghost", "ghost/ghost.def"}}, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")))
+	f := NewFlow(os.DirFS("."), []Entry{{"ghost", "ghost/ghost.def"}}, []Entry{{"s", "s.def"}}, DefaultLoader(os.DirFS(".")), versusMode(t))
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.SetupRow = SetupRowStart
 	f.Navigate(NavConfirm)
+	f.Navigate(NavConfirm) // VS screen
 	if f.Screen != ScreenError || !contains(f.Message, "ghost") {
 		t.Errorf("screen=%v message=%q", f.Screen, f.Message)
 	}
@@ -406,6 +417,7 @@ func TestFlow_CPUDrivesPlayer2IgnoringItsKeysAndSurvivesRematch(t *testing.T) {
 	f.Navigate(NavRight)
 	f.SetupRow = SetupRowStart
 	f.Navigate(NavConfirm)
+	f.Navigate(NavConfirm) // VS screen
 	if f.Screen != ScreenMatch || f.Match == nil {
 		t.Fatalf("screen=%v msg=%q", f.Screen, f.Message)
 	}
@@ -432,6 +444,7 @@ func TestFlow_HumanMatchLeavesPlayer2InputUntouched(t *testing.T) {
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
+	f.Navigate(NavConfirm)
 	if f.Screen != ScreenMatch || f.cpus[1] != nil {
 		t.Fatalf("screen=%v cpu=%v, want a human-vs-human match", f.Screen, f.cpus[1])
 	}
@@ -440,6 +453,7 @@ func TestFlow_HumanMatchLeavesPlayer2InputUntouched(t *testing.T) {
 func TestFlow_CPUDecisionReplacesPlayer2Keys(t *testing.T) {
 	f := newTestFlow(t)
 	f.Player2CPU = true
+	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)

@@ -12,6 +12,7 @@ import (
 	"github.com/openkakutou/character"
 	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/game/native/internal/game"
+	"github.com/openkakutou/game/native/internal/mode"
 	"github.com/openkakutou/stage"
 	"github.com/veandco/go-sdl2/mix"
 )
@@ -48,13 +49,18 @@ func matchFlow(t *testing.T) *game.Flow {
 	fsys := os.DirFS(content)
 	chars, _ := game.DiscoverCharacters(fsys, "chars")
 	stages, _ := game.DiscoverStages(fsys, "stages")
-	f := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys))
+	versus, err := mode.Versus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys), versus)
 	f.Navigate(game.NavConfirm)
 	f.Navigate(game.NavRight)
 	f.Navigate(game.NavConfirm)
 	f.Navigate(game.NavConfirm)
 	f.SetupRow = game.SetupRowStart
 	f.Navigate(game.NavConfirm)
+	f.Navigate(game.NavConfirm) // VS screen
 	if f.Screen != game.ScreenMatch {
 		t.Fatalf("screen = %v, msg %q", f.Screen, f.Message)
 	}

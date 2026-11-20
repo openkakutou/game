@@ -17,7 +17,8 @@ shot 1-select-p1
 key Return; shot 2-select-p2
 key Right Return; shot 3-stage
 key Return; shot 4-setup
-key Return                       # start match (cursor is on "Start")
+key Return; shot 4b-versus       # start (cursor is on "Start"): the VS screen
+key Return                       # skip the VS screen: the match
 sleep 2; shot 5-match
 xdotool keydown f; sleep 1; xdotool keyup f; shot 6-match-attack
 key Escape; sleep 0.5; shot 6b-pause      # pause menu over the frozen match
@@ -45,6 +46,7 @@ sleep 2
 key Return; key Right Return; key Return   # P1, P2, stage
 key Up Right; shot 9-setup-cpu             # Player 2 row -> CPU
 key Down Return                            # Start
+key Return                                 # skip the VS screen
 sleep 3; shot 10-match-cpu
 kill -0 $pid
 kill $pid; wait $pid 2>/dev/null || true

@@ -160,6 +160,7 @@ func toMatchWith(t *testing.T, l Loader) *Flow {
 	f.Navigate(NavConfirm)
 	f.SetupRow = SetupRowStart
 	f.Navigate(NavConfirm)
+	f.Navigate(NavConfirm) // VS screen
 	if f.Screen != ScreenMatch {
 		t.Fatalf("screen=%v msg=%q", f.Screen, f.Message)
 	}

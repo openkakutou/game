@@ -19,6 +19,7 @@ import (
 	"github.com/openkakutou/game/native/internal/game"
 	"github.com/openkakutou/game/native/internal/gfx"
 	"github.com/openkakutou/game/native/internal/host"
+	"github.com/openkakutou/game/native/internal/mode"
 )
 
 func main() {
@@ -93,7 +94,8 @@ func run() error {
 		stages, stageErr = game.DiscoverStages(fsys, stagesDir)
 		folderErr = errors.Join(charErr, stageErr)
 	}
-	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)))
+	versus, modeErr := mode.Versus() // the zero mode on error: NewFlow shows an error screen, replaced below
+	flow := game.NewFlow(fsys, chars, stages, game.DefaultLoader(fsys, game.CommonFolder(fsys)), versus)
 	hud, lifebarNotices := game.SelectLifebar(fsys)
 	flow.Lifebar = hud
 	for _, n := range lifebarNotices {
@@ -104,6 +106,9 @@ func run() error {
 		for _, n := range flow.StartQuickVersus(quick) {
 			fmt.Fprintln(os.Stderr, "openkakutou:", n)
 		}
+	case modeErr != nil:
+		flow.Screen = game.ScreenError
+		flow.Message = fmt.Sprintf("Cannot read the game mode: %v", modeErr)
 	case folderErr != nil:
 		flow.Screen = game.ScreenError
 		flow.Message = fmt.Sprintf("Cannot read the content: %v. Use -content to point at the content folder.", folderErr)

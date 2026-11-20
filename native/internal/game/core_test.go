@@ -78,13 +78,14 @@ func scriptedMatch(t *testing.T, fsys fs.FS, ticks int) *Flow {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := NewFlow(fsys, chars, stages, DefaultLoader(fsys))
+	f := NewFlow(fsys, chars, stages, DefaultLoader(fsys), versusMode(t))
 	f.Navigate(NavConfirm)
 	f.Navigate(NavRight)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.SetupRow = SetupRowStart
 	f.Navigate(NavConfirm)
+	f.Navigate(NavConfirm) // VS screen
 	if f.Screen != ScreenMatch {
 		t.Fatalf("screen=%v msg=%q", f.Screen, f.Message)
 	}

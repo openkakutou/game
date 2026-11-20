@@ -4,20 +4,24 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
 
 	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/engine/v2/match"
+	"github.com/openkakutou/game/native/internal/mode"
 	"github.com/openkakutou/stage"
 )
 
 // Screen identifies which screen the game is showing.
 type Screen int
 
-// The game's screens, in flow order. ScreenError is shown when content cannot be loaded.
+// The game's screens, in flow order. ScreenError is shown when content cannot
+// be loaded or the mode asks for something not supported yet.
 const (
-	ScreenSelect Screen = iota // each player picks a character
+	ScreenSelect Screen = iota // the sides of a characterSelect step pick a character
 	ScreenStage                // pick a stage
 	ScreenSetup                // rounds and time limit
+	ScreenVersus               // both picked characters, before the match
 	ScreenMatch
 	ScreenResult
 	ScreenError
@@ -44,6 +48,10 @@ var (
 	RoundOptions = []int{1, 3, 5}
 	TimeOptions  = []int{0, 30, 60, 99} // seconds; 0 = no limit
 )
+
+// VersusTicks is how long the VS screen shows before the match starts:
+// 2 seconds.
+const VersusTicks = 2 * TickRateHz
 
 // RoundEndTicks is how long a finished round stays on screen before the next
 // round starts (or the result screen appears): 2 seconds.
@@ -75,19 +83,28 @@ func DefaultLoader(fsys fs.FS, stateDirs ...string) Loader {
 	}
 }
 
-// Flow is the screen state machine: select -> stage -> setup -> match -> result.
+// Flow is the screen state machine: it walks the steps of its mode's flow.
 type Flow struct {
 	Chars, Stages []Entry
 	Loader        Loader
+	Mode          mode.Mode
+	// Step is the index in Mode.Flow of the step being shown.
+	Step int
 
 	Screen Screen
-	// Picking is which player is choosing a character (0 or 1).
+	// Picking is which player is choosing a character (0 or 1); pickPos is
+	// its position in the characterSelect step's sides.
 	Picking int
+	pickPos int
 	Cursor  int
 	Picks   [2]int // chosen roster indexes
 	StageNo int
 
+	// RoundIdx and TimeIdx index roundOpts and timeOpts: RoundOptions and
+	// TimeOptions plus the rules' own value when they lack it.
 	RoundIdx, TimeIdx int
+	roundOpts         []int
+	timeOpts          []int
 	SetupRow          int // a SetupRow* constant
 	Player2CPU        bool
 
@@ -109,6 +126,8 @@ type Flow struct {
 	// musicFrom/musicPath memoize Music's resolved path (see Music).
 	musicFrom [2]string
 	musicPath string
+	// versusTicks counts down while the VS screen shows.
+	versusTicks int
 	// RoundOverTicks counts down while a finished round is shown.
 	RoundOverTicks int
 	// ResultWinner is the match winner shown on the result screen.
@@ -128,30 +147,60 @@ type Flow struct {
 	Quit bool
 }
 
-// NewFlow starts at character selection over the content fsys. An empty
-// roster or stage list goes straight to an error screen instead of an
-// unusable menu.
-func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader) *Flow {
-	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, RoundIdx: 1, TimeIdx: 2}
+// NewFlow starts at the first step of the mode m over the content fsys. An
+// empty roster or stage list, or a mode without steps, goes straight to an
+// error screen instead of an unusable menu.
+func NewFlow(fsys fs.FS, chars, stages []Entry, l Loader, m mode.Mode) *Flow {
+	f := &Flow{FS: fsys, Chars: chars, Stages: stages, Loader: l, Mode: m}
+	f.roundOpts = withOption(RoundOptions, m.Rules.Rounds)
+	f.timeOpts = withOption(TimeOptions, m.Rules.TimeLimitSeconds)
+	f.RoundIdx = slices.Index(f.roundOpts, m.Rules.Rounds)
+	f.TimeIdx = slices.Index(f.timeOpts, m.Rules.TimeLimitSeconds)
 	switch {
 	case len(chars) == 0:
 		f.fail("No characters found. Put character folders in the characters folder.")
 	case len(stages) == 0:
 		f.fail("No stages found. Put stage .def files in the stages folder.")
+	case len(m.Flow) == 0:
+		f.fail("The game mode has no screens.")
+	default:
+		f.enter(0, false)
 	}
 	return f
+}
+
+// withOption returns options, with value added in order when it lacks it.
+func withOption(options []int, value int) []int {
+	if slices.Contains(options, value) {
+		return options
+	}
+	out := append(slices.Clone(options), value)
+	slices.Sort(out)
+	return out
 }
 
 func (f *Flow) fail(msg string) {
 	f.Screen, f.Message = ScreenError, msg
 }
 
-// Setup returns the currently chosen match setup.
+// HasPlayer2Row is whether the setup screen lets the player choose who plays
+// side 2.
+// shortcut: side 1 is human unless its control is cpu, a humanOrCpu side 1
+// gets no row; upgrade when a mode needs it.
+func (f *Flow) HasPlayer2Row() bool {
+	return f.Mode.Rules.Sides[1].Control == mode.ControlHumanOrCPU
+}
+
+// Setup returns the currently chosen match setup: the setup screen's choices,
+// preselected to the rules (which apply as written when the flow has no
+// matchSetup step). A cpu side is always CPU-driven, a human side never.
 func (f *Flow) Setup() Setup {
 	if f.quick != nil {
 		return *f.quick
 	}
-	return Setup{Rounds: RoundOptions[f.RoundIdx], TimeLimitSeconds: TimeOptions[f.TimeIdx], CPU: [2]bool{false, f.Player2CPU}}
+	sides := f.Mode.Rules.Sides
+	cpu := [2]bool{sides[0].Control == mode.ControlCPU, sides[1].Control == mode.ControlCPU || f.Player2CPU}
+	return Setup{Rounds: f.roundOpts[f.RoundIdx], TimeLimitSeconds: f.timeOpts[f.TimeIdx], CPU: cpu}
 }
 
 func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
@@ -165,6 +214,8 @@ func (f *Flow) Navigate(n Nav) {
 		f.navStage(n)
 	case ScreenSetup:
 		f.navSetup(n)
+	case ScreenVersus:
+		f.navVersus(n)
 	case ScreenResult:
 		f.navResult(n)
 	case ScreenError:
@@ -187,7 +238,78 @@ func (f *Flow) navMatch(n Nav) {
 	}
 }
 
+// sideIndex is the player index of a characterSelect side name ("p1", "p2").
+func sideIndex(side string) int {
+	if side == "p2" {
+		return 1
+	}
+	return 0
+}
+
+// enter shows step i. returning is set when the player comes back to it with
+// cancel, so a characterSelect starts on its last picker instead of its first.
+func (f *Flow) enter(i int, returning bool) {
+	f.Step = i
+	step := f.Mode.Flow[i]
+	switch step.Screen {
+	case mode.ScreenCharacterSelect:
+		if len(step.Sides) == 0 {
+			f.fail("The characterSelect screen lists no sides.")
+			return
+		}
+		pos := 0
+		if returning {
+			pos = len(step.Sides) - 1
+		}
+		f.Screen = ScreenSelect
+		f.setPicker(pos)
+		f.Cursor = f.Picks[f.Picking]
+	case mode.ScreenStageSelect:
+		f.Screen, f.Cursor = ScreenStage, f.StageNo
+	case mode.ScreenMatchSetup:
+		f.Screen, f.SetupRow = ScreenSetup, SetupRowStart
+	case mode.ScreenVersus:
+		f.Screen, f.versusTicks = ScreenVersus, VersusTicks
+	case mode.ScreenMatch:
+		f.startMatch()
+	case mode.ScreenResults:
+		f.Screen = ScreenResult
+	default:
+		f.fail(fmt.Sprintf("The %s screen is not supported yet.", step.Screen))
+	}
+}
+
+// setPicker makes the pos-th side of the current characterSelect step pick.
+// A side no characterSelect step lists keeps index 0, the first roster entry.
+func (f *Flow) setPicker(pos int) {
+	f.pickPos = pos
+	f.Picking = sideIndex(f.Mode.Flow[f.Step].Sides[pos])
+}
+
+// next shows the step after the current one.
+func (f *Flow) next() {
+	if f.Step+1 >= len(f.Mode.Flow) {
+		f.fail("The game mode has no screen after this one.")
+		return
+	}
+	f.enter(f.Step+1, false)
+}
+
+// back shows the previous interactive step, never the VS screen nor the
+// match; cancelling the first one quits.
+func (f *Flow) back() {
+	for i := f.Step - 1; i >= 0; i-- {
+		switch f.Mode.Flow[i].Screen {
+		case mode.ScreenCharacterSelect, mode.ScreenStageSelect, mode.ScreenMatchSetup:
+			f.enter(i, true)
+			return
+		}
+	}
+	f.Quit = true
+}
+
 func (f *Flow) navSelect(n Nav) {
+	sides := f.Mode.Flow[f.Step].Sides
 	switch n {
 	case NavUp, NavLeft:
 		f.Cursor = wrap(f.Cursor, -1, len(f.Chars))
@@ -195,18 +317,18 @@ func (f *Flow) navSelect(n Nav) {
 		f.Cursor = wrap(f.Cursor, 1, len(f.Chars))
 	case NavConfirm:
 		f.Picks[f.Picking] = f.Cursor
-		if f.Picking == 0 {
-			f.Picking = 1
+		if f.pickPos < len(sides)-1 {
+			f.setPicker(f.pickPos + 1)
 			return
 		}
-		f.Screen, f.Cursor = ScreenStage, f.StageNo
+		f.next()
 	case NavCancel:
-		if f.Picking == 1 {
-			f.Picking = 0
-			f.Cursor = f.Picks[0]
+		if f.pickPos > 0 {
+			f.setPicker(f.pickPos - 1)
+			f.Cursor = f.Picks[f.Picking]
 			return
 		}
-		f.Quit = true
+		f.back()
 	}
 }
 
@@ -217,18 +339,28 @@ func (f *Flow) navStage(n Nav) {
 	case NavDown, NavRight:
 		f.Cursor = wrap(f.Cursor, 1, len(f.Stages))
 	case NavConfirm:
-		f.StageNo, f.Screen, f.SetupRow = f.Cursor, ScreenSetup, SetupRowStart
+		f.StageNo = f.Cursor
+		f.next()
 	case NavCancel:
-		f.Screen, f.Picking, f.Cursor = ScreenSelect, 1, f.Picks[1]
+		f.back()
+	}
+}
+
+// moveRow moves the setup cursor, skipping the player 2 row when it is not
+// offered.
+func (f *Flow) moveRow(delta int) {
+	f.SetupRow = wrap(f.SetupRow, delta, setupRowCount)
+	if f.SetupRow == SetupRowPlayer2 && !f.HasPlayer2Row() {
+		f.SetupRow = wrap(f.SetupRow, delta, setupRowCount)
 	}
 }
 
 func (f *Flow) navSetup(n Nav) {
 	switch n {
 	case NavUp:
-		f.SetupRow = wrap(f.SetupRow, -1, setupRowCount)
+		f.moveRow(-1)
 	case NavDown:
-		f.SetupRow = wrap(f.SetupRow, 1, setupRowCount)
+		f.moveRow(1)
 	case NavLeft, NavRight:
 		d := 1
 		if n == NavLeft {
@@ -236,20 +368,29 @@ func (f *Flow) navSetup(n Nav) {
 		}
 		switch f.SetupRow {
 		case SetupRowRounds:
-			f.RoundIdx = wrap(f.RoundIdx, d, len(RoundOptions))
+			f.RoundIdx = wrap(f.RoundIdx, d, len(f.roundOpts))
 		case SetupRowTime:
-			f.TimeIdx = wrap(f.TimeIdx, d, len(TimeOptions))
+			f.TimeIdx = wrap(f.TimeIdx, d, len(f.timeOpts))
 		case SetupRowPlayer2:
 			f.Player2CPU = !f.Player2CPU
 		}
 	case NavConfirm:
 		if f.SetupRow == SetupRowStart {
-			f.startMatch()
+			f.next()
 		} else {
-			f.SetupRow = wrap(f.SetupRow, 1, setupRowCount)
+			f.moveRow(1)
 		}
 	case NavCancel:
-		f.Screen, f.Cursor = ScreenStage, f.StageNo
+		f.back()
+	}
+}
+
+func (f *Flow) navVersus(n Nav) {
+	switch n {
+	case NavConfirm:
+		f.next()
+	case NavCancel:
+		f.back()
 	}
 }
 
@@ -262,9 +403,38 @@ func (f *Flow) navResult(n Nav) {
 	}
 }
 
+// toSelect goes back to the flow's first characterSelect step, P1 picking.
+// shortcut: a flow without one quits, upgrade when a mode needs another way
+// to change characters.
 func (f *Flow) toSelect() {
-	f.Match, f.Screen, f.Picking, f.Cursor = nil, ScreenSelect, 0, f.Picks[0]
-	f.Paused = false
+	f.Match, f.Paused = nil, false
+	i := slices.IndexFunc(f.Mode.Flow, func(s mode.Step) bool { return s.Screen == mode.ScreenCharacterSelect })
+	if i < 0 {
+		f.Quit = true
+		return
+	}
+	f.enter(i, false)
+}
+
+// finishMatch follows the rules' outcome of the match that just ended:
+// onWin when player 1 won, onLose otherwise (a match always has a winner;
+// player 2 winning is player 1 losing). Only results is supported yet.
+func (f *Flow) finishMatch() {
+	f.ResultWinner = f.Match.Winner
+	outcome := f.Mode.Rules.OnLose
+	if f.Match.Winner == match.SideP1 {
+		outcome = f.Mode.Rules.OnWin
+	}
+	if outcome != mode.OutcomeResults {
+		f.fail(fmt.Sprintf("%s is not supported yet.", outcome))
+		return
+	}
+	i := slices.IndexFunc(f.Mode.Flow, func(s mode.Step) bool { return s.Screen == mode.ScreenResults })
+	if i < 0 {
+		f.fail("The game mode ends on results but has no results screen.")
+		return
+	}
+	f.enter(i, false)
 }
 
 // startMatch loads both characters and the stage; any failure lands on the
@@ -351,8 +521,16 @@ func (f *Flow) StartQuickVersus(q QuickVersus) (notices []string) {
 }
 
 // Tick advances the match screen by one simulation tick (60 per second) with
-// both players' held inputs. It does nothing on other screens.
+// both players' held inputs, and counts down the VS screen. It does nothing on
+// other screens.
 func (f *Flow) Tick(in [2]input.TickInput) {
+	if f.Screen == ScreenVersus {
+		f.versusTicks--
+		if f.versusTicks <= 0 {
+			f.next()
+		}
+		return
+	}
 	if f.Screen != ScreenMatch || f.Match == nil || f.Paused {
 		return
 	}
@@ -366,7 +544,7 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 			return
 		}
 		if f.Match.Over {
-			f.ResultWinner, f.Screen = f.Match.Winner, ScreenResult
+			f.finishMatch()
 			return
 		}
 		if err := f.Match.NextRound(); err != nil {
