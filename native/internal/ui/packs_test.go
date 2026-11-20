@@ -158,3 +158,40 @@ func TestArrange_SortsTheRostersByThePacksRulesAndKeepsThePicksOnTheirEntries(t 
 		t.Errorf("stages = %+v StageNo = %d, want Arena first and StageNo 1 (still Zed)", f.Stages, f.StageNo)
 	}
 }
+
+func TestPacks_CaseVariantFoldersAreEachListedAndLoadedAsThemselves(t *testing.T) {
+	g := fstest.MapFS{}
+	addPack(t, g, "Alt", map[string]string{"title": redBackground})
+	addPack(t, g, "alt", nil)
+	names, problems := ui.DiscoverPacks(g)
+	if got := strings.Join(names, ","); got != "Alt,alt,default" || len(problems) != 0 {
+		t.Errorf("names = %s problems = %q, want Alt,alt,default and none", got, problems)
+	}
+	upper, _ := ui.LoadPack(g, "Alt")
+	lower, _ := ui.LoadPack(g, "alt")
+	if upper.Name() != "Alt" || lower.Name() != "alt" {
+		t.Fatalf("names = %q and %q, want Alt and alt", upper.Name(), lower.Name())
+	}
+	if len(rectOps(draw(ui.NewLayout(upper), menuState([]string{"V"}, 0)), red)) != 1 {
+		t.Error("Alt did not load its own red background")
+	}
+	if len(rectOps(draw(ui.NewLayout(lower), menuState([]string{"V"}, 0)), red)) != 0 {
+		t.Error("alt loaded Alt's files")
+	}
+}
+
+func TestPacks_OfTwoCaseVariantFoldersOnlyTheValidOneIsListed(t *testing.T) {
+	g := fstest.MapFS{"screenpacks/alt/screenpack.json": {Data: []byte(`{}`)}}
+	addPack(t, g, "Alt", nil)
+	names, problems := ui.DiscoverPacks(g)
+	if got := strings.Join(names, ","); got != "Alt,default" {
+		t.Errorf("names = %s, want Alt,default", got)
+	}
+	if len(problems) != 1 || !strings.Contains(problems[0], "screenpacks/alt ") {
+		t.Errorf("problems = %q, want one for screenpacks/alt", problems)
+	}
+	pack, notices := ui.LoadPack(g, "Alt")
+	if pack.Name() != "Alt" || len(notices) != 0 {
+		t.Errorf("LoadPack(Alt) = %q %q", pack.Name(), notices)
+	}
+}

@@ -363,14 +363,24 @@ func TestSettings_SavingAppearanceKeepsUnknownKeys(t *testing.T) {
 	}
 }
 
-func TestSettings_NoteAppearanceShowsTheFallbacksOnTheOptionsScreenAndStderr(t *testing.T) {
+func TestSettings_AppearanceNoticeIsRebuiltFromTheScreenpackAndLifebarPartsAndClearedWhenBothAreEmpty(t *testing.T) {
 	var warned []string
 	s := LoadSettings(fstest.MapFS{}, "linux", nil, func(m string) { warned = append(warned, m) })
-	s.NoteAppearance([]string{"screenpack \"gone\" not found, using \"default\"", "lifebar \"x\" not found: \"default\" used"})
-	if n := s.Notices(); len(n) != 1 || n[0] != "screenpack \"gone\" not found, using \"default\"; lifebar \"x\" not found: \"default\" used" {
-		t.Errorf("notices = %q", n)
+	s.NoteScreenpack([]string{"screenpack \"gone\" not found, using \"default\"\ndetail"})
+	s.NoteLifebar([]string{"lifebar \"x\" not found: \"default\" used"})
+	want := "screenpack \"gone\" not found, using \"default\"; lifebar \"x\" not found: \"default\" used"
+	if n := s.Notices(); len(n) != 1 || n[0] != want {
+		t.Errorf("notices = %q, want [%s]", n, want)
 	}
 	if len(warned) != 2 {
 		t.Errorf("warnings = %q, want one per fallback", warned)
+	}
+	s.NoteLifebar(nil)
+	if n := s.Notices(); len(n) != 1 || n[0] != "screenpack \"gone\" not found, using \"default\"" {
+		t.Errorf("after the lifebar notice went: %q, want the screenpack one alone", n)
+	}
+	s.NoteScreenpack(nil)
+	if len(s.Notices()) != 0 {
+		t.Errorf("notices = %q, want none", s.Notices())
 	}
 }

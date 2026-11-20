@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -172,5 +173,66 @@ func TestSortRosters_OrdersBothListsAndKeepsThePicksOnTheirEntries(t *testing.T)
 	}
 	if f.Picks != [2]int{2, 0} || f.StageNo != 1 {
 		t.Errorf("picks = %v stage = %d, want [2 0] and 1", f.Picks, f.StageNo)
+	}
+}
+
+func TestOptions_TheLifebarNoticeFollowsTheCandidateAndTheScreenpackNoticeSurvivesIt(t *testing.T) {
+	f, _ := appearanceFlow(t, nil)
+	root := t.TempDir()
+	put(t, filepath.Join(root, "lifebars", "default", "fight.def"), "[Lifebar]\n")
+	put(t, filepath.Join(root, "lifebars", "broken", "fight.def"), "[Files]\nsff = gone.sff\n[Lifebar]\n")
+	f.FS = os.DirFS(root)
+	f.Lifebars, _ = DiscoverLifebars(f.FS)
+	f.Settings.NoteScreenpack([]string{`screenpack "gone" not found, using "default"`})
+	navAll(f, NavDown, NavRight) // Lifebar: broken
+	if f.OptionsItems()[1] != "Lifebar  broken" {
+		t.Fatalf("rows = %q, want broken", f.OptionsItems())
+	}
+	n := f.Settings.Notices()
+	if len(n) != 1 || !strings.Contains(n[0], `screenpack "gone" not found`) || !strings.Contains(n[0], `"gone.sff" not found`) {
+		t.Errorf("notices = %q, want the screenpack and the sprite notices", n)
+	}
+	f.Navigate(NavLeft) // back to default
+	n = f.Settings.Notices()
+	if len(n) != 1 || n[0] != `screenpack "gone" not found, using "default"` {
+		t.Errorf("notices = %q, want the screenpack notice alone", n)
+	}
+}
+
+func TestOptions_CaseVariantNamesAreEachReachableByCycling(t *testing.T) {
+	f, _ := appearanceFlow(t, nil)
+	f.Packs = []string{"alt", "Alt", "default"}
+	if f.ScreenpackChoice() != "default" {
+		t.Fatalf("choice = %q", f.ScreenpackChoice())
+	}
+	var seen []string
+	for range 3 {
+		f.Navigate(NavRight)
+		seen = append(seen, f.ScreenpackChoice())
+	}
+	if !slices.Equal(seen, []string{"alt", "Alt", "default"}) {
+		t.Errorf("cycling gave %q, want alt, Alt, default", seen)
+	}
+	f.Settings.Appearance.Screenpack = "Alt"
+	if f.ScreenpackChoice() != "Alt" {
+		t.Errorf("choice for the saved Alt = %q, want the exact Alt", f.ScreenpackChoice())
+	}
+}
+
+func TestOptions_TheBuiltInBarsStayOfferedAsDefaultWhenNoDefaultLifebarFolderExists(t *testing.T) {
+	f, _ := appearanceFlow(t, nil)
+	root := t.TempDir()
+	put(t, filepath.Join(root, "lifebars", "fancy", "fight.def"), "[Lifebar]\n")
+	f.FS = os.DirFS(root)
+	f.Lifebars, _ = DiscoverLifebars(f.FS)
+	f.Settings.Appearance.Lifebar = "default"
+	f.options.cursor = appearanceRowLifebar
+	var seen []string
+	for range 3 {
+		f.Navigate(NavRight)
+		seen = append(seen, f.Settings.Appearance.Lifebar)
+	}
+	if !slices.Equal(seen, []string{"fancy", "default", "fancy"}) {
+		t.Errorf("cycling gave %q, want fancy, default, fancy", seen)
 	}
 }

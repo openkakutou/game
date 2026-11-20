@@ -178,6 +178,19 @@ func TestDiscoverListsValidFoldersAndReportsBrokenOnes(t *testing.T) {
 	}
 }
 
+func TestPick_PrefersTheExactNameOverACaseVariant(t *testing.T) {
+	entries := []Entry{{Name: "Alt"}, {Name: "alt"}}
+	if e, _ := Pick(entries, "alt"); e.Name != "alt" {
+		t.Errorf("pick alt = %q", e.Name)
+	}
+	if e, _ := Pick(entries, "Alt"); e.Name != "Alt" {
+		t.Errorf("pick Alt = %q", e.Name)
+	}
+	if e, _ := Pick(entries, "ALT"); e.Name != "Alt" {
+		t.Errorf("pick ALT = %q, want the first match ignoring case", e.Name)
+	}
+}
+
 func TestPick(t *testing.T) {
 	entries := []Entry{{Name: "default"}, {Name: "vhd"}}
 	if e, ok := Pick(entries, "VHD"); !ok || e.Name != "vhd" {

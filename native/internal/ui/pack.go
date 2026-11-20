@@ -98,7 +98,12 @@ func packFolders(gameFS fs.FS) []string {
 // loadFolder loads the pack of the folder of folders named name (whatever
 // the case), resolved against the built-in default; errNoFolder when none is.
 func loadFolder(gameFS fs.FS, folders []string, name string) (*Pack, error) {
-	i := slices.IndexFunc(folders, func(f string) bool { return strings.EqualFold(f, name) })
+	// The exact spelling first: folders that differ only by case are each
+	// themselves.
+	i := slices.Index(folders, name)
+	if i < 0 {
+		i = slices.IndexFunc(folders, func(f string) bool { return strings.EqualFold(f, name) })
+	}
 	if i < 0 {
 		return nil, errNoFolder
 	}

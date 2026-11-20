@@ -230,10 +230,14 @@ func (f *Flow) PreviewLifebar() *HUDLifebar {
 	return f.options.previewLifebar
 }
 
-// pickName is the name of names matching saved without case, else the
-// default's, else "default" itself.
+// pickName is the name of names equal to saved (the exact spelling first,
+// then ignoring case), else the default's the same way, else "default"
+// itself.
 func pickName(names []string, saved string) string {
 	for _, want := range []string{saved, defaultName} {
+		if slices.Contains(names, want) {
+			return want
+		}
 		for _, n := range names {
 			if strings.EqualFold(n, want) {
 				return n
@@ -253,11 +257,22 @@ func nextName(names []string, saved string, delta int) string {
 	return cycle(names, current, delta)
 }
 
+// lifebarNames are the lifebars Options offers: every folder, and "default"
+// (the built-in bars) when no folder is called so, sorted ignoring case.
 func lifebarNames(entries []lifebar.Entry) []string {
-	names := make([]string, len(entries))
-	for i, e := range entries {
-		names[i] = e.Name
+	names := make([]string, 0, len(entries)+1)
+	for _, e := range entries {
+		names = append(names, e.Name)
 	}
+	if !slices.ContainsFunc(names, func(n string) bool { return strings.EqualFold(n, defaultName) }) {
+		names = append(names, defaultName)
+	}
+	slices.SortFunc(names, func(a, b string) int {
+		if c := strings.Compare(strings.ToLower(a), strings.ToLower(b)); c != 0 {
+			return c
+		}
+		return strings.Compare(a, b)
+	})
 	return names
 }
 
@@ -332,7 +347,7 @@ func (f *Flow) changeRow(delta int) {
 		case appearanceRowLifebar:
 			s.Appearance.Lifebar = nextName(lifebarNames(f.Lifebars), s.Appearance.Lifebar, delta)
 			hud, notices := SelectLifebar(f.FS, f.Lifebars, s.Appearance.Lifebar)
-			s.NoteAppearance(notices)
+			s.NoteLifebar(notices)
 			f.options.previewLifebar = hud
 		}
 	case ConcernControls:

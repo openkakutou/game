@@ -124,7 +124,8 @@ func run() error {
 	hud, lifebarNotices := game.SelectLifebar(fsys, lifebars, settings.Appearance.Lifebar)
 	flow.Settings = settings
 	defer flow.SaveOpenConcern() // a closed window keeps the changes of the open screen
-	settings.NoteAppearance(append(packNotices, lifebarNotices...))
+	settings.NoteScreenpack(packNotices)
+	settings.NoteLifebar(lifebarNotices)
 	flow.Packs, flow.Lifebars, flow.Lifebar = packNames, lifebars, hud
 	// The screenpack's select screens say how their rosters are ordered.
 	pack.Arrange(flow)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
+	"slices"
 	"strings"
 )
 
@@ -141,8 +142,11 @@ type Settings struct {
 	raw      [concernCount]map[string]json.RawMessage // last read or written object, to keep unknown fields
 	notice   [concernCount]string
 	notices  []string
-	write    WriteFunc
-	warn     func(string)
+	// screenpackNotices and lifebarNotices are the two parts of the
+	// appearance notice.
+	screenpackNotices, lifebarNotices []string
+	write                             WriteFunc
+	warn                              func(string)
 }
 
 // NewSettings returns the default settings, never persisted: the starting
@@ -271,20 +275,32 @@ func (s *Settings) RejectControls(err error) {
 	s.setNotice(ConcernControls, fmt.Sprintf("%s: defaults used", name), fmt.Sprintf("%s ignored, defaults used: %v", name, err))
 }
 
-// NoteAppearance reports the fallbacks the host met choosing the screenpack
-// and the lifebar (a selected folder that is gone or refused): each on
-// stderr, and their first lines on the Options screen. The file keeps the
-// old names until the player changes them.
-func (s *Settings) NoteAppearance(notices []string) {
-	if len(notices) == 0 {
-		return
-	}
-	short := make([]string, len(notices))
-	for i, n := range notices {
-		short[i], _, _ = strings.Cut(n, "\n")
-		if s.warn != nil {
+// NoteScreenpack sets the fallback notices of the screenpack choice (a
+// selected folder that is gone or refused) and NoteLifebar those of the
+// lifebar candidate; each replaces its previous ones. Each notice goes on
+// stderr, and their first lines on the Options screen, which shows both
+// parts together and nothing when both are empty. The file keeps the old
+// names until the player changes them.
+func (s *Settings) NoteScreenpack(notices []string) {
+	s.noteAppearance(&s.screenpackNotices, notices)
+}
+
+// NoteLifebar is NoteScreenpack for the lifebar.
+func (s *Settings) NoteLifebar(notices []string) {
+	s.noteAppearance(&s.lifebarNotices, notices)
+}
+
+func (s *Settings) noteAppearance(part *[]string, notices []string) {
+	*part = notices
+	if s.warn != nil {
+		for _, n := range notices {
 			s.warn(n)
 		}
+	}
+	var short []string
+	for _, n := range append(slices.Clone(s.screenpackNotices), s.lifebarNotices...) {
+		first, _, _ := strings.Cut(n, "\n")
+		short = append(short, first)
 	}
 	s.setNotice(ConcernAppearance, strings.Join(short, "; "), "")
 }
@@ -328,6 +344,9 @@ func (s *Settings) Save(c Concern) {
 		return
 	}
 	s.raw[c] = obj
+	if c == ConcernAppearance {
+		s.screenpackNotices, s.lifebarNotices = nil, nil
+	}
 	s.setNotice(c, "", "")
 }
 

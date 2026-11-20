@@ -67,11 +67,16 @@ func findDef(fsys fs.FS, folder string) (string, error) {
 	return "", errors.New("no fight.def")
 }
 
-// Pick is the entry named name, else DefaultName's, matching names without
-// case as the folders come from any OS (decision 033). It reports false when
-// neither exists.
+// Pick is the entry named name, else DefaultName's, matching the exact name
+// first and then without case as the folders come from any OS (decision
+// 033). It reports false when neither exists.
 func Pick(entries []Entry, name string) (Entry, bool) {
 	for _, want := range []string{name, DefaultName} {
+		for _, e := range entries {
+			if e.Name == want {
+				return e, true
+			}
+		}
 		for _, e := range entries {
 			if strings.EqualFold(e.Name, want) {
 				return e, true

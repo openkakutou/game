@@ -13,6 +13,7 @@ Left out of item 030 (ADR 025), each marked `shortcut:` in `native/internal/ui`:
 - stage preview is a plain panel (`select.go`)
 - wrapped error message line spacing is OpenKakutou's (format has none) (`error.go`)
 - menu music `loopStartMs` not applied (`internal/audio`)
+- the Appearance page's sample lifebar is drawn at the lifebar's own HUD position and overlaps the page heading
 - first select frame decodes up to a screenful of portraits at once (big rosters: spread over frames)
 
 ## Acceptance Criteria
