@@ -3,6 +3,7 @@ package gfx
 import (
 	"testing"
 
+	"github.com/openkakutou/engine/v2/match"
 	"github.com/openkakutou/engine/v2/round"
 )
 
@@ -45,6 +46,22 @@ func TestBanner_FollowsTheRound(t *testing.T) {
 	} {
 		if got := banner(c.outcome, c.training, c.state, 2, c.timer, total); got != c.want {
 			t.Errorf("%+v: banner %q, want %q", c, got, c.want)
+		}
+	}
+}
+
+func TestSuperDarkness(t *testing.T) {
+	cases := []struct {
+		s    match.MatchState
+		want float32
+	}{
+		{match.MatchState{SuperTime: 10, SuperDarken: true}, 0.5},
+		{match.MatchState{SuperTime: 10}, 0},
+		{match.MatchState{SuperDarken: true}, 0},
+	}
+	for _, c := range cases {
+		if got := superDarkness(c.s); got != c.want {
+			t.Errorf("%+v: %v, want %v", c.s, got, c.want)
 		}
 	}
 }

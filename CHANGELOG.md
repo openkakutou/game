@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- Super moves pause the match as in Ikemen GO (engine v2.52.0): the screen darkens behind the fighters during a SuperPause and its effect shows; counters (ReversalDef) and HitOverride work (engine v2.51.0).
 - Throws work in the desktop game (engine v2.50.0): kfm grabs, lifts and throws its opponent, the thrown fighter drawn with the thrower's animation while it is held; a HitDef now only hits the stances its hitflag allows.
 - The round's timings (wait before the intros, control time, KO wait, win pose and round end times) come from the lifebar's [Round] section, Ikemen GO's defaults otherwise.
 - The round banner follows the round: "Round N" during the intros, "Fight!" as the fight starts, the outcome (KO, Time over...) as soon as the round is decided.

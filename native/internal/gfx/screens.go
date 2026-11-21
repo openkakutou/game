@@ -288,6 +288,15 @@ func (r *Renderer) drawProjectiles(f *game.Flow, groundY, camX float32) {
 	}
 }
 
+// superDarkness is how dark the stage is drawn: half during a darkening
+// SuperPause (Ikemen GO's superbrightness 0.5), else not at all.
+func superDarkness(s match.MatchState) float32 {
+	if s.SuperTime > 0 && s.SuperDarken {
+		return 0.5
+	}
+	return 0
+}
+
 // explodLayer picks which explods a drawExplods call draws.
 type explodLayer int
 
@@ -516,6 +525,9 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	r.camX = m.CameraX() * r.stageScale // the match's camera, in view pixels
 	camX := float32(r.camX)
 	r.drawLayers(f, r.behind, m.Ticks(), r.camX)
+	if a := superDarkness(m.State); a > 0 {
+		w.Rect(0, 0, VW, VH, Color{0, 0, 0, a})
+	}
 	r.drawExplods(f, explodsBehind, groundY, camX)
 	for i, fs := range []match.FighterState{p1, p2} {
 		sx := VW/2 + float32(fs.Position.X) - camX
