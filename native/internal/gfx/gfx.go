@@ -336,7 +336,20 @@ const (
 // SpriteBlended is SpriteSized drawn with blend, its colours weighted by
 // alpha (0..1).
 func (w *Window) SpriteBlended(t *Texture, x, y, wd, ht float32, flip bool, blend Blend, alpha float32) {
+	w.SpriteRotated(t, x, y, wd, ht, flip, blend, alpha, 0, 0, 0)
+}
+
+// SpriteRotated is SpriteBlended turned deg degrees counter-clockwise on
+// screen around px, py.
+func (w *Window) SpriteRotated(t *Texture, x, y, wd, ht float32, flip bool, blend Blend, alpha, px, py, deg float32) {
 	w.Flush()
+	if deg != 0 {
+		gl.PushMatrix()
+		gl.Translatef(px, py, 0)
+		gl.Rotatef(-deg, 0, 0, 1) // y points down: a negative turn is counter-clockwise
+		gl.Translatef(-px, -py, 0)
+		defer gl.PopMatrix()
+	}
 	switch blend {
 	case BlendAdd:
 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)

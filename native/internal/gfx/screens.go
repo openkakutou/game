@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/openkakutou/character/air"
+	"github.com/openkakutou/engine/v2/evaluator"
 	"github.com/openkakutou/engine/v2/match"
 	"github.com/openkakutou/engine/v2/round"
 	"github.com/openkakutou/game/native/internal/game"
@@ -337,7 +338,7 @@ func (r *Renderer) drawProjectiles(f *game.Flow, groundY, camX float32) {
 	for side := range f.Fighters {
 		for _, h := range f.Match.Helpers(match.Side(side)) {
 			c := &h.Context
-			r.drawOwnAnim(f, side, c.Anim, c.AnimElapsed, unscaled(c.Position, c.Facing), groundY, camX)
+			r.drawOwnAnim(f, side, c.Anim, c.AnimElapsed, angleDrawn(c.Position, c.Facing, c), groundY, camX)
 		}
 		for _, p := range f.Match.Projectiles(match.Side(side)) {
 			r.drawOwnAnim(f, side, p.Anim, p.AnimTime, unscaled(p.Position, p.Facing), groundY, camX)
@@ -410,10 +411,10 @@ func (r *Renderer) drawExplods(f *game.Flow, layer explodLayer, groundY, camX fl
 				continue
 			}
 			if e.Common {
-				r.drawCommonAnim(f, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale, e.Trans, e.Alpha}, groundY, camX)
+				r.drawCommonAnim(f, e.Anim, e.AnimTime, placed{pos: e.Position, facing: e.Facing, scale: e.Scale, trans: e.Trans, alpha: e.Alpha}, groundY, camX)
 				continue
 			}
-			r.drawOwnAnim(f, side, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale, e.Trans, e.Alpha}, groundY, camX)
+			r.drawOwnAnim(f, side, e.Anim, e.AnimTime, placed{pos: e.Position, facing: e.Facing, scale: e.Scale, trans: e.Trans, alpha: e.Alpha}, groundY, camX)
 		}
 	}
 }
@@ -444,6 +445,23 @@ type placed struct {
 	// blend) and alpha.
 	trans string
 	alpha [2]int
+	// angle is the counter-clockwise turn in degrees (an AngleDraw).
+	angle float64
+}
+
+// angleDrawn is how a fighter or helper context is drawn: its AngleDraw's
+// scale and angle while it runs one (negated facing left, char.go:13533-
+// 13540), else at its own size.
+func angleDrawn(pos match.Position, facing match.Facing, c *evaluator.Context) placed {
+	at := unscaled(pos, facing)
+	if !c.AngleDraw {
+		return at
+	}
+	at.scale, at.angle = c.AngleDrawScale, c.Angle
+	if facing == match.FacingLeft {
+		at.angle = -at.angle
+	}
+	return at
 }
 
 // unscaled is a placement at pos and facing, at its own size.
@@ -465,7 +483,7 @@ func (r *Renderer) blit(t *Texture, fr air.Frame, axis [2]int, at placed, ground
 	x, y := sx+ox*kx, sy+float32(fr.Y-axis[1])*ky
 	w, h := float32(t.W)*kx, float32(t.H)*ky
 	blend, alpha := spriteBlend(at.trans, at.alpha, string(fr.Blend))
-	r.win.SpriteBlended(t, x, y, w, h, flip, blend, alpha)
+	r.win.SpriteRotated(t, x, y, w, h, flip, blend, alpha, sx, sy, float32(at.angle))
 }
 
 // spriteBlend is how a trans type (an explod's, or a fighter's Trans) mixes
@@ -674,7 +692,12 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 					x, y := sx+ox, sy+float32(fr.Y-sp.AxisY)
 					trans, transAlpha := m.Trans(i)
 					blend, alpha := spriteBlend(trans, transAlpha, string(fr.Blend))
+					at := angleDrawn(fs.Position, fs.Facing, m.FighterContext(i))
 					switch {
+					case at.angle != 0 || at.scale != [2]float64{1, 1}:
+						// shortcut: a rotated or scaled fighter is drawn without its PalFX tint.
+						kx, ky := float32(at.scale[0]), float32(at.scale[1])
+						w.SpriteRotated(t, sx+ox*kx, sy+float32(fr.Y-sp.AxisY)*ky, float32(t.W)*kx, float32(t.H)*ky, flip, blend, alpha, sx, sy, float32(at.angle))
 					case m.PalFX[i].Active():
 						mul, add := m.PalFX[i].Tint()
 						w.SpriteTinted(t, x, y, flip, blend == BlendAdd, mul, add)

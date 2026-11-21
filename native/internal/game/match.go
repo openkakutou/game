@@ -13,6 +13,7 @@ import (
 	"github.com/openkakutou/character"
 	"github.com/openkakutou/character/cmd"
 	"github.com/openkakutou/engine/v2"
+	"github.com/openkakutou/engine/v2/evaluator"
 	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/engine/v2/match"
 	"github.com/openkakutou/engine/v2/round"
@@ -572,6 +573,11 @@ func (m *Match) Advances() bool {
 	}
 	m.slowAcc--
 	return true
+}
+
+// FighterContext is side's state machine context, for drawing (read only).
+func (m *Match) FighterContext(side int) *evaluator.Context {
+	return &m.runtimes[side].Context
 }
 
 // Trans is how side is drawn this tick: its Trans controller's type ("" for

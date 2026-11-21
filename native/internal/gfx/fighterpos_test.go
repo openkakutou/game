@@ -1,6 +1,7 @@
 package gfx
 
 import (
+	"github.com/openkakutou/engine/v2/evaluator"
 	"github.com/openkakutou/lifebar"
 	"testing"
 
@@ -104,5 +105,21 @@ func TestSpriteBlend_FollowsTheExplodsTrans(t *testing.T) {
 		if b != c.blend || a != c.alpha {
 			t.Errorf("%q over %q: %v %v, want %v %v", c.trans, c.frame, b, a, c.blend, c.alpha)
 		}
+	}
+}
+
+// char.go:13533-13540: an AngleDraw turns and scales the drawing, its angle
+// negated facing left; without one the context draws at its own size.
+func TestAngleDrawn(t *testing.T) {
+	c := evaluator.Context{AngleDraw: true, Angle: 30, AngleDrawScale: [2]float64{2, 1}}
+	if at := angleDrawn(match.Position{}, match.FacingRight, &c); at.angle != 30 || at.scale != [2]float64{2, 1} {
+		t.Errorf("facing right: %+v", at)
+	}
+	if at := angleDrawn(match.Position{}, match.FacingLeft, &c); at.angle != -30 {
+		t.Errorf("facing left: angle %v, want -30", at.angle)
+	}
+	c.AngleDraw = false
+	if at := angleDrawn(match.Position{}, match.FacingRight, &c); at.angle != 0 || at.scale != [2]float64{1, 1} {
+		t.Errorf("no AngleDraw: %+v", at)
 	}
 }
