@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- A fighter's Offset moves its drawing for the tick (engine v2.74.0).
 - EnvColor fills the screen (the fighters over it with under), BGPalFX tints the stage and AllPalFX the stage and the fighters, StopSnd stops a fighter's sound or every fighter sound, as Ikemen GO (engine v2.73.0).
 - Fighters and helpers running AngleDraw are drawn turned and scaled around their position, the angle mirrored facing left, as Ikemen GO (engine v2.71.0).
 - Explods, and fighters running a Trans controller, are drawn with their trans: add, add1, addalpha (at its alpha), sub, none (engine v2.67.0).

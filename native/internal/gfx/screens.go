@@ -693,8 +693,10 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	r.drawExplods(f, explodsBehind, groundY, camX)
 	for i, fs := range []match.FighterState{p1, p2} {
 		r.drawGhosts(f, i, groundY, camX)
-		sx := VW/2 + float32(fs.Position.X) - camX
-		sy := fighterScreenY(groundY, float32(fs.Position.Y))
+		// An Offset moves the drawing, x not mirrored (char.go:10441-10445).
+		off := m.FighterContext(i).DrawOffset
+		sx := VW/2 + float32(fs.Position.X+off[0]) - camX
+		sy := fighterScreenY(groundY, float32(fs.Position.Y)) + float32(off[1])
 		flip := fs.Facing == match.FacingLeft
 		drawn := false
 		// A thrown fighter may show its thrower's animation, drawn with the
