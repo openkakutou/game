@@ -468,7 +468,8 @@ func (r *Renderer) blit(t *Texture, fr air.Frame, axis [2]int, at placed, ground
 	r.win.SpriteBlended(t, x, y, w, h, flip, blend, alpha)
 }
 
-// spriteBlend is how an explod's trans type mixes it (paramTrans): add and
+// spriteBlend is how a trans type (an explod's, or a fighter's Trans) mixes
+// a sprite (paramTrans): add and
 // add1 add it, addalpha draws it at its source alpha, sub subtracts it, none
 // draws it plainly; without one, the frame's own blend applies.
 // shortcut: add1's halved backdrop and addalpha's destination weight are not
@@ -670,14 +671,15 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 					if flip {
 						ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
 					}
+					x, y := sx+ox, sy+float32(fr.Y-sp.AxisY)
+					trans, transAlpha := m.Trans(i)
+					blend, alpha := spriteBlend(trans, transAlpha, string(fr.Blend))
 					switch {
-					case additiveBlend(string(fr.Blend)):
-						w.SpriteAdd(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
 					case m.PalFX[i].Active():
 						mul, add := m.PalFX[i].Tint()
-						w.SpriteTinted(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip, false, mul, add)
+						w.SpriteTinted(t, x, y, flip, blend == BlendAdd, mul, add)
 					default:
-						w.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
+						w.SpriteBlended(t, x, y, float32(t.W), float32(t.H), flip, blend, alpha)
 					}
 					drawn = true
 				}

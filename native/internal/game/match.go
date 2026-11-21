@@ -574,6 +574,13 @@ func (m *Match) Advances() bool {
 	return true
 }
 
+// Trans is how side is drawn this tick: its Trans controller's type ("" for
+// its animation's blend) and alpha.
+func (m *Match) Trans(side int) (string, [2]int) {
+	c := &m.runtimes[side].Context
+	return c.Trans, c.TransAlpha
+}
+
 // Ghosts appends to dst side's afterimage ghosts to draw, newest first.
 func (m *Match) Ghosts(side int, dst []GhostDraw) []GhostDraw {
 	return m.AfterImages[side].Ghosts(dst, m.programs[side].IkemenVersion == [3]uint16{})
