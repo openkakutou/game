@@ -23,11 +23,12 @@ Both run headless in Docker (Xvfb, software OpenGL), driven by `xdotool`, record
 game/.claude/skills/fidelity-video/scripts/run.sh \
   --p1 <P1.def> --p2 <P2.def> --stage <stage.def> --out <video.mp4> \
   [--work <dir>] [--inputs <script.sh>] [--ik-wait 17] [--seconds 16] \
-  [--ikemen-tag nightly] [--engine <ref>] [--character <ref>]
+  [--ok-wait 5] [--ikemen-tag nightly] [--engine <ref>] [--character <ref>]
 ```
 
 Put `--work` and `--out` in the scratchpad; reuse the same `--work` between runs (the Ikemen GO download, its config and the Go caches are kept). A first run takes about 8 minutes, later ones about 2.
 
+- `--ok-wait`: the same for OpenKakutou, which loads faster (about 5 seconds for kfm on Training).
 - `--ik-wait`: seconds from Ikemen GO's launch to "Fight!". It depends on the characters' intros: check the left half of the preview, and raise it if the first moves happen during "Get ready".
 - `--inputs`: a bash script of `xdotool` key presses, P1 only, same keys in both engines (W A S D move; F G H = a b c; R T Y = x y z). The default (`scripts/inputs.sh`) walks, uses a, b, x, a crouching c, walks back, jumps, then tries D-DF-F+a and F-D-DF+x, facing right.
 

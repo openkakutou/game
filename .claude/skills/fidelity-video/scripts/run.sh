@@ -3,19 +3,19 @@
 # (reference build) and into OpenKakutou's native game, recorded under Xvfb
 # in Docker, then composed side by side.
 #   run.sh --p1 path/to/A.def --p2 path/to/B.def --stage path/to/S.def --out video.mp4
-#          [--work DIR] [--inputs inputs.sh] [--ik-wait 17] [--seconds 16]
+#          [--work DIR] [--inputs inputs.sh] [--ik-wait 17] [--ok-wait 5] [--seconds 16]
 #          [--ikemen-tag nightly] [--engine REF] [--character REF]
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 game="$(cd "$here/../../../.." && pwd)"           # game repo root
 workspace="$(cd "$game/.." && pwd)"
-work=""; inputs="$here/inputs.sh"; ik_wait=17; seconds=16; ik_tag=nightly
+work=""; inputs="$here/inputs.sh"; ik_wait=17; ok_wait=5; seconds=16; ik_tag=nightly
 engine_ref=""; character_ref=""; p1=""; p2=""; stage=""; out=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --p1) p1="$2"; shift 2;; --p2) p2="$2"; shift 2;; --stage) stage="$2"; shift 2;;
     --out) out="$2"; shift 2;; --work) work="$2"; shift 2;; --inputs) inputs="$2"; shift 2;;
-    --ik-wait) ik_wait="$2"; shift 2;; --seconds) seconds="$2"; shift 2;;
+    --ik-wait) ik_wait="$2"; shift 2;; --ok-wait) ok_wait="$2"; shift 2;; --seconds) seconds="$2"; shift 2;;
     --ikemen-tag) ik_tag="$2"; shift 2;; --engine) engine_ref="$2"; shift 2;;
     --character) character_ref="$2"; shift 2;;
     *) echo "unknown argument: $1" >&2; exit 2;;
@@ -86,7 +86,7 @@ fi
 python3 "$here/ikemen_keys.py" "$work/ikemen/save/config.ini"
 
 # 6. Record both, then compose.
-env_args=(-e SECONDS_REC="$seconds" -e IK_WAIT="$ik_wait" -e P1="okv-$n1" -e P1DEF="$n1.def" -e P2="okv-$n2" -e P2DEF="$n2.def"
+env_args=(-e SECONDS_REC="$seconds" -e IK_WAIT="$ik_wait" -e OK_WAIT="$ok_wait" -e P1="okv-$n1" -e P1DEF="$n1.def" -e P2="okv-$n2" -e P2DEF="$n2.def"
           -e P2COLOR=$p2color -e STAGE="$(basename "$stage")" -e P1IDX=$p1idx -e P2IDX=$p2idx)
 drun "${env_args[@]}" "$image" bash /w/record.sh ikemen
 drun "${env_args[@]}" "$image" bash /w/record.sh openkakutou
