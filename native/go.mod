@@ -9,7 +9,7 @@ require (
 	github.com/openkakutou/fnt v0.2.0
 	github.com/openkakutou/lifebar v0.3.0
 	github.com/openkakutou/screenpack v0.7.0
-	github.com/openkakutou/sff v0.10.0
+	github.com/openkakutou/sff v0.10.1
 	github.com/openkakutou/snd v0.7.2
 	github.com/openkakutou/stage v0.18.0
 	github.com/veandco/go-sdl2 v0.4.40
