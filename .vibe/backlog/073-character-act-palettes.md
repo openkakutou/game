@@ -9,10 +9,13 @@ The desktop game draws every sprite with the palette embedded in the sprite file
 MUST: Ikemen GO behaviour (roadmap decision `038`).
 
 ## Acceptance Criteria
-- [ ] An SFF v1 character's shared-palette sprites use its selected `.act` palette, own-palette sprites keep theirs
+- [x] An SFF v1 character's shared-palette sprites use its selected `.act` palette, own-palette sprites keep theirs
 - [ ] An SFF v2 character uses its selected palette
 - [ ] The palette choice of the select screen (once it exists) picks which one
 - [ ] Checked in the game against Ikemen GO (fidelity video) on a corpus SFF v1 character
 
 ## Notes
 Needs the `sff` library to tell which v1 sprites share the first palette (its palette chain, `v1PaletteSource`, is unexported today).
+
+## Progress
+2026-11-21 - Desktop: the first readable .act is the default palette, applied to the SFF v1 sprites sharing the first palette (sff v0.9.0 ResolveCharacterSpritePixels). Left: SFF v2 palette selection, the select screen choice, the fidelity check.

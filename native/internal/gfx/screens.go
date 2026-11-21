@@ -182,7 +182,7 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 				if fr.IsBlank() || r.sprites[k] != nil {
 					continue
 				}
-				px, wd, ht, err := sff.ResolveSpritePixels(file, fr.Group, fr.Image, nil)
+				px, wd, ht, err := sff.ResolveCharacterSpritePixels(file, fr.Group, fr.Image, fighter.Palette)
 				if err != nil || wd == 0 || ht == 0 {
 					continue
 				}

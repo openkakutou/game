@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/openkakutou/character/air"
+	"github.com/openkakutou/sff"
 	"io/fs"
 	"log"
 	"path"
@@ -46,6 +47,10 @@ type Fighter struct {
 	// Missing lists the state files (st, stN, cmd, stcommon entries) found in
 	// the character folder or the search folders: loading went on without them.
 	Missing []string
+	// Palette is the character's first .act palette, its default one (Ikemen
+	// GO loadPalettes, char.go:4743-4800); nil without one, and the sprites
+	// keep their own palettes.
+	Palette *sff.Palette
 
 	sounds map[soundKey]character.Sound // built lazily by FindSound
 }
@@ -77,7 +82,26 @@ func LoadFighter(fsys fs.FS, defName string, searchDirs ...string) (*Fighter, er
 			}
 		}
 	}
-	return &Fighter{Char: c, Cmd: commands, SffPath: joinResolved(fsys, []string{dir}, c.SpriteFile), Program: program, Missing: missing}, nil
+	f := &Fighter{Char: c, Cmd: commands, SffPath: joinResolved(fsys, []string{dir}, c.SpriteFile), Program: program, Missing: missing}
+	f.Palette = firstActPalette(fsys, dir, c.Palettes)
+	return f, nil
+}
+
+// firstActPalette is the first of the character's .act palettes that reads,
+// nil when none does (an unreadable one is skipped, as Ikemen GO does).
+func firstActPalette(fsys fs.FS, dir string, palettes []string) *sff.Palette {
+	for _, name := range palettes {
+		raw, err := fs.ReadFile(fsys, joinResolved(fsys, []string{dir}, name))
+		if err != nil {
+			continue
+		}
+		pal, err := sff.DecodeExternalPalette(raw)
+		if err != nil {
+			continue
+		}
+		return &pal
+	}
+	return nil
 }
 
 // LoadStage parses a stage .def, a name in fsys.
