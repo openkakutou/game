@@ -630,20 +630,38 @@ func (r *Renderer) drawBuiltInBars(f *game.Flow) {
 	w.Text(VW/2-12, 10, 2, white, timerText(f))
 }
 
-// drawBanner shows the round number as a round starts and its outcome as
-// it ends.
+// drawBanner shows the round number during the intros, "Fight!" as the
+// fight starts and the outcome once the round is decided.
 func (r *Renderer) drawBanner(m *game.Match) {
-	w := r.win
-	switch {
-	case m.RoundEnded():
-		w.TextCentered(90, 3, gold, roundBanner(m))
-	case m.State.RoundTimer > m.Setup.RoundTimerTicks()-game.TickRateHz && m.Setup.RoundTimerTicks() > 0:
-		w.TextCentered(90, 3, gold, fmt.Sprintf("Round %d", m.State.Round))
+	if text := bannerText(m); text != "" {
+		r.win.TextCentered(90, 3, gold, text)
 	}
 }
 
-func roundBanner(m *game.Match) string {
-	switch m.LastRound.Outcome {
+// bannerText is drawBanner's text, "" for none.
+func bannerText(m *game.Match) string {
+	return banner(m.LastRound.Outcome, m.Setup.Training, m.RoundState(), m.State.Round, m.State.RoundTimer, m.Setup.RoundTimerTicks())
+}
+
+// banner is the text for a round decided with outcome (OutcomeNone while
+// fought) at RoundState state, round number roundNo, timer ticks left of
+// total.
+func banner(outcome round.Outcome, training bool, state, roundNo, timer, total int) string {
+	switch {
+	case outcome != round.OutcomeNone:
+		return outcomeBanner(outcome)
+	case training:
+		return ""
+	case state < 2:
+		return fmt.Sprintf("Round %d", roundNo)
+	case total > 0 && timer > total-game.TickRateHz:
+		return "Fight!"
+	}
+	return ""
+}
+
+func outcomeBanner(outcome round.Outcome) string {
+	switch outcome {
 	case round.OutcomeKO:
 		return "KO"
 	case round.OutcomeDoubleKO:

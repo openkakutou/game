@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The round banner follows the round: "Round N" during the intros, "Fight!" as the fight starts, the outcome (KO, Time over...) as soon as the round is decided.
 - Rounds play as in Ikemen GO (engine v2.46.0): the fighters start in their intro (kfm kicks its wood pieces) without control, the fight starts once the intros are done, and after a KO the round goes on, the inputs pause, the winner plays its win pose and the loser its lose pose before the next round. Training still fights from the first tick.
 - The desktop game draws a character with its first .act palette, as Ikemen GO does by default: in an SFF v1 sheet it replaces the first palette, sprites with their own palette keep it (sff v0.9.0).
 - Engine v2.44.0 and character v0.21.0: many more community characters load and play without stopping the match (a run over 373 corpus characters went from 22 to over 90 playing 900 random ticks cleanly).
