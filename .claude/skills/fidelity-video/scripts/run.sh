@@ -59,6 +59,9 @@ add_char() {  # $1 = .def path; prints the folder name
 }
 n1="$(add_char "$p1")"; n2="$(add_char "$p2")"
 copy "$(dirname "$stage")/." "$work/content/stages/"
+# The game's common files (common1.cns.zss, fightfx, common.snd): its
+# common/ folder, Ikemen GO's data/ (roadmap decision 031).
+copy "$game/common" "$work/content/common"
 copy "$(dirname "$stage")/." "$work/ikemen/stages/stage/"
 p2color=1; [ "$n1" = "$n2" ] && p2color=2
 names="$(ls "$work/content/chars" | sort)"
