@@ -592,6 +592,9 @@ func (r *Renderer) drawHUD(f *game.Flow) {
 		r.drawBuiltInBars(f)
 	default:
 		r.drawLifebar(f)
+		if game.HasCalls(f.Lifebar.Lifebar) {
+			return // the lifebar draws its own calls
+		}
 	}
 	r.drawBanner(f.Match)
 }

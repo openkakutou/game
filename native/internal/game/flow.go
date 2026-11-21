@@ -184,6 +184,8 @@ type Flow struct {
 	FS fs.FS
 	// Lifebar is the HUD's lifebar; nil keeps the built-in bars.
 	Lifebar *HUDLifebar
+	// Announcer paces the lifebar's round, fight and KO calls.
+	Announcer Announcer
 	// Lifebars are the usable folders of lifebars/ and Packs the installed
 	// screenpacks' names, which Options > Appearance offers.
 	Lifebars []lifebar.Entry
@@ -732,7 +734,7 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 			_ = m.SetCommonAnimations(raw) // an unreadable file shows no common spark
 		}
 	}
-	f.Match, f.Screen, f.RoundOverTicks = m, ScreenMatch, 0
+	f.Match, f.Screen, f.RoundOverTicks, f.Announcer = m, ScreenMatch, 0, Announcer{}
 	for i, level := range setup.AILevel {
 		f.cpus[i] = nil
 		if level > 0 {
@@ -833,12 +835,18 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 		f.decideCPU(i, cpu)
 		in[i] = f.cpuIn[i]
 	}
+	if f.Lifebar != nil {
+		f.Announcer.Frame(f.Lifebar.Lifebar)
+	}
 	if !f.Match.Advances() {
 		return // the KO slow motion holds this frame
 	}
 	if err := f.Match.Step(in); err != nil {
 		f.fail(fmt.Sprintf("The match stopped: %v", err))
 		return
+	}
+	if intro, ok := f.Match.Intro(); ok && f.Lifebar != nil {
+		f.Announcer.Tick(f.Lifebar.Lifebar, f.Match.State.Round, intro, f.Match.Decided())
 	}
 	if f.Match.RoundEnded() {
 		f.RoundOverTicks = RoundEndTicks

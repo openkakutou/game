@@ -560,6 +560,18 @@ func (m *Match) Advances() bool {
 	return true
 }
 
+// Intro is the round clock's Ikemen GO sys.intro, and whether the match has
+// a round clock (training has none).
+func (m *Match) Intro() (int, bool) {
+	if m.clock == nil {
+		return 0, false
+	}
+	return m.clock.Intro(), true
+}
+
+// Decided is the round's outcome so far.
+func (m *Match) Decided() round.Outcome { return m.decided.Outcome }
+
 // RoundState is the round's Ikemen GO RoundState (0 to 4); 2 in training.
 func (m *Match) RoundState() int {
 	if m.clock == nil {

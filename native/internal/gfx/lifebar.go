@@ -5,6 +5,8 @@ import (
 	"github.com/openkakutou/game/native/internal/bmfont"
 	"io/fs"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/openkakutou/character/air"
 	"github.com/openkakutou/game/native/internal/game"
@@ -87,7 +89,12 @@ func (l *lifebarHUD) elements() []lifebar.Element {
 		}
 		out = append(out, l.hud.Name[i].Bg, l.hud.Name[i].Top)
 	}
-	return append(out, l.hud.Time.Bg, l.hud.Time.Top)
+	out = append(out, l.hud.Time.Bg, l.hud.Time.Top)
+	r := &l.hud.Round
+	for _, a := range r.Round {
+		out = append(out, a.Element)
+	}
+	return append(out, r.RoundDefault.Element, r.Fight.Element, r.Ko.Element, r.Dko.Element, r.To.Element)
 }
 
 // screen is where the lifebar lands in the 320x240 view (Ikemen GO's
@@ -149,6 +156,32 @@ func (l *lifebarHUD) draw(w *Window, f *game.Flow) {
 		names[i] = f.Fighters[i].Char.Name
 	}
 	l.paint(w, m.Ticks(), l.meters, power, names, timerText(f))
+	l.drawCalls(w, f)
+}
+
+// drawCalls draws the round, fight and KO calls showing, at the [Round]
+// pos (fs.go:4030-4200).
+func (l *lifebarHUD) drawCalls(w *Window, f *game.Flow) {
+	lb := l.hud.Lifebar
+	s := l.screen()
+	pos := lb.Round.Pos
+	for _, shown := range f.Announcer.Showing(lb) {
+		if shown.Call == game.CallNone {
+			continue
+		}
+		a := game.CallOf(lb, shown.Call, f.Match.State.Round, f.Announcer.Finish())
+		for layer := range 3 {
+			l.drawElement(w, s, a.Element, pos, layer, shown.Elapsed)
+		}
+		if a.Text.Text != "" {
+			l.print(w, s, a.Text, pos, callText(a.Text.Text, f.Match.State.Round))
+		}
+	}
+}
+
+// callText is a call's text, %i standing for the round number.
+func callText(text string, roundNo int) string {
+	return strings.ReplaceAll(text, "%i", strconv.Itoa(roundNo))
 }
 
 // sampleNames and sampleTimer are the texts of the sample lifebar the

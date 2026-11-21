@@ -8,6 +8,8 @@ github.com/openkakutou/character v0.21.0 h1:1T/R8k+s/C5532ixQ5aHrLu9JzwkiNF+iZ2m
 github.com/openkakutou/character v0.21.0/go.mod h1:iPpJxagNriywu0qLJqGIThufnr+OmWwBNILWf2Aq150=
 github.com/openkakutou/engine/v2 v2.52.0 h1:SlO2ZTZHDd/MKLvKrUzrpfIzd+NNr6dDbSsUIpsmtTA=
 github.com/openkakutou/engine/v2 v2.52.0/go.mod h1:kiHUeo5AMvmyBCRob/LA+IvRLv0zup8Q2O6WjRoOlW8=
+github.com/openkakutou/engine/v2 v2.53.0 h1:kDj2Bu0kwMChgmdMqsoRxrQF46bb3CcaI4NSjgVL+f4=
+github.com/openkakutou/engine/v2 v2.53.0/go.mod h1:kiHUeo5AMvmyBCRob/LA+IvRLv0zup8Q2O6WjRoOlW8=
 github.com/openkakutou/fnt v0.2.0 h1:ZLMWv1eX8vSGkSOEz+634l9sCxPCCak3n5dihrJVP0A=
 github.com/openkakutou/fnt v0.2.0/go.mod h1:3Doe0iB5tRXZDPA6/q02zWDiL4caJ70qK7vBj+HAITM=
 github.com/openkakutou/lifebar v0.1.0 h1:pmjj4RZJxhzr+MSZzfK20o5iAX0Oqcb38RplKReQxYE=
