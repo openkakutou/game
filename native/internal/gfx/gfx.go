@@ -318,6 +318,14 @@ func (w *Window) SpriteTinted(t *Texture, x, y float32, flip bool, mul, add [3]f
 	gl.Disable(gl.TEXTURE_2D)
 }
 
+// SpriteAddSized is SpriteSized drawn additively.
+func (w *Window) SpriteAddSized(t *Texture, x, y, wd, ht float32, flip bool) {
+	w.Flush()
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
+	w.SpriteSized(t, x, y, wd, ht, flip)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+}
+
 // SpriteAdd is Sprite drawn additively: the sprite's colours are added to
 // what is behind it, as an .air frame's A blend asks.
 func (w *Window) SpriteAdd(t *Texture, x, y float32, flip bool) {

@@ -335,10 +335,10 @@ func (r *Renderer) drawProjectiles(f *game.Flow, groundY, camX float32) {
 	for side := range f.Fighters {
 		for _, h := range f.Match.Helpers(match.Side(side)) {
 			c := &h.Context
-			r.drawOwnAnim(f, side, c.Anim, c.AnimElapsed, c.Position, c.Facing, groundY, camX)
+			r.drawOwnAnim(f, side, c.Anim, c.AnimElapsed, unscaled(c.Position, c.Facing), groundY, camX)
 		}
 		for _, p := range f.Match.Projectiles(match.Side(side)) {
-			r.drawOwnAnim(f, side, p.Anim, p.AnimTime, p.Position, p.Facing, groundY, camX)
+			r.drawOwnAnim(f, side, p.Anim, p.AnimTime, unscaled(p.Position, p.Facing), groundY, camX)
 		}
 	}
 }
@@ -381,17 +381,17 @@ func (r *Renderer) drawExplods(f *game.Flow, layer explodLayer, groundY, camX fl
 				continue
 			}
 			if e.Common {
-				r.drawCommonAnim(f, e.Anim, e.AnimTime, e.Position, e.Facing, groundY, camX)
+				r.drawCommonAnim(f, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale}, groundY, camX)
 				continue
 			}
-			r.drawOwnAnim(f, side, e.Anim, e.AnimTime, e.Position, e.Facing, groundY, camX)
+			r.drawOwnAnim(f, side, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale}, groundY, camX)
 		}
 	}
 }
 
 // drawCommonAnim draws the common fightfx animation anim, animTime ticks
 // in, at a world position and facing.
-func (r *Renderer) drawCommonAnim(f *game.Flow, anim, animTime int, pos match.Position, facing match.Facing, groundY, camX float32) {
+func (r *Renderer) drawCommonAnim(f *game.Flow, anim, animTime int, at placed, groundY, camX float32) {
 	fr, ok := currentFrame(f.Match.CommonAnimations(), anim, animTime)
 	if !ok || fr.IsBlank() {
 		return
@@ -402,29 +402,45 @@ func (r *Renderer) drawCommonAnim(f *game.Flow, anim, animTime int, pos match.Po
 	if t == nil || !found {
 		return
 	}
-	r.blit(t, fr, axis, pos, facing, groundY, camX)
+	r.blit(t, fr, axis, at, groundY, camX)
 }
 
-// blit draws texture t of frame fr, whose sprite axis is axis, at a world
-// position and facing, additively when the frame asks.
-func (r *Renderer) blit(t *Texture, fr air.Frame, axis [2]int, pos match.Position, facing match.Facing, groundY, camX float32) {
-	flip := facing == match.FacingLeft
-	sx := VW/2 + float32(pos.X) - camX
-	sy := fighterScreenY(groundY, float32(pos.Y))
+// placed is where an animation is drawn: a world position, a facing and a
+// scale.
+type placed struct {
+	pos    match.Position
+	facing match.Facing
+	scale  [2]float64
+}
+
+// unscaled is a placement at pos and facing, at its own size.
+func unscaled(pos match.Position, facing match.Facing) placed {
+	return placed{pos: pos, facing: facing, scale: [2]float64{1, 1}}
+}
+
+// blit draws texture t of frame fr, whose sprite axis is axis, where at
+// places it, scaled around the axis, additively when the frame asks.
+func (r *Renderer) blit(t *Texture, fr air.Frame, axis [2]int, at placed, groundY, camX float32) {
+	flip := at.facing == match.FacingLeft
+	kx, ky := float32(at.scale[0]), float32(at.scale[1])
+	sx := VW/2 + float32(at.pos.X) - camX
+	sy := fighterScreenY(groundY, float32(at.pos.Y))
 	ox := float32(fr.X - axis[0])
 	if flip {
 		ox = -float32(fr.X) - float32(t.W-axis[0])
 	}
+	x, y := sx+ox*kx, sy+float32(fr.Y-axis[1])*ky
+	w, h := float32(t.W)*kx, float32(t.H)*ky
 	if additiveBlend(string(fr.Blend)) {
-		r.win.SpriteAdd(t, sx+ox, sy+float32(fr.Y-axis[1]), flip)
+		r.win.SpriteAddSized(t, x, y, w, h, flip)
 		return
 	}
-	r.win.Sprite(t, sx+ox, sy+float32(fr.Y-axis[1]), flip)
+	r.win.SpriteSized(t, x, y, w, h, flip)
 }
 
 // drawOwnAnim draws side's animation anim, animTime ticks in, at a world
 // position and facing, with side's sprites.
-func (r *Renderer) drawOwnAnim(f *game.Flow, side, anim, animTime int, pos match.Position, facing match.Facing, groundY, camX float32) {
+func (r *Renderer) drawOwnAnim(f *game.Flow, side, anim, animTime int, at placed, groundY, camX float32) {
 	fighter := f.Fighters[side]
 	fr, ok := currentFrame(fighter.Char.Animations, anim, animTime)
 	if !ok || fr.IsBlank() {
@@ -438,7 +454,7 @@ func (r *Renderer) drawOwnAnim(f *game.Flow, side, anim, animTime int, pos match
 	if !ok {
 		return
 	}
-	r.blit(t, fr, [2]int{sp.AxisX, sp.AxisY}, pos, facing, groundY, camX)
+	r.blit(t, fr, [2]int{sp.AxisX, sp.AxisY}, at, groundY, camX)
 }
 
 // openSprites reads the sprite file name of fsys, to hand to the sff reader.
