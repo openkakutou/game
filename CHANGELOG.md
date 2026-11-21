@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- More characters play (engine v2.58.0, character v0.22.0): BindToTarget throws, ModifyExplod, `!` after a value, `!MoveType = H`, lenient AnimElem / VarSet / Clsn lines as Ikemen GO reads them.
 - Explods are drawn at their scale, and ModifyExplod changes them (engine v2.55.0).
 - The lifebar's combo counter: from a 2-hit combo it slides in, shows the hits and the damage for its display time, then slides out, as Ikemen GO.
 - The lifebar draws each player's portrait (face.spr from the character's sprites, its backgrounds, KO layer and top) and win icons (a bg0 per round to win, a normal or time icon per round won with the perfect icon over a perfect, the counter text past useiconupto), as Ikemen GO.
