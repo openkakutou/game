@@ -2,13 +2,20 @@ package game
 
 import sharedlifebar "github.com/openkakutou/lifebar"
 
+// koLieState is the state a knocked out fighter lies in (common1.cns 5150):
+// Ikemen GO's SCF_over_ko, which ends the combo on it.
+const koLieState = 5150
+
 // ComboHits is the hits side's combo has landed on the opponent, while the
-// opponent stays hit (Ikemen GO receivedHits, fs.go:5593-5603), and their
-// damage since the combo started.
+// opponent stays hit and is not lying knocked out (Ikemen GO receivedHits,
+// fs.go:5593-5603).
 // shortcut: guarded hits count, as the engine's ghv.hitcount does.
 func (m *Match) ComboHits(side int) int {
 	opp := &m.runtimes[1-side].Context
 	if opp.MoveType != 'H' {
+		return 0
+	}
+	if opp.Health <= 0 && opp.StateNo == koLieState {
 		return 0
 	}
 	return opp.GetHit.HitCount

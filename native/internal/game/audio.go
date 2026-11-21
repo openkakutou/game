@@ -24,12 +24,8 @@ type Cue struct {
 	Lifebar bool
 }
 
-// QueueLifebarSound queues a lifebar call's sound (group, sample), none for
-// a negative group.
+// QueueLifebarSound queues a lifebar call's sound (group, sample).
 func (m *Match) QueueLifebarSound(ref sharedlifebar.SoundRef) {
-	if ref.Group < 0 {
-		return
-	}
 	m.cues = append(m.cues, Cue{Group: ref.Group, Sample: ref.Number, Channel: -1, Lifebar: true})
 }
 

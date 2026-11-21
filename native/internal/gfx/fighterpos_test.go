@@ -67,10 +67,10 @@ func TestSuperDarkness(t *testing.T) {
 }
 
 func TestCallText_PutsTheRoundNumber(t *testing.T) {
-	if got := callText("Round %i", 3); got != "Round 3" {
+	if got := callText("Round %i", 3, ""); got != "Round 3" {
 		t.Errorf("got %q", got)
 	}
-	if got := callText("Fight!", 3); got != "Fight!" {
+	if got := callText("%s Wins", 3, "Kung Fu Man"); got != "Kung Fu Man Wins" {
 		t.Errorf("got %q", got)
 	}
 }

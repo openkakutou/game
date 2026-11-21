@@ -65,3 +65,18 @@ func TestMatch_ComboHitsAreTheOpponentsWhileItIsHit(t *testing.T) {
 		t.Errorf("P2 combo = %d, want 0", got)
 	}
 }
+
+// fs.go:5598: a knocked out opponent lying in 5150 ends the combo.
+func TestMatch_ComboEndsOnAnOpponentLyingKO(t *testing.T) {
+	m := &Match{}
+	opp := &m.runtimes[1].Context
+	opp.MoveType, opp.GetHit.HitCount, opp.Health = 'H', 4, 0
+	opp.StateNo = 5100
+	if got := m.ComboHits(0); got != 4 {
+		t.Errorf("falling KO: combo = %d, want 4", got)
+	}
+	opp.StateNo = koLieState
+	if got := m.ComboHits(0); got != 0 {
+		t.Errorf("lying KO: combo = %d, want 0", got)
+	}
+}

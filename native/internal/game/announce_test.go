@@ -1,6 +1,7 @@
 package game
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/openkakutou/character/air"
@@ -27,6 +28,9 @@ func callLifebar() *sharedlifebar.Lifebar {
 	lb.Round.Fight = sharedlifebar.Announcement{Text: sharedlifebar.Text{Text: "Fight"}, DisplayTime: 4}
 	lb.Round.KoTime = 5
 	lb.Round.Ko = sharedlifebar.Announcement{Element: sharedlifebar.Element{HasAnim: true, Anim: 2}, DisplayTime: -2}
+	// The library's defaults for the calls left out: no sound, no display time.
+	none := sharedlifebar.Announcement{Sound: sharedlifebar.SoundRef{Group: -1}, DisplayTime: -2}
+	lb.Round.Win, lb.Round.Draw, lb.Round.Dko, lb.Round.To = [2]sharedlifebar.Announcement{none, none}, none, none, none
 	return lb
 }
 
@@ -38,7 +42,7 @@ func TestAnnouncer_RoundThenFightCalls(t *testing.T) {
 	var a Announcer
 	var shown []Call
 	for intro := 40; intro >= 0; intro-- {
-		a.Tick(lb, 1, intro, round.OutcomeNone)
+		a.Tick(lb, 1, intro, round.RoundResult{Outcome: round.OutcomeNone})
 		shown = append(shown, a.Showing(lb)[0].Call)
 	}
 	// Intro 40..31 is before ctrl.time: nothing.
@@ -58,7 +62,7 @@ func TestAnnouncer_RoundThenFightCalls(t *testing.T) {
 	b := Announcer{}
 	for intro := 40; intro >= -100; intro-- {
 		// The fight goes on at intro 0: callfight.time may outlast the intro.
-		b.Tick(lb, 1, max(intro, 0), round.OutcomeNone)
+		b.Tick(lb, 1, max(intro, 0), round.RoundResult{Outcome: round.OutcomeNone})
 		if b.Showing(lb)[1].Call == CallFight {
 			fights++
 		}
@@ -74,7 +78,7 @@ func TestAnnouncer_FightCallLastsItsDisplayTime(t *testing.T) {
 	var a Announcer
 	fights := 0
 	for intro := 30; intro >= 0; intro-- {
-		a.Tick(lb, 1, intro, round.OutcomeNone)
+		a.Tick(lb, 1, intro, round.RoundResult{Outcome: round.OutcomeNone})
 		if a.Showing(lb)[1].Call == CallFight {
 			fights++
 		}
@@ -92,12 +96,12 @@ func TestAnnouncer_KOCallHoldsAfterItsDelay(t *testing.T) {
 	lb.Round.CallFightTime = 0
 	var a Announcer
 	for intro := 30; intro >= 0; intro-- {
-		a.Tick(lb, 1, intro, round.OutcomeNone)
+		a.Tick(lb, 1, intro, round.RoundResult{Outcome: round.OutcomeNone})
 	}
 	for range 20 {
-		a.Tick(lb, 1, 0, round.OutcomeNone)
+		a.Tick(lb, 1, 0, round.RoundResult{Outcome: round.OutcomeNone})
 	}
-	a.Tick(lb, 1, -1, round.OutcomeKO)
+	a.Tick(lb, 1, -1, round.RoundResult{Outcome: round.OutcomeKO})
 	frames := 1
 	for ; frames < 40; frames++ {
 		if a.Showing(lb)[2].Call == CallKO {
@@ -177,10 +181,10 @@ func TestAnnouncer_PlaysEachCallsSoundAtItsTime(t *testing.T) {
 	var a Announcer
 	var heard []sharedlifebar.SoundRef
 	for intro := 30; intro >= 0; intro-- {
-		a.Tick(lb, 2, intro, round.OutcomeNone)
+		a.Tick(lb, 2, intro, round.RoundResult{Outcome: round.OutcomeNone})
 		heard = a.DrainSounds(heard)
 	}
-	a.Tick(lb, 2, -1, round.OutcomeKO)
+	a.Tick(lb, 2, -1, round.RoundResult{Outcome: round.OutcomeKO})
 	for range 20 {
 		a.Frame(lb)
 	}
@@ -194,4 +198,55 @@ func TestAnnouncer_PlaysEachCallsSoundAtItsTime(t *testing.T) {
 			t.Fatalf("sounds = %v, want %v", heard, want)
 		}
 	}
+}
+
+// fs.go handleRoundOutro: over.waittime after the decision the winner's
+// win call shows from win.time for its display time; a time over draw shows
+// the draw call; a double KO without dko.showdraw shows none.
+func TestAnnouncer_WinCallFollowsOverWaitTime(t *testing.T) {
+	lb := callLifebar()
+	lb.Round.CallFightTime = 0
+	lb.Round.OverWaitTime, lb.Round.WinTime = 3, 2
+	lb.Round.Win[1] = sharedlifebar.Announcement{Text: sharedlifebar.Text{Text: "%s Wins"}, DisplayTime: 5, Sound: sharedlifebar.SoundRef{Group: -1}}
+	lb.Round.Draw = sharedlifebar.Announcement{Text: sharedlifebar.Text{Text: "Draw"}, DisplayTime: 5, Sound: sharedlifebar.SoundRef{Group: -1}}
+	run := func(result round.RoundResult) (calls []Call) {
+		var a Announcer
+		for intro := 30; intro >= 0; intro-- {
+			a.Tick(lb, 1, intro, round.RoundResult{})
+		}
+		for intro := -1; intro > -20; intro-- {
+			a.Tick(lb, 1, intro, result)
+			a.Frame(lb)
+			calls = append(calls, a.Showing(lb)[3].Call)
+		}
+		return calls
+	}
+	win := run(round.RoundResult{Outcome: round.OutcomeKO, Winner: 1})
+	first := slices.Index(win, CallWin)
+	if first < 3+2 || slices.Contains(win[:first], CallWin) {
+		t.Errorf("win calls %v: want none before over.waittime + win.time", win)
+	}
+	// End is checked before the frame draws: display time 5 shows 4 frames.
+	if n := countCalls(win, CallWin); n != 4 {
+		t.Errorf("win call shown %d frames, want 4 (display time 5)", n)
+	}
+	if got := CallOf(lb, CallWin, 1, round.RoundResult{Outcome: round.OutcomeKO, Winner: 1}).Text.Text; got != "%s Wins" {
+		t.Errorf("P2's win call = %q", got)
+	}
+	if n := countCalls(run(round.RoundResult{Outcome: round.OutcomeTimeoutDraw}), CallDraw); n != 4 {
+		t.Errorf("draw call shown %d frames, want 4", n)
+	}
+	if n := countCalls(run(round.RoundResult{Outcome: round.OutcomeDoubleKO}), CallDraw) + countCalls(run(round.RoundResult{Outcome: round.OutcomeDoubleKO}), CallWin); n != 0 {
+		t.Errorf("double KO without dko.showdraw showed %d call frames", n)
+	}
+}
+
+func countCalls(calls []Call, c Call) int {
+	n := 0
+	for _, x := range calls {
+		if x == c {
+			n++
+		}
+	}
+	return n
 }

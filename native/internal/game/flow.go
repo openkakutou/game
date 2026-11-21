@@ -851,8 +851,11 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 		f.fail(fmt.Sprintf("The match stopped: %v", err))
 		return
 	}
+	if intro, ok := f.Match.Intro(); ok && f.Lifebar != nil && intro > f.Lifebar.Round.CtrlTime {
+		f.Combos = [2]ComboCounter{} // a new round's intro: the counters start over
+	}
 	if intro, ok := f.Match.Intro(); ok && f.Lifebar != nil {
-		f.Announcer.Tick(f.Lifebar.Lifebar, f.Match.State.Round, intro, f.Match.Decided())
+		f.Announcer.Tick(f.Lifebar.Lifebar, f.Match.State.Round, intro, f.Match.DecidedResult())
 	}
 	f.queueCallSounds()
 	if f.Lifebar != nil {

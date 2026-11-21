@@ -16,6 +16,8 @@ const (
 	CallKO
 	CallDKO
 	CallTO
+	CallWin
+	CallDraw
 )
 
 // Announcer paces the lifebar's round, fight and KO calls as Ikemen GO's
@@ -25,17 +27,29 @@ const (
 // is decided, the KO, double KO or time over call, its time (plus MUGEN's 10
 // ticks) after, shown at the game's speed rather than the slow motion's.
 // Each call's sound plays at its sndtime.
-// shortcut: round.single / round.final, the win and draw calls and the bg
-// and top layers are not played; MUGEN's 10-tick KO delay is
+// The win or draw call follows over.waittime after the decision.
+// shortcut: round.single / round.final, win2-4, ai.win / ai.lose, the
+// per-win-type calls and the bg and top layers are not played; MUGEN's 10-tick KO delay is
 // always applied (the lifebar library does not report ikemenversion).
 type Announcer struct {
 	roundPhase, roundTimer int
 	fightPhase, fightTimer int
 	koPhase, koTimer       int
+	winPhase, winTimer     int
 	outro                  bool
 	finish                 round.Outcome
+	result                 round.RoundResult
+	// lastIntro is the round clock's intro at the last tick.
+	lastIntro int
 	// sounds are the calls' sounds due, drained by DrainSounds.
 	sounds []sharedlifebar.SoundRef
+}
+
+// queueSound queues a call's sound, none for a negative group.
+func (a *Announcer) queueSound(ref sharedlifebar.SoundRef) {
+	if ref.Group >= 0 {
+		a.sounds = append(a.sounds, ref)
+	}
 }
 
 // DrainSounds returns dst followed by the calls' sounds due since the last
@@ -46,8 +60,8 @@ func (a *Announcer) DrainSounds(dst []sharedlifebar.SoundRef) []sharedlifebar.So
 	return dst
 }
 
-// Finish is the outcome the KO call announces.
-func (a *Announcer) Finish() round.Outcome { return a.finish }
+// Result is the round result the win call announces.
+func (a *Announcer) Result() round.RoundResult { return a.result }
 
 // mugenKODelay is the delay Ikemen GO adds to a MUGEN lifebar's KO call.
 const mugenKODelay = 10
@@ -58,11 +72,11 @@ type Shown struct {
 	Elapsed int
 }
 
-// Showing is the calls on screen, round, fight then KO, CallNone in the
-// slots of those not showing; Ikemen GO draws them together.
-func (a *Announcer) Showing(lb *sharedlifebar.Lifebar) [3]Shown {
+// Showing is the calls on screen, round, fight, KO then win, CallNone in
+// the slots of those not showing; Ikemen GO draws them together.
+func (a *Announcer) Showing(lb *sharedlifebar.Lifebar) [4]Shown {
 	r := &lb.Round
-	var out [3]Shown
+	var out [4]Shown
 	if a.roundPhase == 1 {
 		out[0] = Shown{CallRound, max(a.roundTimer-r.RoundTime-1, 0)}
 	}
@@ -71,6 +85,9 @@ func (a *Announcer) Showing(lb *sharedlifebar.Lifebar) [3]Shown {
 	}
 	if a.koPhase == 1 {
 		out[2] = Shown{koCall(a.finish), max(a.koTimer-KOCallTime(lb, a.finish)-mugenKODelay-1, 0)}
+	}
+	if call := winCall(lb, a.result); a.winPhase == 1 && call != CallNone {
+		out[3] = Shown{call, max(a.winTimer-r.WinTime-1, 0)}
 	}
 	return out
 }
@@ -87,8 +104,10 @@ func koCall(o round.Outcome) Call {
 
 // Tick advances the calls by a simulated tick: intro is the round clock's,
 // finish the round's outcome so far.
-func (a *Announcer) Tick(lb *sharedlifebar.Lifebar, roundNo, intro int, finish round.Outcome) {
+func (a *Announcer) Tick(lb *sharedlifebar.Lifebar, roundNo, intro int, result round.RoundResult) {
 	r := &lb.Round
+	finish := result.Outcome
+	a.lastIntro = intro
 	if intro > r.CtrlTime {
 		*a = Announcer{}
 		return
@@ -97,7 +116,7 @@ func (a *Announcer) Tick(lb *sharedlifebar.Lifebar, roundNo, intro int, finish r
 		a.intro(lb, roundNo)
 	}
 	if a.fightPhase == 2 && intro < 0 && finish != round.OutcomeNone && !a.outro {
-		a.outro, a.finish = true, finish
+		a.outro, a.finish, a.result = true, finish, result
 		a.stepOutro(lb)
 	}
 }
@@ -113,7 +132,7 @@ func (a *Announcer) intro(lb *sharedlifebar.Lifebar, roundNo int) {
 	r := &lb.Round
 	if a.roundPhase < 2 {
 		if a.roundTimer == r.RoundSndTime {
-			a.sounds = append(a.sounds, roundSound(lb, roundNo))
+			a.queueSound(roundSound(lb, roundNo))
 		}
 		if a.roundTimer >= r.RoundTime {
 			a.roundPhase = 1
@@ -135,7 +154,7 @@ func (a *Announcer) intro(lb *sharedlifebar.Lifebar, roundNo int) {
 		a.fightTimer++
 	case 1:
 		if a.fightTimer == r.FightSndTime {
-			a.sounds = append(a.sounds, r.Fight.Sound)
+			a.queueSound(r.Fight.Sound)
 		}
 		if a.fightTimer >= r.FightTime && ended(lb, r.Fight, a.fightTimer-r.FightTime+1, true) && a.fightTimer >= r.FightSndTime {
 			a.fightPhase = 2
@@ -145,12 +164,59 @@ func (a *Announcer) intro(lb *sharedlifebar.Lifebar, roundNo int) {
 }
 
 func (a *Announcer) stepOutro(lb *sharedlifebar.Lifebar) {
+	a.stepKO(lb)
+	a.stepWin(lb)
+}
+
+// stepWin paces the win or draw call: over.waittime after the decision, then
+// win.time, its sound at win.sndtime (fs.go handleRoundOutro, 3880-3960).
+func (a *Announcer) stepWin(lb *sharedlifebar.Lifebar) {
+	r := &lb.Round
+	if a.winPhase >= 2 || a.lastIntro >= -r.OverWaitTime {
+		return
+	}
+	call := winCall(lb, a.result)
+	if call == CallNone {
+		return
+	}
+	c := CallOf(lb, call, 0, a.result)
+	if a.winTimer == r.WinSndTime {
+		a.queueSound(c.Sound)
+	}
+	if a.winTimer >= r.WinTime {
+		a.winPhase = 1
+		if ended(lb, c, a.winTimer-r.WinTime+1, false) {
+			a.winPhase = 2
+		}
+	}
+	a.winTimer++
+}
+
+// winCall is the call a round result ends on: draw for a time over draw or
+// a double KO with dko.showdraw, the winner's win call, none for a double KO
+// without.
+func winCall(lb *sharedlifebar.Lifebar, r round.RoundResult) Call {
+	switch r.Outcome {
+	case round.OutcomeTimeoutDraw:
+		return CallDraw
+	case round.OutcomeDoubleKO:
+		if lb.Round.DkoShowDraw {
+			return CallDraw
+		}
+		return CallNone
+	case round.OutcomeKO, round.OutcomeTimeout:
+		return CallWin
+	}
+	return CallNone
+}
+
+func (a *Announcer) stepKO(lb *sharedlifebar.Lifebar) {
 	if a.koPhase >= 2 {
 		return
 	}
 	start := KOCallTime(lb, a.finish) + mugenKODelay
 	if a.koTimer == koSoundTime(lb, a.finish)+mugenKODelay {
-		a.sounds = append(a.sounds, KOCall(lb, a.finish).Sound)
+		a.queueSound(KOCall(lb, a.finish).Sound)
 	}
 	if a.koTimer >= start {
 		a.koPhase = 1
@@ -258,14 +324,18 @@ func HasCalls(lb *sharedlifebar.Lifebar) bool {
 	return drawable(r.RoundDefault) || drawable(r.Fight) || drawable(r.Ko)
 }
 
-// CallOf is the announcement a shown call draws, in round roundNo decided
-// with finish.
-func CallOf(lb *sharedlifebar.Lifebar, c Call, roundNo int, finish round.Outcome) sharedlifebar.Announcement {
+// CallOf is the announcement a shown call draws, in round roundNo ending
+// with result.
+func CallOf(lb *sharedlifebar.Lifebar, c Call, roundNo int, result round.RoundResult) sharedlifebar.Announcement {
 	switch c {
 	case CallRound:
 		return RoundCall(lb, roundNo)
 	case CallFight:
 		return lb.Round.Fight
+	case CallWin:
+		return lb.Round.Win[min(max(int(result.Winner), 0), 1)]
+	case CallDraw:
+		return lb.Round.Draw
 	}
-	return KOCall(lb, finish)
+	return KOCall(lb, result.Outcome)
 }

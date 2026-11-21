@@ -572,8 +572,8 @@ func (m *Match) Intro() (int, bool) {
 	return m.clock.Intro(), true
 }
 
-// Decided is the round's outcome so far.
-func (m *Match) Decided() round.Outcome { return m.decided.Outcome }
+// DecidedResult is the round's result so far.
+func (m *Match) DecidedResult() round.RoundResult { return m.decided }
 
 // RoundState is the round's Ikemen GO RoundState (0 to 4); 2 in training.
 func (m *Match) RoundState() int {

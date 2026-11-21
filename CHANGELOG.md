@@ -8,11 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- The combo counter ends once the knocked out opponent lies down (state 5150) and starts over each round, as Ikemen GO.
 - In the desktop game, a jumping fighter is drawn in the air instead of sinking below the ground.
 - In the desktop game's Appearance options, the sample lifebar no longer covers the page heading.
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The lifebar's win and draw calls follow the round's end as Ikemen GO paces them (over.waittime, win.time, display time, sound; %s is the winner's name) (lifebar v0.2.0).
 - The lifebar's round, fight and KO calls play their sounds from its fight.snd at their sndtime, as Ikemen GO.
 - More characters play (engine v2.58.0, character v0.22.0): BindToTarget throws, ModifyExplod, `!` after a value, `!MoveType = H`, lenient AnimElem / VarSet / Clsn lines as Ikemen GO reads them.
 - Explods are drawn at their scale, and ModifyExplod changes them (engine v2.55.0).

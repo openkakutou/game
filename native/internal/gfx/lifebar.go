@@ -99,7 +99,8 @@ func (l *lifebarHUD) elements() []lifebar.Element {
 	for _, a := range r.Round {
 		out = append(out, a.Element)
 	}
-	return append(out, r.RoundDefault.Element, r.Fight.Element, r.Ko.Element, r.Dko.Element, r.To.Element)
+	return append(out, r.RoundDefault.Element, r.Fight.Element, r.Ko.Element, r.Dko.Element, r.To.Element,
+		r.Win[0].Element, r.Win[1].Element, r.Draw.Element)
 }
 
 // screen is where the lifebar lands in the 320x240 view (Ikemen GO's
@@ -275,19 +276,30 @@ func (l *lifebarHUD) drawCalls(w *Window, f *game.Flow) {
 		if shown.Call == game.CallNone {
 			continue
 		}
-		a := game.CallOf(lb, shown.Call, f.Match.State.Round, f.Announcer.Finish())
+		a := game.CallOf(lb, shown.Call, f.Match.State.Round, f.Announcer.Result())
 		for layer := range 3 {
 			l.drawElement(w, s, a.Element, pos, layer, shown.Elapsed)
 		}
 		if a.Text.Text != "" {
-			l.print(w, s, a.Text, pos, callText(a.Text.Text, f.Match.State.Round))
+			l.print(w, s, a.Text, pos, callText(a.Text.Text, f.Match.State.Round, winnerName(f)))
 		}
 	}
 }
 
-// callText is a call's text, %i standing for the round number.
-func callText(text string, roundNo int) string {
-	return strings.ReplaceAll(text, "%i", strconv.Itoa(roundNo))
+// callText is a call's text, %i standing for the round number and %s for
+// the winner's name.
+func callText(text string, roundNo int, winner string) string {
+	text = strings.ReplaceAll(text, "%i", strconv.Itoa(roundNo))
+	return strings.ReplaceAll(text, "%s", winner)
+}
+
+// winnerName is the name of the round's winner.
+func winnerName(f *game.Flow) string {
+	w := int(f.Announcer.Result().Winner)
+	if w < 0 || w >= len(f.Fighters) || f.Fighters[w].Char == nil {
+		return ""
+	}
+	return f.Fighters[w].Char.Name
 }
 
 // sampleNames and sampleTimer are the texts of the sample lifebar the
