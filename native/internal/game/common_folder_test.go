@@ -53,7 +53,7 @@ func TestShippedCommon_GivesKungFuManItsCommonStates(t *testing.T) {
 		t.Fatalf("stcommon = common1.cns must resolve to the shipped common1.cns.zss, missing %v", f.Missing)
 	}
 	m := startMatch(t, f, f)
-	requireStartsInStateZero(t, m)
+	requireStartsTheRound(t, m)
 }
 
 func TestShippedCommon_ReplacingCommon1ChangesTheStates(t *testing.T) {

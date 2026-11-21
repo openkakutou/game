@@ -232,6 +232,7 @@ func TestStartQuickVersus_QuitsWhenTheMatchEndsOrThePlayerLeaves(t *testing.T) {
 	f.StartQuickVersus(q)
 	f.Match.Over = true
 	f.Match.LastRound.Outcome = 1
+	f.Match.roundOver = true
 	f.RoundOverTicks = 1
 	f.Tick([2]input.TickInput{})
 	if !f.Quit || f.Screen == ScreenResult {

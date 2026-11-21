@@ -209,6 +209,15 @@ type Match struct {
 	Over   bool
 	Winner match.Side
 
+	// clock drives the round as Ikemen GO does (intros, fight, KO, poses),
+	// nil in training, which fights from the first tick; progress is what
+	// the fighters see of it, decided the round's result once known and
+	// roundOver set when the clock ends the round.
+	clock     *round.Clock
+	progress  engine.RoundProgress
+	decided   round.RoundResult
+	roundOver bool
+
 	starting [2]match.FighterState
 	// cam is the match's own camera, in stage units: Ikemen GO's camera is
 	// part of the simulation and sets the screen edges the fighters stay
@@ -312,15 +321,28 @@ func (m *Match) reset(roundNo int) error {
 	if err != nil {
 		return err
 	}
+	m.clock = nil
+	if !m.Setup.Training {
+		m.clock = round.NewClock(round.DefaultTimings)
+	}
 	for i := range m.runtimes {
-		rt, err := m.programs[i].NewRuntime(m.starting[i])
+		// A round starts in state 5900 without control, as in Ikemen GO; a
+		// training session fights at once.
+		var rt engine.FighterRuntime
+		if m.clock != nil {
+			rt, err = m.programs[i].NewRoundRuntime(m.starting[i])
+		} else {
+			rt, err = m.programs[i].NewRuntime(m.starting[i])
+		}
 		if err != nil {
 			return fmt.Errorf("side %d: %w%s", i, err, m.missingNote(i))
 		}
 		rt.Context.AILevel = m.Setup.AILevel[i]
 		m.runtimes[i] = rt
+		state.Fighters[i].StateNo = rt.Context.StateNo
 	}
 	m.State = *state
+	m.decided, m.roundOver = round.RoundResult{}, false
 	m.tick = 0
 	m.camX = m.cam.Follow(m.cam.Start(), m.starting[0].Position.X, m.starting[1].Position.X, true)
 	m.cues = m.cues[:0]
@@ -374,6 +396,14 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	}
 	m.tick++
 	cfg := engine.TickConfig{Bounds: &m.Bounds, Screen: m.Screen(), Gravity: DefaultGravity, Tick: m.tick, ComboWindow: DefaultComboWindow}
+	if m.clock != nil && m.clock.InputWait() {
+		in = [2]input.TickInput{} // the players' inputs wait (Ikemen GO inputWait)
+	}
+	if m.clock != nil {
+		m.progress.State, m.progress.Result = m.clock.State(), m.decided
+		m.progress.MatchOver = m.decided.Outcome != round.OutcomeNone && m.matchEndsWith(m.decided)
+		cfg.Round = &m.progress
+	}
 	res, err := engine.Tick(m.State, m.programs, m.runtimes, in, cfg)
 	if err != nil {
 		return err
@@ -390,12 +420,48 @@ func (m *Match) Step(in [2]input.TickInput) error {
 		m.refillLife()
 		return nil
 	}
-	if res.Round.Outcome != round.OutcomeNone {
-		m.LastRound = res.Round
-		m.Progress = m.Progress.RecordRoundResult(res.Round)
+	if res.Round.Outcome != round.OutcomeNone && m.decided.Outcome == round.OutcomeNone {
+		m.decided, m.LastRound = res.Round, res.Round
+	}
+	return m.stepClock()
+}
+
+// stepClock advances the round clock after a tick and does what it asks:
+// start the fight, send the fighters to their poses, end the round (and
+// count it).
+func (m *Match) stepClock() error {
+	intro := engine.IntroAsserted(&m.runtimes[0]) || engine.IntroAsserted(&m.runtimes[1])
+	settled := engine.Settled(&m.runtimes[0]) && engine.Settled(&m.runtimes[1])
+	switch m.clock.Step(intro, m.decided.Outcome != round.OutcomeNone, settled) {
+	case round.EventFightStart:
+		if err := engine.StartFight(m.programs, &m.State, &m.runtimes); err != nil {
+			return err
+		}
+	case round.EventPoses:
+		if err := engine.EnterPoses(m.programs, &m.State, &m.runtimes, m.decided); err != nil {
+			return err
+		}
+	case round.EventRoundOver:
+		m.roundOver = true
+		m.Progress = m.Progress.RecordRoundResult(m.decided)
 		m.Over, m.Winner = m.Progress.MatchOutcome()
 	}
+	m.syncAnim()
 	return nil
+}
+
+// matchEndsWith reports whether the round result ends the match.
+func (m *Match) matchEndsWith(r round.RoundResult) bool {
+	over, _ := m.Progress.RecordRoundResult(r).MatchOutcome()
+	return over
+}
+
+// RoundState is the round's Ikemen GO RoundState (0 to 4); 2 in training.
+func (m *Match) RoundState() int {
+	if m.clock == nil {
+		return 2
+	}
+	return m.clock.State()
 }
 
 // CameraX is the match camera's position, in stage units.
@@ -442,8 +508,9 @@ func screenMargins(st *stage.Stage, width float64) [2]float64 {
 // Ticks is how many ticks the current round has simulated.
 func (m *Match) Ticks() int { return m.tick }
 
-// RoundEnded reports that the current round has an outcome.
-func (m *Match) RoundEnded() bool { return m.LastRound.Outcome != round.OutcomeNone }
+// RoundEnded reports that the current round is over: decided, its poses
+// played and its over.time passed (training rounds end at the KO).
+func (m *Match) RoundEnded() bool { return m.roundOver }
 
 // NextRound resets both fighters for the following round.
 func (m *Match) NextRound() error {

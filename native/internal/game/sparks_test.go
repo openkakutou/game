@@ -70,6 +70,7 @@ func TestMatch_ALandedHitShowsItsSpark(t *testing.T) {
 	if err := m.SetCommonAnimations(raw); err != nil {
 		t.Fatal(err)
 	}
+	untilFight(t, m)
 	seen := false
 	for i := 0; i < 40 && !seen; i++ {
 		in := [2]input.TickInput{}

@@ -53,23 +53,42 @@ func startMatch(t *testing.T, p1, p2 *Fighter) *Match {
 	return m
 }
 
-func requireStartsInStateZero(t *testing.T, m *Match) {
+// requireStartsTheRound expects both fighters to start the round as Ikemen
+// GO starts them (system.go:2580-2595): in common1's state 5900 without
+// control.
+func requireStartsTheRound(t *testing.T, m *Match) {
 	t.Helper()
 	for i, rt := range m.runtimes {
-		if rt.Context.StateNo != 0 {
-			t.Errorf("side %d starts in state %d, want 0", i, rt.Context.StateNo)
+		if rt.Context.StateNo != 5900 || rt.Context.Ctrl {
+			t.Errorf("side %d starts in state %d (ctrl %v), want 5900 without control", i, rt.Context.StateNo, rt.Context.Ctrl)
 		}
 	}
 }
 
-// requireTicksIdle runs a few ticks and expects both fighters to stay in the
-// idle state 0 with anim 0 (common1's state 0 is "ChangeAnim value = 0").
+// untilFight steps m with no input until the round's fight starts
+// (RoundState 2), the intros played.
+func untilFight(t *testing.T, m *Match) {
+	t.Helper()
+	for n := 0; n < 2000 && m.RoundState() != 2; n++ {
+		if err := m.Step([2]input.TickInput{}); err != nil {
+			t.Fatalf("tick %d: %v", n+1, err)
+		}
+	}
+	if m.RoundState() != 2 {
+		t.Fatal("the fight never started")
+	}
+}
+
+// requireTicksIdle plays the intros, runs a few ticks of the fight and
+// expects both fighters in the idle state 0 with anim 0 (common1's state 0
+// is "ChangeAnim value = 0").
 // Known engine gap: common1 state 0 reads Const(...), a trigger the engine
 // lacks until its backlog item 042. That failure is kept as an expected
 // failure (skipped with the item named), never weakened: once 042 lands the
 // skip no longer triggers and the assertions below must pass.
 func requireTicksIdle(t *testing.T, m *Match) {
 	t.Helper()
+	untilFight(t, m)
 	for n := 0; n < 5; n++ {
 		if err := m.Step([2]input.TickInput{}); err != nil {
 			t.Fatalf("tick %d: %v", n+1, err)
@@ -95,7 +114,7 @@ func TestNewMatch_CnsAndZssKungFuManStartWithCommonFolder(t *testing.T) {
 		t.Fatalf("nothing should be missing, got %v and %v", cns.Missing, zss.Missing)
 	}
 	m := startMatch(t, cns, zss)
-	requireStartsInStateZero(t, m)
+	requireStartsTheRound(t, m)
 	requireTicksIdle(t, m)
 }
 
@@ -109,7 +128,7 @@ func TestNewMatch_CommonFilesInTheCharacterFolderStartToo(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := startMatch(t, cns, zss)
-	requireStartsInStateZero(t, m)
+	requireStartsTheRound(t, m)
 	requireTicksIdle(t, m)
 }
 

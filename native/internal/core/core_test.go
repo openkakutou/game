@@ -165,6 +165,24 @@ func TestStartMatch_ReturnsRoundZeroState(t *testing.T) {
 }
 
 // playTo has P1 tap attack for n ticks.
+// playUntilRoundEnd plays like playTo until the round is over (its intros,
+// fight and poses played), at most n ticks.
+func playUntilRoundEnd(t *testing.T, c *Core, id, n int) map[string]any {
+	t.Helper()
+	var out map[string]any
+	for i := 0; i < n && (out == nil || out["roundEnded"] != true); i++ {
+		in := pressA
+		if i%2 == 1 {
+			in = idle
+		}
+		out = decode(t, c.Tick(id, in))
+		if out["ok"] != true {
+			t.Fatalf("tick %d: %v", i, out)
+		}
+	}
+	return out
+}
+
 func playTo(t *testing.T, c *Core, id, n int) map[string]any {
 	t.Helper()
 	var out map[string]any
@@ -262,7 +280,8 @@ func TestNextRound_RefusesARoundStillBeingPlayed(t *testing.T) {
 func TestTick_NamesTheRoundWinnerOfATimeoutWithAHealthLead(t *testing.T) {
 	c := loaded(t)
 	id, _ := start(t, c, strings.Replace(startReq, `"timeLimitSeconds":60`, `"timeLimitSeconds":2`, 1))
-	out := playTo(t, c, id, 120)
+	// The time counts in the fight only (RoundState 2), after the intros.
+	out := playUntilRoundEnd(t, c, id, 2000)
 	// Pinned: P1's attack lands within the first seconds (health of P2 drops,
 	// see TestTick_SnapshotMatchesTheMatchItDrives), so P1 wins on time.
 	if out["outcome"] != "timeout" || out["roundWinner"] != 0.0 {
@@ -274,7 +293,7 @@ func TestTick_RoundEndsAndNextRoundResets(t *testing.T) {
 	c := loaded(t)
 	id, _ := start(t, c, strings.Replace(startReq, `"timeLimitSeconds":60`, `"timeLimitSeconds":1`, 1))
 	var out map[string]any
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 2000 && (out == nil || out["roundEnded"] != true); i++ {
 		out = decode(t, c.Tick(id, idle))
 	}
 	if out["roundEnded"] != true || out["outcome"] != "draw" || out["timer"] != 0.0 || out["roundWinner"] != -1.0 {

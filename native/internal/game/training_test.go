@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/openkakutou/engine/v2/round"
 	"os"
 	"slices"
 	"strings"
@@ -261,8 +262,14 @@ func TestTraining_OffKeepsTheLifeLostAndEndsTheRoundOnKO(t *testing.T) {
 	}
 	setHealth(m, 1, 0)
 	stepN(t, m, 1)
+	if m.LastRound.Outcome != round.OutcomeKO {
+		t.Fatalf("last round = %+v, want a KO at once outside training", m.LastRound)
+	}
+	for n := 0; n < 1000 && !m.RoundEnded(); n++ {
+		stepN(t, m, 1)
+	}
 	if !m.RoundEnded() {
-		t.Error("a KO must end the round outside training")
+		t.Error("a KO must end the round outside training, once its poses are played")
 	}
 }
 
