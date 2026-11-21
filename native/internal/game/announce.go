@@ -24,8 +24,9 @@ const (
 // the fight call callfight.time after the round call shows; once the round
 // is decided, the KO, double KO or time over call, its time (plus MUGEN's 10
 // ticks) after, shown at the game's speed rather than the slow motion's.
-// shortcut: round.single / round.final, the win and draw calls, the bg and
-// top layers and the sounds are not played; MUGEN's 10-tick KO delay is
+// Each call's sound plays at its sndtime.
+// shortcut: round.single / round.final, the win and draw calls and the bg
+// and top layers are not played; MUGEN's 10-tick KO delay is
 // always applied (the lifebar library does not report ikemenversion).
 type Announcer struct {
 	roundPhase, roundTimer int
@@ -33,6 +34,16 @@ type Announcer struct {
 	koPhase, koTimer       int
 	outro                  bool
 	finish                 round.Outcome
+	// sounds are the calls' sounds due, drained by DrainSounds.
+	sounds []sharedlifebar.SoundRef
+}
+
+// DrainSounds returns dst followed by the calls' sounds due since the last
+// drain, and forgets them.
+func (a *Announcer) DrainSounds(dst []sharedlifebar.SoundRef) []sharedlifebar.SoundRef {
+	dst = append(dst, a.sounds...)
+	a.sounds = a.sounds[:0]
+	return dst
 }
 
 // Finish is the outcome the KO call announces.
@@ -101,6 +112,9 @@ func (a *Announcer) Frame(lb *sharedlifebar.Lifebar) {
 func (a *Announcer) intro(lb *sharedlifebar.Lifebar, roundNo int) {
 	r := &lb.Round
 	if a.roundPhase < 2 {
+		if a.roundTimer == r.RoundSndTime {
+			a.sounds = append(a.sounds, roundSound(lb, roundNo))
+		}
 		if a.roundTimer >= r.RoundTime {
 			a.roundPhase = 1
 			if ended(lb, RoundCall(lb, roundNo), a.roundTimer-r.RoundTime+1, true) {
@@ -120,6 +134,9 @@ func (a *Announcer) intro(lb *sharedlifebar.Lifebar, roundNo int) {
 		}
 		a.fightTimer++
 	case 1:
+		if a.fightTimer == r.FightSndTime {
+			a.sounds = append(a.sounds, r.Fight.Sound)
+		}
 		if a.fightTimer >= r.FightTime && ended(lb, r.Fight, a.fightTimer-r.FightTime+1, true) && a.fightTimer >= r.FightSndTime {
 			a.fightPhase = 2
 		}
@@ -132,6 +149,9 @@ func (a *Announcer) stepOutro(lb *sharedlifebar.Lifebar) {
 		return
 	}
 	start := KOCallTime(lb, a.finish) + mugenKODelay
+	if a.koTimer == koSoundTime(lb, a.finish)+mugenKODelay {
+		a.sounds = append(a.sounds, KOCall(lb, a.finish).Sound)
+	}
 	if a.koTimer >= start {
 		a.koPhase = 1
 		if ended(lb, KOCall(lb, a.finish), a.koTimer-start+1, false) {
@@ -148,6 +168,26 @@ func RoundCall(lb *sharedlifebar.Lifebar, roundNo int) sharedlifebar.Announcemen
 		return lb.Round.Round[roundNo-1]
 	}
 	return lb.Round.RoundDefault
+}
+
+// roundSound is round roundNo's call sound: its own when it has one, else
+// round.default's (fs.go handleRoundIntro).
+func roundSound(lb *sharedlifebar.Lifebar, roundNo int) sharedlifebar.SoundRef {
+	if roundNo >= 1 && roundNo <= len(lb.Round.Round) && lb.Round.Round[roundNo-1].Sound.Group >= 0 {
+		return lb.Round.Round[roundNo-1].Sound
+	}
+	return lb.Round.RoundDefault.Sound
+}
+
+// koSoundTime is when the call of a round decided with o sounds.
+func koSoundTime(lb *sharedlifebar.Lifebar, o round.Outcome) int {
+	switch koCall(o) {
+	case CallDKO:
+		return lb.Round.DkoSndTime
+	case CallTO:
+		return lb.Round.ToSndTime
+	}
+	return lb.Round.KoSndTime
 }
 
 // KOCall is the call of a round decided with o.

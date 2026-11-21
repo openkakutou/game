@@ -15,7 +15,9 @@ import (
 // (src/char.go:6653-6663), moved to common/ by roadmap decision 031.
 // It reads the file on the first lookup and decodes each sample once.
 type CommonSounds struct {
-	fsys     fs.FS
+	fsys fs.FS
+	// name is the file read; "" is common/common.snd.
+	name     string
 	read     bool
 	data     []byte
 	sounds   map[soundKey]character.Sound
@@ -25,6 +27,12 @@ type CommonSounds struct {
 // NewCommonSounds returns the common sounds of fsys's common/ folder.
 func NewCommonSounds(fsys fs.FS) *CommonSounds {
 	return &CommonSounds{fsys: fsys, sounds: map[soundKey]character.Sound{}}
+}
+
+// NewSoundFile returns the sounds of the .snd file name of fsys, read the
+// same way (the lifebar's fight.snd).
+func NewSoundFile(fsys fs.FS, name string) *CommonSounds {
+	return &CommonSounds{fsys: fsys, name: name, sounds: map[soundKey]character.Sound{}}
 }
 
 // Find returns the decoded common sample (group, sample). A missing or
@@ -54,7 +62,10 @@ func (c *CommonSounds) load() {
 		return
 	}
 	c.read = true
-	name := path.Join(CommonFolder(c.fsys), "common.snd")
+	name := c.name
+	if name == "" {
+		name = path.Join(CommonFolder(c.fsys), "common.snd")
+	}
 	data, err := fs.ReadFile(c.fsys, name)
 	if err != nil {
 		c.warnings = append(c.warnings, fmt.Sprintf("common sounds: cannot read %s: %v", name, err))
@@ -80,6 +91,12 @@ func checkSoundFile(data []byte) error {
 // FindCueSound returns the sample a cue plays: from common/common.snd for a
 // common cue, from the cue's fighter otherwise.
 func (f *Flow) FindCueSound(c Cue) (character.Sound, bool) {
+	if c.Lifebar {
+		if f.Lifebar == nil || f.Lifebar.SoundFile == nil {
+			return character.Sound{}, false
+		}
+		return f.Lifebar.SoundFile.Find(c.Group, c.Sample)
+	}
 	if c.Common {
 		return f.CommonSounds.Find(c.Group, c.Sample)
 	}

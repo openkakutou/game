@@ -22,6 +22,8 @@ type HUDLifebar struct {
 	// fightscreen.go:4918), as a name in the content file system; "" when
 	// none is found.
 	Sprites string
+	// SoundFile is its [Files] snd, the calls' sounds; nil without one.
+	SoundFile *CommonSounds
 	// Fonts are the [Files] fonts that loaded, by number; text in a font
 	// missing here is printed in the built-in font.
 	Fonts map[int]*bmfont.Font
@@ -86,6 +88,14 @@ func loadLifebar(fsys fs.FS, entry lifebar.Entry) (*HUDLifebar, []string) {
 		if _, serr := fs.Stat(fsys, hud.Sprites); serr != nil {
 			notices = append(notices, fmt.Sprintf("lifebar %q: sprite file %q not found", entry.Name, lb.Files.Sprites))
 			hud.Sprites = ""
+		}
+	}
+	if lb.Files.Sounds != "" {
+		name := joinResolved(fsys, []string{path.Dir(entry.Def), ".", CommonFolder(fsys)}, lb.Files.Sounds)
+		if _, serr := fs.Stat(fsys, name); serr == nil && name != "" {
+			hud.SoundFile = NewSoundFile(fsys, name)
+		} else {
+			notices = append(notices, fmt.Sprintf("lifebar %q: sound file %q not found", entry.Name, lb.Files.Sounds))
 		}
 	}
 	fonts := map[int]string{}

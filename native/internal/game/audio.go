@@ -6,6 +6,7 @@ import (
 	"github.com/openkakutou/character"
 	"github.com/openkakutou/engine/v2/evaluator"
 	"github.com/openkakutou/engine/v2/match"
+	sharedlifebar "github.com/openkakutou/lifebar"
 )
 
 // Cue is one sound effect the engine asked a fighter to play (PlaySnd).
@@ -19,6 +20,17 @@ type Cue struct {
 	// channel playing instead of cutting it (see RequestSlot).
 	Channel     int
 	LowPriority bool
+	// Lifebar is a lifebar call's sound, read from its fight.snd.
+	Lifebar bool
+}
+
+// QueueLifebarSound queues a lifebar call's sound (group, sample), none for
+// a negative group.
+func (m *Match) QueueLifebarSound(ref sharedlifebar.SoundRef) {
+	if ref.Group < 0 {
+		return
+	}
+	m.cues = append(m.cues, Cue{Group: ref.Group, Sample: ref.Number, Channel: -1, Lifebar: true})
 }
 
 // queueCues appends one tick's PlaySnd events, side 0 first.

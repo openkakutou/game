@@ -162,3 +162,36 @@ func TestRecordWin_KeepsTheWinnersRoundsAndTheirKind(t *testing.T) {
 		t.Errorf("P2 wins = %+v, want one time win", m.Wins[1])
 	}
 }
+
+// fs.go handleRoundIntro / handleRoundOutro: each call's sound plays at its
+// sndtime: the round's own sound, else round.default's; the fight sound;
+// the KO sound sndtime + 10 frames after the decision.
+func TestAnnouncer_PlaysEachCallsSoundAtItsTime(t *testing.T) {
+	lb := callLifebar()
+	lb.Round.RoundSndTime, lb.Round.FightSndTime, lb.Round.KoSndTime = 1, 0, 2
+	lb.Round.RoundDefault.Sound = sharedlifebar.SoundRef{Group: 0, Number: 9}
+	lb.Round.Round[1].Sound = sharedlifebar.SoundRef{Group: 0, Number: 2}
+	lb.Round.Fight.Sound = sharedlifebar.SoundRef{Group: 1, Number: 0}
+	lb.Round.Ko.Sound = sharedlifebar.SoundRef{Group: 2, Number: 0}
+	lb.Round.CallFightTime = 0
+	var a Announcer
+	var heard []sharedlifebar.SoundRef
+	for intro := 30; intro >= 0; intro-- {
+		a.Tick(lb, 2, intro, round.OutcomeNone)
+		heard = a.DrainSounds(heard)
+	}
+	a.Tick(lb, 2, -1, round.OutcomeKO)
+	for range 20 {
+		a.Frame(lb)
+	}
+	heard = a.DrainSounds(heard)
+	want := []sharedlifebar.SoundRef{{Group: 0, Number: 2}, {Group: 1, Number: 0}, {Group: 2, Number: 0}}
+	if len(heard) != len(want) {
+		t.Fatalf("sounds = %v, want %v", heard, want)
+	}
+	for i := range want {
+		if heard[i] != want[i] {
+			t.Fatalf("sounds = %v, want %v", heard, want)
+		}
+	}
+}

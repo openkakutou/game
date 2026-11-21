@@ -31,9 +31,9 @@ const (
 // chunkKey identifies one character sample, or one common sample when
 // common is true (side is then ignored).
 type chunkKey struct {
-	side          match.Side
-	group, sample int
-	common        bool
+	side            match.Side
+	group, sample   int
+	common, lifebar bool
 }
 
 // Player owns the mixer. The zero value and a nil *Player are silent no-ops,
@@ -384,7 +384,7 @@ func (p *Player) loadMenuChunk(asset ui.Asset) *mix.Chunk {
 }
 
 func (p *Player) playCue(f *game.Flow, c game.Cue) {
-	key := chunkKey{c.Side, c.Group, c.Sample, c.Common}
+	key := chunkKey{c.Side, c.Group, c.Sample, c.Common, c.Lifebar}
 	if c.Common {
 		key.side = 0
 	}

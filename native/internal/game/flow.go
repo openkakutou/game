@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"github.com/openkakutou/engine/v2/round"
+	sharedlifebar "github.com/openkakutou/lifebar"
 	"io/fs"
 	"path"
 	"slices"
@@ -188,6 +189,8 @@ type Flow struct {
 	Announcer Announcer
 	// Combos are each side's lifebar combo counter.
 	Combos [2]ComboCounter
+	// callSounds is the buffer of the lifebar calls' sounds.
+	callSounds []sharedlifebar.SoundRef
 	// Lifebars are the usable folders of lifebars/ and Packs the installed
 	// screenpacks' names, which Options > Appearance offers.
 	Lifebars []lifebar.Entry
@@ -839,6 +842,7 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 	}
 	if f.Lifebar != nil {
 		f.Announcer.Frame(f.Lifebar.Lifebar)
+		f.queueCallSounds()
 	}
 	if !f.Match.Advances() {
 		return // the KO slow motion holds this frame
@@ -850,6 +854,7 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 	if intro, ok := f.Match.Intro(); ok && f.Lifebar != nil {
 		f.Announcer.Tick(f.Lifebar.Lifebar, f.Match.State.Round, intro, f.Match.Decided())
 	}
+	f.queueCallSounds()
 	if f.Lifebar != nil {
 		for i := range f.Combos {
 			f.Combos[i].Step(f.Lifebar.Combo[i], f.Lifebar.Localcoord[0], f.Match.ComboHits(i), f.Match.State.Fighters[1-i].Health)
@@ -870,4 +875,12 @@ func (f *Flow) decideCPU(i int, cpu *CPU) {
 		return
 	}
 	cpu.Decide(&f.cpuIn[i])
+}
+
+// queueCallSounds hands the lifebar calls' due sounds to the match's cues.
+func (f *Flow) queueCallSounds() {
+	f.callSounds = f.Announcer.DrainSounds(f.callSounds[:0])
+	for _, ref := range f.callSounds {
+		f.Match.QueueLifebarSound(ref)
+	}
 }

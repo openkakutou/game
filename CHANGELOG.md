@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The lifebar's round, fight and KO calls play their sounds from its fight.snd at their sndtime, as Ikemen GO.
 - More characters play (engine v2.58.0, character v0.22.0): BindToTarget throws, ModifyExplod, `!` after a value, `!MoveType = H`, lenient AnimElem / VarSet / Clsn lines as Ikemen GO reads them.
 - Explods are drawn at their scale, and ModifyExplod changes them (engine v2.55.0).
 - The lifebar's combo counter: from a 2-hit combo it slides in, shows the hits and the damage for its display time, then slides out, as Ikemen GO.
