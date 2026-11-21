@@ -546,9 +546,13 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 					if flip {
 						ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
 					}
-					if additiveBlend(string(fr.Blend)) {
+					switch {
+					case additiveBlend(string(fr.Blend)):
 						w.SpriteAdd(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
-					} else {
+					case m.PalFX[i].Active():
+						mul, add := m.PalFX[i].Tint()
+						w.SpriteTinted(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip, mul, add)
+					default:
 						w.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
 					}
 					drawn = true

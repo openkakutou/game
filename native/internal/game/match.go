@@ -256,6 +256,8 @@ type Match struct {
 	Sparks Sparks
 	// Shake is the screen shake (EnvShake, FallEnvShake).
 	Shake Shake
+	// PalFX is each fighter's palette effect.
+	PalFX [2]PalFX
 	// Over/Winner report that the match is decided.
 	Over   bool
 	Winner match.Side
@@ -404,6 +406,7 @@ func (m *Match) reset(roundNo int) error {
 	m.cues = m.cues[:0]
 	m.Sparks.Live = m.Sparks.Live[:0]
 	m.Shake = Shake{}
+	m.PalFX = [2]PalFX{}
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
 	return nil
@@ -475,10 +478,16 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	m.syncAnim()
 	m.queueCues(res.Sounds)
 	m.Sparks.Step(m.commonAnims, m.fighterAnims)
-	for _, evs := range res.Events {
+	for i := range m.PalFX {
+		m.PalFX[i].Step()
+	}
+	for side, evs := range res.Events {
 		for _, e := range evs {
-			if e.Type == "EnvShake" {
+			switch e.Type {
+			case "EnvShake":
 				m.Shake.Start(e)
+			case "PalFX":
+				m.PalFX[side].Start(e)
 			}
 		}
 	}

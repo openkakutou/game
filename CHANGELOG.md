@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- PalFX tints the fighter (add, mul, sinadd) for its time, as a hit flash or a super glow.
 - A KO slows the match down as in Ikemen GO: the lifebar's slow.time at slow.speed, easing back to full speed (60 ticks at a quarter speed by default).
 - The screen shakes on EnvShake and on heavy falls (FallEnvShake), as Ikemen GO computes it; the HUD stays still.
 - Super moves pause the match as in Ikemen GO (engine v2.52.0): the screen darkens behind the fighters during a SuperPause and its effect shows; counters (ReversalDef) and HitOverride work (engine v2.51.0).
