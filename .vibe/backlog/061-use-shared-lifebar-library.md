@@ -12,9 +12,10 @@ Blocked until `lifebar` releases its WASM entrypoint (`lifebar` 007) with the fe
 🔒 MUST: no regression on any lifebar this repo loads today.
 
 ## Acceptance Criteria
-- [ ] `native/internal/lifebar` keeps only discovery; parsing, layout and meter come from the `lifebar` module
+- [x] `native/internal/lifebar` keeps only discovery; parsing, layout and meter come from the `lifebar` module
 - [ ] Existing lifebar tests pass, and the web build shows the same lifebar through the shared core
 - [ ] Needs `lifebar` 001, 002 and `game` 060
 
 ## Progress
 2026-11-21 - Desktop: `native/internal/lifebar` keeps only discovery; parsing, layout and meter come from `lifebar` v0.1.0 (the same elements drawn, tests and smoke green, checked in the game with the fixture lifebar). Left: the web build through the shared core (060) and `lifebar`'s WASM entrypoint.
+- 2026-11-21: the native game parses, lays out and steps lifebars through the shared `lifebar` module (v0.2.0); `internal/lifebar` keeps discovery. Left: the web build through the shared core (item 060).
