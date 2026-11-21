@@ -85,3 +85,24 @@ func TestAtValue_PicksTheBarsVariants(t *testing.T) {
 		t.Errorf("at 40%%: front anim %d, want 1", got)
 	}
 }
+
+func TestSpriteBlend_FollowsTheExplodsTrans(t *testing.T) {
+	cases := []struct {
+		trans, frame string
+		blend        Blend
+		alpha        float32
+	}{
+		{"add", "", BlendAdd, 1},
+		{"addalpha", "", BlendNormal, 128.0 / 255},
+		{"sub", "", BlendSub, 1},
+		{"none", "A", BlendNormal, 1},
+		{"", "A", BlendAdd, 1},
+		{"", "", BlendNormal, 1},
+	}
+	for _, c := range cases {
+		b, a := spriteBlend(c.trans, [2]int{128, 128}, c.frame)
+		if b != c.blend || a != c.alpha {
+			t.Errorf("%q over %q: %v %v, want %v %v", c.trans, c.frame, b, a, c.blend, c.alpha)
+		}
+	}
+}

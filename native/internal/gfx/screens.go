@@ -410,10 +410,10 @@ func (r *Renderer) drawExplods(f *game.Flow, layer explodLayer, groundY, camX fl
 				continue
 			}
 			if e.Common {
-				r.drawCommonAnim(f, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale}, groundY, camX)
+				r.drawCommonAnim(f, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale, e.Trans, e.Alpha}, groundY, camX)
 				continue
 			}
-			r.drawOwnAnim(f, side, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale}, groundY, camX)
+			r.drawOwnAnim(f, side, e.Anim, e.AnimTime, placed{e.Position, e.Facing, e.Scale, e.Trans, e.Alpha}, groundY, camX)
 		}
 	}
 }
@@ -440,6 +440,10 @@ type placed struct {
 	pos    match.Position
 	facing match.Facing
 	scale  [2]float64
+	// trans and alpha are an explod's trans type ("" for the frame's own
+	// blend) and alpha.
+	trans string
+	alpha [2]int
 }
 
 // unscaled is a placement at pos and facing, at its own size.
@@ -460,11 +464,30 @@ func (r *Renderer) blit(t *Texture, fr air.Frame, axis [2]int, at placed, ground
 	}
 	x, y := sx+ox*kx, sy+float32(fr.Y-axis[1])*ky
 	w, h := float32(t.W)*kx, float32(t.H)*ky
-	if additiveBlend(string(fr.Blend)) {
-		r.win.SpriteAddSized(t, x, y, w, h, flip)
-		return
+	blend, alpha := spriteBlend(at.trans, at.alpha, string(fr.Blend))
+	r.win.SpriteBlended(t, x, y, w, h, flip, blend, alpha)
+}
+
+// spriteBlend is how an explod's trans type mixes it (paramTrans): add and
+// add1 add it, addalpha draws it at its source alpha, sub subtracts it, none
+// draws it plainly; without one, the frame's own blend applies.
+// shortcut: add1's halved backdrop and addalpha's destination weight are not
+// applied.
+func spriteBlend(trans string, alpha [2]int, frameBlend string) (Blend, float32) {
+	switch trans {
+	case "add", "add1":
+		return BlendAdd, 1
+	case "addalpha":
+		return BlendNormal, float32(alpha[0]) / 255
+	case "sub", "subadd":
+		return BlendSub, 1
+	case "none", "default":
+		return BlendNormal, 1
 	}
-	r.win.SpriteSized(t, x, y, w, h, flip)
+	if additiveBlend(frameBlend) {
+		return BlendAdd, 1
+	}
+	return BlendNormal, 1
 }
 
 // drawOwnAnim draws side's animation anim, animTime ticks in, at a world

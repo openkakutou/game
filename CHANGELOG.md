@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- Explods are drawn with their trans: add, add1, addalpha (at its alpha), sub, none (engine v2.66.0).
 - Win icons show how each round was won, as Ikemen GO tells it from the finishing hit: special, hyper, throw, cheese (guarded) or suicide KO, time over (engine v2.65.0).
 - Lifebar bars switch their backgrounds and fill at the life percentages and power values the lifebar sets (`front50`, `front1000`, `frontmax`…), as Ikemen GO (lifebar v0.3.0).
 - Projectiles that meet cancel each other or the stronger one flies on, and multi-hit projectiles land each of their hits, as Ikemen GO (engine v2.64.0).

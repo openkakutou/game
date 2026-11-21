@@ -324,11 +324,49 @@ func (w *Window) SpriteTinted(t *Texture, x, y float32, flip, additive bool, mul
 	gl.Disable(gl.TEXTURE_2D)
 }
 
-// SpriteAddSized is SpriteSized drawn additively.
-func (w *Window) SpriteAddSized(t *Texture, x, y, wd, ht float32, flip bool) {
+// Blend is how a sprite mixes with what is behind it.
+type Blend int
+
+const (
+	BlendNormal Blend = iota
+	BlendAdd
+	BlendSub
+)
+
+// SpriteBlended is SpriteSized drawn with blend, its colours weighted by
+// alpha (0..1).
+func (w *Window) SpriteBlended(t *Texture, x, y, wd, ht float32, flip bool, blend Blend, alpha float32) {
 	w.Flush()
-	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
-	w.SpriteSized(t, x, y, wd, ht, flip)
+	switch blend {
+	case BlendAdd:
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
+	case BlendSub:
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
+		gl.BlendEquation(gl.FUNC_REVERSE_SUBTRACT)
+	}
+	gl.Enable(gl.TEXTURE_2D)
+	gl.BindTexture(gl.TEXTURE_2D, t.id)
+	gl.Color4f(1, 1, 1, alpha)
+	gl.DisableClientState(gl.COLOR_ARRAY)
+	u0, u1 := float32(0), float32(1)
+	if flip {
+		u0, u1 = 1, 0
+	}
+	x2, y2 := x+wd, y+ht
+	gl.Begin(gl.QUADS)
+	gl.TexCoord2f(u0, 0)
+	gl.Vertex2f(x, y)
+	gl.TexCoord2f(u1, 0)
+	gl.Vertex2f(x2, y)
+	gl.TexCoord2f(u1, 1)
+	gl.Vertex2f(x2, y2)
+	gl.TexCoord2f(u0, 1)
+	gl.Vertex2f(x, y2)
+	gl.End()
+	gl.EnableClientState(gl.COLOR_ARRAY)
+	gl.Disable(gl.TEXTURE_2D)
+	gl.Color4f(1, 1, 1, 1)
+	gl.BlendEquation(gl.FUNC_ADD)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 }
 
