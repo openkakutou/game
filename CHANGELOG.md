@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, characters and stages dropped into their folders are listed in alphabetical order regardless of capital letters.
 
 ### Changed
+- The desktop game reads lifebars through the shared `lifebar` library (v0.1.0), as Ikemen GO reads them; only the folder discovery stays in the game.
 - The web game now plays matches with the same engine as the desktop game, so a match plays the same on both: the CPU opponent, the camera that follows the fighters across the stage and the round and match results come from it.
 
 ## [0.26.0] - 2026-11-19

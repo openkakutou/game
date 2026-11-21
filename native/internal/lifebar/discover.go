@@ -20,7 +20,7 @@ type Entry struct {
 	Def string
 }
 
-// Discover lists the folders of dir (a name in fsys) holding a fight.def that parses, sorted
+// Discover lists the folders of dir (a name in fsys) holding a fight.def with a [Lifebar] section, sorted
 // by name. A folder that does not is left out and reported in problems; a
 // missing dir is no lifebar at all, not an error.
 func Discover(fsys fs.FS, dir string) (entries []Entry, problems []error) {
@@ -43,14 +43,29 @@ func Discover(fsys fs.FS, dir string) (entries []Entry, problems []error) {
 			problems = append(problems, fmt.Errorf("lifebar %q skipped: %w", it.Name(), rerr))
 			continue
 		}
-		if _, perr := Parse(string(src)); perr != nil {
-			problems = append(problems, fmt.Errorf("lifebar %q skipped: %s: %w", it.Name(), def, perr))
+		if !hasLifebarSection(string(src)) {
+			problems = append(problems, fmt.Errorf("lifebar %q skipped: %s: no [Lifebar] section", it.Name(), def))
 			continue
 		}
 		entries = append(entries, Entry{Name: it.Name(), Def: def})
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
 	return entries, problems
+}
+
+// hasLifebarSection reports a "[Lifebar]" section line (any case), which a
+// folder's fight.def needs to be listed.
+func hasLifebarSection(src string) bool {
+	for _, line := range strings.Split(src, "\n") {
+		line = strings.TrimSpace(line)
+		if i := strings.IndexByte(line, ';'); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		if strings.EqualFold(line, "[lifebar]") {
+			return true
+		}
+	}
+	return false
 }
 
 // findDef is the folder's fight.def, whatever its case.

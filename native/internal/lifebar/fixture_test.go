@@ -2,6 +2,7 @@ package lifebar
 
 import (
 	"bytes"
+	shared "github.com/openkakutou/lifebar"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,21 +60,21 @@ func TestFixtureParsesAndItsSpritesExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lb, err := Parse(string(src))
-	if err != nil {
-		t.Fatal(err)
+	lb, warnings := shared.Parse(string(src))
+	if len(warnings) != 0 || !hasLifebarSection(string(src)) {
+		t.Fatalf("warnings %v", warnings)
 	}
-	f, err := os.Open(filepath.Join(fixtureDir, lb.Sprites))
+	f, err := os.Open(filepath.Join(fixtureDir, lb.Files.Sprites))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	for _, b := range []Bar{lb.Life[0], lb.Life[1], lb.Power[0], lb.Power[1]} {
-		for _, e := range []Element{b.Bg[0], b.Mid, b.Front} {
-			if !e.Shown() {
+	for _, b := range []shared.Bar{lb.Life[0].Bar, lb.Life[1].Bar, lb.Power[0].Bar, lb.Power[1].Bar} {
+		for _, e := range []shared.Element{b.Bg0, b.Mid, b.Front} {
+			if !e.HasSprite {
 				continue
 			}
-			if _, _, _, err := sff.ResolveSpritePixels(f, e.Sprite[0], e.Sprite[1], nil); err != nil {
+			if _, _, _, err := sff.ResolveSpritePixels(f, e.Sprite.Group, e.Sprite.Image, nil); err != nil {
 				t.Errorf("sprite %v: %v", e.Sprite, err)
 			}
 		}

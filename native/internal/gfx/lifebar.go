@@ -6,8 +6,9 @@ import (
 	"io/fs"
 	"os"
 
+	"github.com/openkakutou/character/air"
 	"github.com/openkakutou/game/native/internal/game"
-	"github.com/openkakutou/game/native/internal/lifebar"
+	"github.com/openkakutou/lifebar"
 	"github.com/openkakutou/sff"
 )
 
@@ -65,24 +66,34 @@ func (l *lifebarHUD) load(fsys fs.FS) {
 		l.sheet[k] = NewTexture(px, wd, ht)
 	}
 	for _, e := range l.elements() {
-		if e.Anim < 0 {
-			upload(e.Sprite[0], e.Sprite[1])
+		if e.HasAnim {
+			for _, fr := range l.hud.Animations[e.Anim].Frames {
+				upload(fr.Group, fr.Image)
+			}
 			continue
 		}
-		for _, fr := range l.hud.Anims[e.Anim].Frames {
-			upload(fr.Group, fr.Image)
+		if e.HasSprite {
+			upload(e.Sprite.Group, e.Sprite.Image)
 		}
 	}
 }
 
+// elements are the lifebar's elements the HUD draws.
 func (l *lifebarHUD) elements() []lifebar.Element {
 	var out []lifebar.Element
-	for _, bars := range [][2]lifebar.Bar{l.hud.Life, l.hud.Power} {
-		for _, b := range bars {
-			out = append(out, b.Bg[0], b.Bg[1], b.Bg[2], b.Mid, b.Front, b.Top)
+	for i := range 2 {
+		for _, b := range []lifebar.Bar{l.hud.Life[i].Bar, l.hud.Power[i].Bar} {
+			out = append(out, b.Bg0, b.Bg1, b.Bg2, b.Mid, b.Front, b.Top)
 		}
+		out = append(out, l.hud.Name[i].Bg, l.hud.Name[i].Top)
 	}
-	return out
+	return append(out, l.hud.Time.Bg, l.hud.Time.Top)
+}
+
+// screen is where the lifebar lands in the 320x240 view (Ikemen GO's
+// fightscreen scale and offset for that game size).
+func (l *lifebarHUD) screen() lifebar.Screen {
+	return l.hud.Screen([2]int{VW, VH}, [2]int{VW, VH})
 }
 
 func (l *lifebarHUD) delete() {
@@ -112,7 +123,8 @@ func (l *lifebarHUD) step(m *game.Match) {
 		// The engine exposes no move type: a drop in life stands in for
 		// Ikemen GO's getHit, which freezes the trailing fill.
 		hit := h < l.health[i]
-		l.meters[i].Step(lifeFraction(h, m.LifeMax[i]), hit, l.hud.Life[i].Mid.Shown())
+		mid := l.hud.Life[i].Mid
+		l.meters[i].Step(l.hud.Life[i], lifebar.LifeTick{Life: float32(lifeFraction(h, m.LifeMax[i])), GetHit: hit, HasMid: mid.HasAnim || mid.HasSprite})
 		l.health[i] = h
 	}
 	l.tick = tick
@@ -149,6 +161,7 @@ const sampleTimer = "99"
 // life bars full, the power bars empty, ticks into the animations.
 func (l *lifebarHUD) drawSample(w *Window, ticks int) {
 	full := [2]lifebar.Meter{lifebar.NewMeter(), lifebar.NewMeter()}
+	full[0].Top, full[1].Top = 1, 1
 	l.paint(w, ticks, full, [2]float64{}, sampleNames, sampleTimer)
 }
 
@@ -156,33 +169,45 @@ func (l *lifebarHUD) drawSample(w *Window, ticks int) {
 // power bars, each one's backgrounds, trailing fill, front fill, top
 // (FightScreen.draw, fightscreen.go:5757).
 func (l *lifebarHUD) paint(w *Window, ticks int, life [2]lifebar.Meter, power [2]float64, names [2]string, timer string) {
-	scale := l.hud.Scale(VW)
+	s := l.screen()
 	for layer := range 3 {
 		for i := range 2 {
-			l.drawBar(w, l.hud.Life[i], layer, ticks, scale, life[i].Top, life[i].Mid)
+			l.drawBar(w, s, l.hud.Life[i].Bar, layer, ticks, life[i].Top, life[i].Mid)
 		}
 		for i := range 2 {
-			l.drawBar(w, l.hud.Power[i], layer, ticks, scale, power[i], power[i])
+			l.drawBar(w, s, l.hud.Power[i].Bar, layer, ticks, float32(power[i]), float32(power[i]))
 		}
+		for i := range 2 {
+			n := l.hud.Name[i]
+			l.drawElement(w, s, n.Bg, n.Pos, layer, ticks)
+		}
+		l.drawElement(w, s, l.hud.Time.Bg, l.hud.Time.Pos, layer, ticks)
 	}
-	l.drawTexts(w, scale, names, timer)
+	l.drawTexts(w, s, names, timer)
+	for layer := range 3 {
+		for i := range 2 {
+			n := l.hud.Name[i]
+			l.drawElement(w, s, n.Top, n.Pos, layer, ticks)
+		}
+		l.drawElement(w, s, l.hud.Time.Top, l.hud.Time.Pos, layer, ticks)
+	}
 }
 
-func (l *lifebarHUD) drawBar(w *Window, b lifebar.Bar, layer, ticks int, scale, top, mid float64) {
-	for _, e := range b.Bg {
-		l.drawElement(w, e, b.Pos, layer, ticks, scale)
+func (l *lifebarHUD) drawBar(w *Window, s lifebar.Screen, b lifebar.Bar, layer, ticks int, top, mid float32) {
+	for _, e := range []lifebar.Element{b.Bg0, b.Bg1, b.Bg2} {
+		l.drawElement(w, s, e, b.Pos, layer, ticks)
 	}
-	front, trail := b.Clips(scale, VW, VH, top, mid)
+	front, trail := b.Clips(s, top, mid)
 	w.Clip(float32(trail.X), float32(trail.Y), float32(trail.W), float32(trail.H))
-	l.drawElement(w, b.Mid, b.Pos, layer, ticks, scale)
+	l.drawElement(w, s, b.Mid, b.Pos, layer, ticks)
 	w.Clip(float32(front.X), float32(front.Y), float32(front.W), float32(front.H))
-	l.drawElement(w, b.Front, b.Pos, layer, ticks, scale)
+	l.drawElement(w, s, b.Front, b.Pos, layer, ticks)
 	w.NoClip()
-	l.drawElement(w, b.Top, b.Pos, layer, ticks, scale)
+	l.drawElement(w, s, b.Top, b.Pos, layer, ticks)
 }
 
-func (l *lifebarHUD) drawElement(w *Window, e lifebar.Element, pos [2]int, layer, ticks int, scale float64) {
-	if e.Layer != layer {
+func (l *lifebarHUD) drawElement(w *Window, s lifebar.Screen, e lifebar.Element, pos [2]int, layer, ticks int) {
+	if e.Layout.LayerNo != layer {
 		return
 	}
 	fr, ok := l.hud.Frame(e, ticks)
@@ -194,32 +219,39 @@ func (l *lifebarHUD) drawElement(w *Window, e lifebar.Element, pos [2]int, layer
 	if t == nil {
 		return
 	}
-	r, flip := lifebar.Place(e, fr, l.axis[k], [2]int{t.W, t.H}, pos, scale)
-	w.SpriteSized(t, float32(r.X), float32(r.Y), float32(r.W), float32(r.H), flip)
+	p := s.Place(e, fr, lifebar.SpriteBox{Axis: l.axis[k], Size: [2]int{t.W, t.H}}, pos)
+	w.SpriteSized(t, float32(p.X), float32(p.Y), float32(p.W), float32(p.H), p.FlipX)
 }
 
 // drawTexts prints the names and the timer where the lifebar places them,
 // in the lifebar's own font, else the built-in one.
-func (l *lifebarHUD) drawTexts(w *Window, scale float64, names [2]string, timer string) {
+func (l *lifebarHUD) drawTexts(w *Window, s lifebar.Screen, names [2]string, timer string) {
 	for i, name := range l.hud.Name {
-		if name.Shown() {
-			l.print(w, name, scale, names[i])
+		if name.Name.Font.No >= 0 {
+			l.print(w, s, name.Name, name.Pos, names[i])
 		}
 	}
-	if l.hud.Time.Shown() {
-		l.print(w, l.hud.Time, scale, timer)
+	if l.hud.Time.Counter.Font.No >= 0 {
+		l.print(w, s, l.hud.Time.Counter, l.hud.Time.Pos, timer)
 	}
 }
 
-func (l *lifebarHUD) print(w *Window, t lifebar.Text, scale float64, s string) {
-	f := l.hud.Fonts[t.Font]
+// textAnchor is where the lifebar places a text at pos: the origin of a
+// zero-size sprite there.
+func textAnchor(s lifebar.Screen, t lifebar.Text, pos [2]int) (x, y float64) {
+	p := s.Place(lifebar.Element{Layout: t.Layout}, air.Frame{}, lifebar.SpriteBox{}, pos)
+	return p.X, p.Y
+}
+
+func (l *lifebarHUD) print(w *Window, s lifebar.Screen, t lifebar.Text, pos [2]int, text string) {
+	x, y := textAnchor(s, t, pos)
+	scale := s.Scale * float64(t.Layout.Scale[0])
+	f := l.hud.Fonts[t.Font.No]
 	if f == nil {
-		printAt(w, t, scale, s)
+		printAt(w, t, x, y, text)
 		return
 	}
-	x := (float64(t.Pos[0]) + t.Offset[0]) * scale
-	y := (float64(t.Pos[1]) + t.Offset[1]) * scale
-	l.placed = f.Layout(s, t.Bank, t.Align, x, y, scale, l.placed)
+	l.placed = f.Layout(text, t.Font.Bank, t.Font.Align, x, y, scale, l.placed)
 	for _, p := range l.placed {
 		tex := l.glyphs[p.Glyph]
 		if tex == nil {
@@ -233,14 +265,13 @@ func (l *lifebarHUD) print(w *Window, t lifebar.Text, scale float64, s string) {
 	}
 }
 
-func printAt(w *Window, t lifebar.Text, scale float64, s string) {
-	x := (float64(t.Pos[0]) + t.Offset[0]) * scale
-	y := (float64(t.Pos[1])+t.Offset[1])*scale - glyphHeight
+func printAt(w *Window, t lifebar.Text, x, y float64, s string) {
+	y -= glyphHeight
 	width := float64(TextWidth(s))
 	switch {
-	case t.Align < 0:
+	case t.Font.Align < 0:
 		x -= width
-	case t.Align == 0:
+	case t.Font.Align == 0:
 		x -= width / 2
 	}
 	w.Text(float32(x), float32(y), 1, white, s)

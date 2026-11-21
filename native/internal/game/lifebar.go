@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"github.com/openkakutou/game/native/internal/bmfont"
+	sharedlifebar "github.com/openkakutou/lifebar"
 	"io/fs"
 	"path"
 	"strings"
@@ -13,7 +14,7 @@ import (
 // HUDLifebar is the lifebar the match HUD draws, read from the content
 // file system's lifebars/ folder.
 type HUDLifebar struct {
-	*lifebar.Lifebar
+	*sharedlifebar.Lifebar
 	// Def is the name of the fight.def it was read from.
 	Def string
 	// Sprites is its sprite file, found as Ikemen GO looks it up (beside the
@@ -75,19 +76,23 @@ func loadLifebar(fsys fs.FS, entry lifebar.Entry) (*HUDLifebar, []string) {
 	if err != nil {
 		return nil, append(notices, fmt.Sprintf("lifebar %q: %v", entry.Name, err))
 	}
-	lb, err := lifebar.Parse(string(src))
-	if err != nil {
-		return nil, append(notices, fmt.Sprintf("lifebar %q: %v", entry.Name, err))
+	lb, warnings := sharedlifebar.Parse(string(src))
+	for _, w := range warnings {
+		notices = append(notices, fmt.Sprintf("lifebar %q: line %d: [%s] skipped as Ikemen GO skips it", entry.Name, w.Line, w.Section))
 	}
-	hud := &HUDLifebar{Lifebar: lb, Def: entry.Def}
-	if lb.Sprites != "" {
-		hud.Sprites = joinResolved(fsys, []string{path.Dir(entry.Def), ".", CommonFolder(fsys)}, lb.Sprites)
+	hud := &HUDLifebar{Lifebar: &lb, Def: entry.Def}
+	if lb.Files.Sprites != "" {
+		hud.Sprites = joinResolved(fsys, []string{path.Dir(entry.Def), ".", CommonFolder(fsys)}, lb.Files.Sprites)
 		if _, serr := fs.Stat(fsys, hud.Sprites); serr != nil {
-			notices = append(notices, fmt.Sprintf("lifebar %q: sprite file %q not found", entry.Name, lb.Sprites))
+			notices = append(notices, fmt.Sprintf("lifebar %q: sprite file %q not found", entry.Name, lb.Files.Sprites))
 			hud.Sprites = ""
 		}
 	}
-	hud.Fonts, notices = loadLifebarFonts(fsys, entry, lb.Fonts, notices)
+	fonts := map[int]string{}
+	for n, f := range lb.Files.Fonts {
+		fonts[n] = f.File
+	}
+	hud.Fonts, notices = loadLifebarFonts(fsys, entry, fonts, notices)
 	return hud, notices
 }
 
