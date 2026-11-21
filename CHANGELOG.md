@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- On a high-resolution stage (localcoord wider than 320, such as a 1280x720 one) the fighters stay on screen and the camera follows them: the stage's camera, screen edges and bounds are taken into the fighters' 320-wide space, as Ikemen GO scales a stage by its localcoord. Found filming kfm on the Training stage.
 - A character missing a common state (walk, jump, get-hit…) or changing to a negative state behaves as in Ikemen GO instead of staying put (engine v2.76.0, v2.77.0).
 - Up-forward and up-back jump diagonally instead of straight up: a "$" command step (holdfwd, holdback) holds whatever else is held, as Ikemen GO (engine v2.75.0).
 - The combo counter ends once the knocked out opponent lies down (state 5150) and starts over each round, as Ikemen GO.

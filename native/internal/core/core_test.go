@@ -253,8 +253,16 @@ func TestTick_TheCPUDrivesPlayer2(t *testing.T) {
 	if s := c.matches[id]; s.cpu == nil || s.cpu.Level != game.DefaultAILevel {
 		t.Fatalf("p2cpu: CPU = %+v, want one at Ikemen GO's default level", s.cpu)
 	}
-	// A draw that always wins jams every button: P2 presses a and attacks.
-	c.matches[id].cpu = game.NewCPU(game.DefaultAILevel, func(lo, _ int) int { return lo })
+	// A draw that always wins jams every button, and never a direction (its
+	// 1-in-15 draw loses): P2 presses a and attacks. A jammed direction
+	// would jump into the fixture's missing state 40, entered empty as
+	// Ikemen GO does, where it never attacks.
+	c.matches[id].cpu = game.NewCPU(game.DefaultAILevel, func(lo, hi int) int {
+		if hi == 15 {
+			return hi
+		}
+		return lo
+	})
 	attacked := false
 	for i := 0; i < 300 && !attacked; i++ {
 		out := decode(t, c.Tick(id, idle))

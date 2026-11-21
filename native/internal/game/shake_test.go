@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/openkakutou/stage"
 	"math"
 	"testing"
 
@@ -95,5 +96,27 @@ func TestEnvColor_FillsForItsTime(t *testing.T) {
 	}
 	if !e.Active() || !e.Under || e.Color != [3]int{} {
 		t.Errorf("held black fill = %+v", e)
+	}
+}
+
+// A 1280-wide stage's values are taken into the fighters' 320-wide space:
+// its bounds shrink by 4 and the screen the fighters stay in is 320 wide
+// less the margins, not 1280 (fighters off the view, found filming kfm on
+// Training).
+func TestNewMatch_AHighResolutionStageIsScaledToTheFighters(t *testing.T) {
+	a, b := loadPair(t)
+	st := closeStage()
+	st.BGdef.LocalCoordWidth = 1280
+	st.StageBoundaries = stage.StageBoundaries{Left: -1420, Right: 1420}
+	m, err := NewMatch(a, b, st, Setup{Rounds: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Bounds.Left != -355 || m.Bounds.Right != 355 {
+		t.Errorf("bounds = %d..%d, want -355..355", m.Bounds.Left, m.Bounds.Right)
+	}
+	scr := m.Screen()
+	if w := scr[1] - scr[0]; w > 320 || w < 280 {
+		t.Errorf("screen width %v fighter units, want 320 less its margins", w)
 	}
 }

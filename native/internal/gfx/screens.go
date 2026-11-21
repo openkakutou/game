@@ -435,6 +435,10 @@ func (r *Renderer) drawCommonAnim(f *game.Flow, anim, animTime int, at placed, g
 	r.blit(t, fr, axis, at, groundY, camX)
 }
 
+// fighterWidth is the width of the fighters' space, 320 units: the match's
+// camera and the fighters are in it.
+const fighterWidth = 320
+
 // placed is where an animation is drawn: a world position, a facing and a
 // scale.
 type placed struct {
@@ -669,10 +673,10 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 
 	p1 := m.State.Fighters[match.SideP1]
 	p2 := m.State.Fighters[match.SideP2]
-	r.camX = m.CameraX() * r.stageScale // the match's camera, in view pixels
+	r.camX = m.CameraX() * VW / fighterWidth // the match's camera, in view pixels
 	camX := float32(r.camX)
 	// The screen shake moves the whole match view, not the HUD.
-	w.BeginShift(float32(m.Shake.Offset() * r.stageScale))
+	w.BeginShift(float32(m.Shake.Offset() * VW / fighterWidth))
 	// An EnvColor fills the screen instead of the stage, the fighters over it
 	// only when under (system.go:3817-3830).
 	env := m.Env.Active()

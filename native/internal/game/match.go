@@ -7,6 +7,7 @@ import (
 	"github.com/openkakutou/sff"
 	"io/fs"
 	"log"
+	"math"
 	"path"
 	"strings"
 
@@ -317,11 +318,16 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 	if err != nil {
 		return nil, err
 	}
-	bounds := ResolveBounds(st)
-	m := &Match{Setup: setup, Bounds: bounds, Progress: progress, starting: StartingFighters(bounds)}
+	// The fighters move in a 320-wide space whatever the stage's localcoord
+	// (Ikemen GO scales a stage's values by its localscl): the camera, the
+	// screen edges and the stage bounds are taken into it.
 	width := stageWidth(st)
-	m.cam = NewStageCamera(st, CameraTension(st), 1, width)
-	m.margins = screenMargins(st, width)
+	k := FighterScale(st)
+	bounds := scaleBounds(ResolveBounds(st), k)
+	m := &Match{Setup: setup, Bounds: bounds, Progress: progress, starting: StartingFighters(bounds)}
+	m.cam = NewStageCamera(st, CameraTension(st), k, mugenLocalWidth)
+	margins := screenMargins(st, width)
+	m.margins = [2]float64{margins[0] * k, margins[1] * k}
 	for i, f := range []*Fighter{p1, p2} {
 		m.programs[i] = f.Program
 		m.missing[i] = f.Missing
@@ -665,6 +671,19 @@ func (m *Match) Screen() [2]float64 {
 		right = left
 	}
 	return [2]float64{left, right}
+}
+
+// FighterScale is how many fighter units a stage unit is: 320 over the
+// stage's localcoord width (1 for a MUGEN 320-wide stage, 0.25 for a
+// 1280-wide one).
+func FighterScale(st *stage.Stage) float64 {
+	return mugenLocalWidth / stageWidth(st)
+}
+
+// scaleBounds is b in fighter units.
+func scaleBounds(b stage.StageBoundaries, k float64) stage.StageBoundaries {
+	b.Left, b.Right = int(math.Round(float64(b.Left)*k)), int(math.Round(float64(b.Right)*k))
+	return b
 }
 
 // stageWidth is the stage's localcoord width, the width of the match's view
