@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
-- Projectiles that meet cancel each other or the stronger one flies on, as Ikemen GO (engine v2.63.0).
+- Projectiles that meet cancel each other or the stronger one flies on, and multi-hit projectiles land each of their hits, as Ikemen GO (engine v2.64.0).
 - More characters play (engine v2.62.0, character v0.23.1, sff v0.10.0): ProjCancelTime, InCustomState, ReversalDefAttr, and Ikemen GO's tolerance of divisions by 0, empty ignorehitpause, odd projectile and name triggers, a VarSet without variable and truncated PCX sprites.
 - ScreenBound: the camera follows only the fighters whose movecamera is on, and a fighter can leave the screen when a move asks (engine v2.60.0).
 - AfterImage trails, as Ikemen GO records and tints them (length, timegap, framegap, palbright, palcontrast, paladd, palmul, palpostbright, additive trans; AfterImageTime) (engine v2.59.0).
