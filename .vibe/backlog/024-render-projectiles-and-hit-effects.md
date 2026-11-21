@@ -17,3 +17,4 @@ Cross-repo: also waits for engine#029 (Explod: hit sparks). Combat-completeness 
 
 ## Progress
 2026-11-21 — Desktop: projectiles from engine v2.37.0 are drawn with their owner's animations and sprites, facing included (checked in the real game with a test-only kfm fireball), hit sparks shipped with item 038; hit pause already freezes both fighters' animations (the engine holds AnimElapsed). Left: the web build, a placeholder for a projectile whose sprite is missing (now skipped, no crash), screen shake.
+2026-11-21 — Desktop draws helpers too (engine v2.41.0); a corpus Ryu (SVC)'s keyboard hadouken flies and hits kfm in the game. Seen: the fireball shows in an unexpected colour, likely the character's .act palettes not applied (to check).

@@ -88,13 +88,17 @@ func TestMatch_ALandedHitShowsItsSpark(t *testing.T) {
 
 // A projectile lives in the engine runtime; the match shows it until the
 // next round, which starts without any.
-func TestMatch_ProjectilesAreShownAndClearedOnTheNextRound(t *testing.T) {
+func TestMatch_ProjectilesAndHelpersAreShownAndClearedOnTheNextRound(t *testing.T) {
 	a, b := kfmPair(t)
 	m, err := NewMatch(a, b, wideStage(), Setup{Rounds: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
 	m.runtimes[0].Projectiles = []engine.Projectile{{Anim: 0, Position: match.Position{X: 50}}}
+	m.runtimes[1].Helpers = []engine.Helper{{}}
+	if got := m.Helpers(match.SideP2); len(got) != 1 {
+		t.Fatalf("P2 helpers = %d, want 1", len(got))
+	}
 	if got := m.Projectiles(match.SideP1); len(got) != 1 || got[0].Position.X != 50 {
 		t.Fatalf("projectiles = %+v, want the one at 50", got)
 	}
@@ -106,5 +110,8 @@ func TestMatch_ProjectilesAreShownAndClearedOnTheNextRound(t *testing.T) {
 	}
 	if got := m.Projectiles(match.SideP1); len(got) != 0 {
 		t.Errorf("after the round reset: %+v, want none", got)
+	}
+	if got := m.Helpers(match.SideP2); len(got) != 0 {
+		t.Errorf("helpers after the round reset: %d, want none", len(got))
 	}
 }

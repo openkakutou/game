@@ -273,38 +273,48 @@ func (r *Renderer) drawSparks(f *game.Flow, groundY, camX float32) {
 	}
 }
 
-// drawProjectiles draws each side's live projectiles with that side's own
-// animations and sprites.
+// drawProjectiles draws each side's live helpers and projectiles with that
+// side's own animations and sprites.
 func (r *Renderer) drawProjectiles(f *game.Flow, groundY, camX float32) {
 	for side := range f.Fighters {
-		fighter := f.Fighters[side]
+		for _, h := range f.Match.Helpers(match.Side(side)) {
+			c := &h.Context
+			r.drawOwnAnim(f, side, c.Anim, c.AnimElapsed, c.Position, c.Facing, groundY, camX)
+		}
 		for _, p := range f.Match.Projectiles(match.Side(side)) {
-			fr, ok := currentFrame(fighter.Char.Animations, p.Anim, p.AnimTime)
-			if !ok || fr.IsBlank() {
-				continue
-			}
-			t := r.sprites[spriteKey{side, fr.Group, fr.Image}]
-			if t == nil {
-				continue
-			}
-			sp, ok := spriteMeta(fighter, fr)
-			if !ok {
-				continue
-			}
-			flip := p.Facing == match.FacingLeft
-			sx := VW/2 + float32(p.Position.X) - camX
-			sy := fighterScreenY(groundY, float32(p.Position.Y))
-			ox := float32(fr.X - sp.AxisX)
-			if flip {
-				ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
-			}
-			if additiveBlend(string(fr.Blend)) {
-				r.win.SpriteAdd(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
-				continue
-			}
-			r.win.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
+			r.drawOwnAnim(f, side, p.Anim, p.AnimTime, p.Position, p.Facing, groundY, camX)
 		}
 	}
+}
+
+// drawOwnAnim draws side's animation anim, animTime ticks in, at a world
+// position and facing, with side's sprites.
+func (r *Renderer) drawOwnAnim(f *game.Flow, side, anim, animTime int, pos match.Position, facing match.Facing, groundY, camX float32) {
+	fighter := f.Fighters[side]
+	fr, ok := currentFrame(fighter.Char.Animations, anim, animTime)
+	if !ok || fr.IsBlank() {
+		return
+	}
+	t := r.sprites[spriteKey{side, fr.Group, fr.Image}]
+	if t == nil {
+		return
+	}
+	sp, ok := spriteMeta(fighter, fr)
+	if !ok {
+		return
+	}
+	flip := facing == match.FacingLeft
+	sx := VW/2 + float32(pos.X) - camX
+	sy := fighterScreenY(groundY, float32(pos.Y))
+	ox := float32(fr.X - sp.AxisX)
+	if flip {
+		ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
+	}
+	if additiveBlend(string(fr.Blend)) {
+		r.win.SpriteAdd(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
+		return
+	}
+	r.win.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
 }
 
 // openSprites reads the sprite file name of fsys, to hand to the sff reader.

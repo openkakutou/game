@@ -120,3 +120,9 @@ func (m *Match) CommonAnimations() []air.Animation { return m.commonAnims }
 func (m *Match) Projectiles(side match.Side) []engine.Projectile {
 	return m.runtimes[side].Projectiles
 }
+
+// Helpers are side's live helpers, drawn like a fighter with its
+// animations.
+func (m *Match) Helpers(side match.Side) []engine.Helper {
+	return m.runtimes[side].Helpers
+}
