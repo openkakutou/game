@@ -133,6 +133,25 @@ type Setup struct {
 	// AILevel is each CPU side's level, 1 to 8 (Ikemen GO's sys.aiLevel),
 	// given to its state machine for the AILevel trigger; 0 for a human side.
 	AILevel [2]float64
+	// Timings are the round's announcement times, the lifebar's [Round]
+	// values; zero ones are Ikemen GO's defaults.
+	Timings round.Timings
+}
+
+// roundTimings are the setup's timings, Ikemen GO's defaults for the unset
+// ones (fs.go:3301-3310).
+func (s Setup) roundTimings() round.Timings {
+	t := s.Timings
+	def := round.DefaultTimings
+	for _, f := range []struct{ v, d *int }{
+		{&t.StartWaitTime, &def.StartWaitTime}, {&t.CtrlTime, &def.CtrlTime},
+		{&t.OverWaitTime, &def.OverWaitTime}, {&t.OverWinTime, &def.OverWinTime}, {&t.OverTime, &def.OverTime},
+	} {
+		if *f.v <= 0 {
+			*f.v = *f.d
+		}
+	}
+	return t
 }
 
 // StartValues overrides a fighter's life and power when the match starts
@@ -323,7 +342,7 @@ func (m *Match) reset(roundNo int) error {
 	}
 	m.clock = nil
 	if !m.Setup.Training {
-		m.clock = round.NewClock(round.DefaultTimings)
+		m.clock = round.NewClock(m.Setup.roundTimings())
 	}
 	for i := range m.runtimes {
 		// A round starts in state 5900 without control, as in Ikemen GO; a

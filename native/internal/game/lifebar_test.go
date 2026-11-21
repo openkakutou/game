@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/openkakutou/engine/v2/round"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,5 +92,15 @@ func TestSelectLifebarLoadsItsFontsAndNamesTheMissingOnes(t *testing.T) {
 	}
 	if hud.Fonts[3] != nil || len(notices) != 1 || !strings.Contains(notices[0], "font3") || !strings.Contains(notices[0], "built-in font") {
 		t.Fatalf("notices = %v, want one naming font3 and the built-in fallback", notices)
+	}
+}
+
+// fs.go:3298-3312: the lifebar's [Round] times run the round clock; unset
+// ones are Ikemen GO's defaults.
+func TestSetup_RoundTimingsDefaultTheUnsetOnes(t *testing.T) {
+	got := Setup{Timings: round.Timings{CtrlTime: 12, OverTime: 99}}.roundTimings()
+	want := round.Timings{StartWaitTime: 30, CtrlTime: 12, OverWaitTime: 45, OverWinTime: 45, OverTime: 99}
+	if got != want {
+		t.Errorf("timings = %+v, want %+v", got, want)
 	}
 }

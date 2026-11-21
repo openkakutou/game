@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"github.com/openkakutou/engine/v2/round"
 	"io/fs"
 	"path"
 	"slices"
@@ -708,6 +709,11 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 	f.Stage, f.StageDefPath = st, se.DefPath
 	setup := f.Setup()
 	setup.MaxPowerMode = f.MaxPowerMode
+	if f.Lifebar != nil {
+		r := f.Lifebar.Round
+		setup.Timings = round.Timings{StartWaitTime: r.StartWaitTime, CtrlTime: r.CtrlTime,
+			OverWaitTime: r.OverWaitTime, OverWinTime: r.OverWinTime, OverTime: r.OverTime}
+	}
 	for i, cpu := range setup.CPU {
 		if cpu && setup.AILevel[i] <= 0 {
 			setup.AILevel[i] = f.AILevel()
