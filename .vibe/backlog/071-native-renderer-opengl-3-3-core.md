@@ -15,3 +15,4 @@ Decision 028. `native/internal/gfx` draws with OpenGL 2.1 fixed-function (`gl.Or
 - [ ] Still one draw call per batch and no per-frame heap allocation in the render loop
 - [ ] Startup on a machine without OpenGL 3.3 fails with a clear message naming the required version
 - [ ] `.vibe/modules` and `CLAUDE.md` name OpenGL 3.3 core instead of 2.1
+- [ ] Textured sprites are batched by texture and blend state like colored quads (audit 2026-11-21: `SpriteSized` and its siblings flush and bind per call, and a tiled stage layer draws one sprite per tile each frame); the three copies of the textured-quad code become one
