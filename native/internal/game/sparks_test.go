@@ -96,6 +96,10 @@ func TestMatch_ProjectilesAndHelpersAreShownAndClearedOnTheNextRound(t *testing.
 	}
 	m.runtimes[0].Projectiles = []engine.Projectile{{Anim: 0, Position: match.Position{X: 50}}}
 	m.runtimes[1].Helpers = []engine.Helper{{}}
+	m.runtimes[1].Explods = []engine.Explod{{ID: 3}}
+	if got := m.Explods(match.SideP2); len(got) != 1 || got[0].ID != 3 {
+		t.Fatalf("P2 explods = %+v, want explod 3", got)
+	}
 	if got := m.Helpers(match.SideP2); len(got) != 1 {
 		t.Fatalf("P2 helpers = %d, want 1", len(got))
 	}
@@ -113,5 +117,8 @@ func TestMatch_ProjectilesAndHelpersAreShownAndClearedOnTheNextRound(t *testing.
 	}
 	if got := m.Helpers(match.SideP2); len(got) != 0 {
 		t.Errorf("helpers after the round reset: %d, want none", len(got))
+	}
+	if got := m.Explods(match.SideP2); len(got) != 0 {
+		t.Errorf("explods after the round reset: %d, want none", len(got))
 	}
 }

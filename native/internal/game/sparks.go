@@ -126,3 +126,8 @@ func (m *Match) Projectiles(side match.Side) []engine.Projectile {
 func (m *Match) Helpers(side match.Side) []engine.Helper {
 	return m.runtimes[side].Helpers
 }
+
+// Explods are side's live explods.
+func (m *Match) Explods(side match.Side) []engine.Explod {
+	return m.runtimes[side].Explods
+}

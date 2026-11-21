@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The desktop game draws explods (engine v2.42.0), the effects characters make with the Explod controller, behind or over the fighters by their sprite priority, from the character's sprites or the common fightfx.
 - The desktop game draws helpers (engine v2.41.0): characters that throw their fireballs from helpers, such as Ryu (SVC), now play them; checked in the game with that Ryu's hadouken hitting kfm.
 - The desktop game draws projectiles (engine v2.37.0) with their thrower's animations, flying across the stage until they hit or leave.
 - The desktop game shows hit sparks where hits land and plays the hit and guard sounds, from the game's own common effects and sounds (or a character's own when it asks for them); additive animation frames now blend as in Ikemen GO.

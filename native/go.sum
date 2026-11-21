@@ -38,6 +38,8 @@ github.com/openkakutou/engine/v2 v2.40.0 h1:GgFk/+DMN6h2cnAxQ/F7UAPSc45o6ZlIX0Ys
 github.com/openkakutou/engine/v2 v2.40.0/go.mod h1:AuBpF/y3xnM5TrV4g/DxpUyGbUwIMri5j5hPiVgX7is=
 github.com/openkakutou/engine/v2 v2.41.0 h1:GGyQQIxlGoXQw4U+wHfvb8Z9xaErmR0250J6cu8lyFw=
 github.com/openkakutou/engine/v2 v2.41.0/go.mod h1:AuBpF/y3xnM5TrV4g/DxpUyGbUwIMri5j5hPiVgX7is=
+github.com/openkakutou/engine/v2 v2.42.0 h1:OK3oT7XPpcDGR3wH8NZzIXzyk/rWjcjmzO1/tnXXXa4=
+github.com/openkakutou/engine/v2 v2.42.0/go.mod h1:AuBpF/y3xnM5TrV4g/DxpUyGbUwIMri5j5hPiVgX7is=
 github.com/openkakutou/fnt v0.2.0 h1:ZLMWv1eX8vSGkSOEz+634l9sCxPCCak3n5dihrJVP0A=
 github.com/openkakutou/fnt v0.2.0/go.mod h1:3Doe0iB5tRXZDPA6/q02zWDiL4caJ70qK7vBj+HAITM=
 github.com/openkakutou/screenpack v0.7.0 h1:+AUoBS1hR6ldMlHCKLSwkp+YM8DSgGelhTBia8OSdcs=

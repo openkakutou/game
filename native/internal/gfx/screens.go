@@ -3,6 +3,7 @@ package gfx
 import (
 	"bytes"
 	"fmt"
+	"github.com/openkakutou/engine/v2"
 	"io/fs"
 	"path"
 	"time"
@@ -287,6 +288,76 @@ func (r *Renderer) drawProjectiles(f *game.Flow, groundY, camX float32) {
 	}
 }
 
+// explodLayer picks which explods a drawExplods call draws.
+type explodLayer int
+
+const (
+	explodsBehind explodLayer = iota // sprpriority below 0: behind the fighters
+	explodsFront                     // the others, over the fighters
+	explodsOnTop                     // ontop: over everything but the HUD
+)
+
+func (l explodLayer) has(e engine.Explod) bool {
+	switch {
+	case e.OnTop:
+		return l == explodsOnTop
+	case e.SprPriority < 0:
+		return l == explodsBehind
+	}
+	return l == explodsFront
+}
+
+// drawExplods draws the explods of layer: common ones from the fightfx
+// sheet, the others with their side's sprites.
+// shortcut: vfacing (upside down) is not drawn.
+func (r *Renderer) drawExplods(f *game.Flow, layer explodLayer, groundY, camX float32) {
+	for side := range f.Fighters {
+		for _, e := range f.Match.Explods(match.Side(side)) {
+			if !layer.has(e) {
+				continue
+			}
+			if e.Common {
+				r.drawCommonAnim(f, e.Anim, e.AnimTime, e.Position, e.Facing, groundY, camX)
+				continue
+			}
+			r.drawOwnAnim(f, side, e.Anim, e.AnimTime, e.Position, e.Facing, groundY, camX)
+		}
+	}
+}
+
+// drawCommonAnim draws the common fightfx animation anim, animTime ticks
+// in, at a world position and facing.
+func (r *Renderer) drawCommonAnim(f *game.Flow, anim, animTime int, pos match.Position, facing match.Facing, groundY, camX float32) {
+	fr, ok := currentFrame(f.Match.CommonAnimations(), anim, animTime)
+	if !ok || fr.IsBlank() {
+		return
+	}
+	k := spriteKey{commonFXSheet, fr.Group, fr.Image}
+	t := r.sprites[k]
+	axis, found := r.fxAxis[k]
+	if t == nil || !found {
+		return
+	}
+	r.blit(t, fr, axis, pos, facing, groundY, camX)
+}
+
+// blit draws texture t of frame fr, whose sprite axis is axis, at a world
+// position and facing, additively when the frame asks.
+func (r *Renderer) blit(t *Texture, fr air.Frame, axis [2]int, pos match.Position, facing match.Facing, groundY, camX float32) {
+	flip := facing == match.FacingLeft
+	sx := VW/2 + float32(pos.X) - camX
+	sy := fighterScreenY(groundY, float32(pos.Y))
+	ox := float32(fr.X - axis[0])
+	if flip {
+		ox = -float32(fr.X) - float32(t.W-axis[0])
+	}
+	if additiveBlend(string(fr.Blend)) {
+		r.win.SpriteAdd(t, sx+ox, sy+float32(fr.Y-axis[1]), flip)
+		return
+	}
+	r.win.Sprite(t, sx+ox, sy+float32(fr.Y-axis[1]), flip)
+}
+
 // drawOwnAnim draws side's animation anim, animTime ticks in, at a world
 // position and facing, with side's sprites.
 func (r *Renderer) drawOwnAnim(f *game.Flow, side, anim, animTime int, pos match.Position, facing match.Facing, groundY, camX float32) {
@@ -303,18 +374,7 @@ func (r *Renderer) drawOwnAnim(f *game.Flow, side, anim, animTime int, pos match
 	if !ok {
 		return
 	}
-	flip := facing == match.FacingLeft
-	sx := VW/2 + float32(pos.X) - camX
-	sy := fighterScreenY(groundY, float32(pos.Y))
-	ox := float32(fr.X - sp.AxisX)
-	if flip {
-		ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
-	}
-	if additiveBlend(string(fr.Blend)) {
-		r.win.SpriteAdd(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
-		return
-	}
-	r.win.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
+	r.blit(t, fr, [2]int{sp.AxisX, sp.AxisY}, pos, facing, groundY, camX)
 }
 
 // openSprites reads the sprite file name of fsys, to hand to the sff reader.
@@ -456,6 +516,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	r.camX = m.CameraX() * r.stageScale // the match's camera, in view pixels
 	camX := float32(r.camX)
 	r.drawLayers(f, r.behind, m.Ticks(), r.camX)
+	r.drawExplods(f, explodsBehind, groundY, camX)
 	for i, fs := range []match.FighterState{p1, p2} {
 		sx := VW/2 + float32(fs.Position.X) - camX
 		sy := fighterScreenY(groundY, float32(fs.Position.Y))
@@ -485,9 +546,11 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 			w.Rect(sx-8, sy-60, 16, 60, col)
 		}
 	}
-	r.drawLayers(f, r.front, m.Ticks(), r.camX)
 	r.drawProjectiles(f, groundY, camX)
+	r.drawExplods(f, explodsFront, groundY, camX)
+	r.drawLayers(f, r.front, m.Ticks(), r.camX)
 	r.drawSparks(f, groundY, camX)
+	r.drawExplods(f, explodsOnTop, groundY, camX)
 	r.drawHUD(f)
 }
 
