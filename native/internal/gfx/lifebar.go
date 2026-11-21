@@ -97,7 +97,7 @@ func (l *lifebarHUD) elements() []lifebar.Element {
 		out = append(out, fa.Bg, fa.Bg0, fa.Bg1, fa.Bg2, fa.Top, fa.Ko)
 		wi := l.hud.WinIcon[i]
 		ic := wi.Icons
-		out = append(out, wi.Bg0, wi.Top, ic.Normal, ic.Time, ic.Perfect, l.hud.Combo[i].Bg, l.hud.Combo[i].Top)
+		out = append(out, wi.Bg0, wi.Top, ic.Normal, ic.Time, ic.Perfect, ic.Special, ic.Hyper, ic.Cheese, ic.Throw, ic.Suicide, l.hud.Combo[i].Bg, l.hud.Combo[i].Top)
 	}
 	out = append(out, l.hud.Time.Bg, l.hud.Time.Top)
 	r := &l.hud.Round
@@ -235,6 +235,25 @@ func (l *lifebarHUD) drawFaces(w *Window, m *game.Match, faces [2]faceSprite) {
 	}
 }
 
+// winIcon is the icon of a win type.
+func winIcon(icons lifebar.WinIcons, t game.WinType) lifebar.Element {
+	switch t {
+	case game.WinSpecial:
+		return icons.Special
+	case game.WinHyper:
+		return icons.Hyper
+	case game.WinCheese:
+		return icons.Cheese
+	case game.WinTime:
+		return icons.Time
+	case game.WinThrow:
+		return icons.Throw
+	case game.WinSuicide:
+		return icons.Suicide
+	}
+	return icons.Normal
+}
+
 // drawWinIcons draws each player's win icons (FightScreenWinIcon.draw,
 // fs.go:2313-2357): a bg0 per round it takes to win, then an icon per round
 // won, the perfect icon over a perfect one; past useiconupto wins, the
@@ -255,10 +274,7 @@ func (l *lifebarHUD) drawWinIcons(w *Window, m *game.Match) {
 				continue
 			}
 			for k, win := range wins {
-				icon := wi.Icons.Normal
-				if win.Time {
-					icon = wi.Icons.Time
-				}
+				icon := winIcon(wi.Icons, win.Type)
 				l.drawElement(w, s, icon, at(k), layer, ticks)
 				if win.Perfect {
 					l.drawElement(w, s, wi.Icons.Perfect, at(k), layer, ticks)

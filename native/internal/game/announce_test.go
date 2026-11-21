@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/openkakutou/engine/v2/evaluator"
 	"slices"
 	"testing"
 
@@ -156,13 +157,14 @@ func TestEnded_FollowsAnimTextSndEnd(t *testing.T) {
 func TestRecordWin_KeepsTheWinnersRoundsAndTheirKind(t *testing.T) {
 	m := &Match{LifeMax: [2]int{1000, 1000}}
 	m.State.Fighters[0].Health, m.State.Fighters[1].Health = 1000, 400
+	m.runtimes[1].Context.MoveType = 'H'
 	m.recordWin(round.RoundResult{Outcome: round.OutcomeKO, Winner: 0})
 	m.recordWin(round.RoundResult{Outcome: round.OutcomeTimeout, Winner: 1})
 	m.recordWin(round.RoundResult{Outcome: round.OutcomeDoubleKO})
-	if len(m.Wins[0]) != 1 || !m.Wins[0][0].Perfect || m.Wins[0][0].Time {
+	if len(m.Wins[0]) != 1 || !m.Wins[0][0].Perfect || m.Wins[0][0].Type != WinNormal {
 		t.Errorf("P1 wins = %+v, want one perfect KO", m.Wins[0])
 	}
-	if len(m.Wins[1]) != 1 || !m.Wins[1][0].Time || m.Wins[1][0].Perfect {
+	if len(m.Wins[1]) != 1 || m.Wins[1][0].Type != WinTime || m.Wins[1][0].Perfect {
 		t.Errorf("P2 wins = %+v, want one time win", m.Wins[1])
 	}
 }
@@ -249,4 +251,32 @@ func countCalls(calls []Call, c Call) int {
 		}
 	}
 	return n
+}
+
+// char.go:8968-8992: a KO's win type comes from the hit that knocked the
+// loser out.
+func TestKOWinType_FollowsTheFinishingHit(t *testing.T) {
+	attr := func(text string) int32 {
+		a, err := evaluator.ParseAttr(text, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	cases := []struct {
+		ctx  evaluator.Context
+		want WinType
+	}{
+		{evaluator.Context{}, WinSuicide},
+		{evaluator.Context{MoveType: 'H', GetHit: evaluator.GetHit{Guarded: true, Attr: attr("S, SA")}}, WinCheese},
+		{evaluator.Context{MoveType: 'H', GetHit: evaluator.GetHit{Attr: attr("S, HA")}}, WinHyper},
+		{evaluator.Context{MoveType: 'H', GetHit: evaluator.GetHit{Attr: attr("S, SP")}}, WinSpecial},
+		{evaluator.Context{MoveType: 'H', GetHit: evaluator.GetHit{Attr: attr("S, NT")}}, WinThrow},
+		{evaluator.Context{MoveType: 'H', GetHit: evaluator.GetHit{Attr: attr("S, NA")}}, WinNormal},
+	}
+	for _, c := range cases {
+		if got := koWinType(&c.ctx); got != c.want {
+			t.Errorf("%+v: %v, want %v", c.ctx.GetHit, got, c.want)
+		}
+	}
 }
