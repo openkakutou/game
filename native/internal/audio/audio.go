@@ -181,6 +181,10 @@ func (p *Player) Update(f *game.Flow) {
 	p.holdForPause(f.Paused)
 	p.cues = p.owner.DrainCues(p.cues)
 	for _, c := range p.cues {
+		if c.Stop {
+			p.stopCue(c)
+			continue
+		}
 		p.playCue(f, c)
 	}
 }
@@ -412,6 +416,20 @@ func (p *Player) playCue(f *game.Flow, c game.Cue) {
 	}
 	p.started++
 	p.slots[channel] = game.SoundSlot{Side: c.Side, ChannelNo: c.Channel, Playing: true, Started: p.started}
+}
+
+// stopCue is a StopSnd (stopSnd.Run): every fighter sound for channel -1,
+// else the side's sound on that channel.
+func (p *Player) stopCue(c game.Cue) {
+	if c.Channel < 0 {
+		mix.HaltGroup(fighterGroup)
+		return
+	}
+	for i, s := range p.slots {
+		if s.Side == c.Side && s.ChannelNo == c.Channel {
+			mix.HaltChannel(i)
+		}
+	}
 }
 
 // requestChannel returns the fighter channel the cue plays on, -1 to drop it

@@ -263,6 +263,11 @@ type Match struct {
 	PalFX [2]PalFX
 	// AfterImages are each fighter's afterimage trail.
 	AfterImages [2]AfterImage
+	// Env is the EnvColor screen fill; StagePalFX tints the stage (BGPalFX,
+	// AllPalFX), and AllPalFX the fighters too.
+	Env        EnvColor
+	StagePalFX PalFX
+	AllPalFX   bool
 	// Over/Winner report that the match is decided.
 	Over   bool
 	Winner match.Side
@@ -413,6 +418,7 @@ func (m *Match) reset(roundNo int) error {
 	m.Shake = Shake{}
 	m.PalFX = [2]PalFX{}
 	m.AfterImages = [2]AfterImage{}
+	m.Env, m.StagePalFX, m.AllPalFX = EnvColor{}, PalFX{}, false
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
 	return nil
@@ -488,6 +494,11 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	for i := range m.PalFX {
 		m.PalFX[i].Step()
 	}
+	m.Env.Step()
+	m.StagePalFX.Step()
+	if !m.StagePalFX.Active() {
+		m.AllPalFX = false
+	}
 	for side, evs := range res.Events {
 		for _, e := range evs {
 			switch e.Type {
@@ -499,6 +510,16 @@ func (m *Match) Step(in [2]input.TickInput) error {
 				m.AfterImages[side].Start(e)
 			case "AfterImageTime":
 				m.AfterImages[side].SetTime(e)
+			case "EnvColor":
+				m.Env.Start(e)
+			case "BGPalFX":
+				m.StagePalFX.Start(e)
+				m.AllPalFX = false
+			case "AllPalFX":
+				m.StagePalFX.Start(e)
+				m.AllPalFX = true
+			case "StopSnd":
+				m.queueStop(match.Side(side), e)
 			}
 		}
 	}

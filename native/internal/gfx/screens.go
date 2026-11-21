@@ -606,6 +606,11 @@ func (r *Renderer) drawLayers(f *game.Flow, idx []int, ticks int, camX float64) 
 			for tx := range nx {
 				x := x0 + float64(tx)*(wd+float64(e.TileSpacingX)*r.stageScale)
 				y := y0 + float64(ty)*(ht+float64(e.TileSpacingY)*r.stageScale)
+				if f.Match.StagePalFX.Active() {
+					mul, add := f.Match.StagePalFX.Tint()
+					r.win.SpriteTintedSized(t, float32(x), float32(y), float32(wd), float32(ht), false, false, mul, add)
+					continue
+				}
 				r.win.SpriteSized(t, float32(x), float32(y), float32(wd), float32(ht), false)
 			}
 		}
@@ -668,9 +673,22 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	camX := float32(r.camX)
 	// The screen shake moves the whole match view, not the HUD.
 	w.BeginShift(float32(m.Shake.Offset() * r.stageScale))
-	r.drawLayers(f, r.behind, m.Ticks(), r.camX)
-	if a := superDarkness(m.State); a > 0 {
+	// An EnvColor fills the screen instead of the stage, the fighters over it
+	// only when under (system.go:3817-3830).
+	env := m.Env.Active()
+	if env {
+		c := m.Env.Color
+		w.Rect(0, 0, VW, VH, Color{float32(c[0]) / 255, float32(c[1]) / 255, float32(c[2]) / 255, 1})
+	} else {
+		r.drawLayers(f, r.behind, m.Ticks(), r.camX)
+	}
+	if a := superDarkness(m.State); a > 0 && !env {
 		w.Rect(0, 0, VW, VH, Color{0, 0, 0, a})
+	}
+	if env && !m.Env.Under {
+		w.EndShift()
+		r.drawHUD(f)
+		return
 	}
 	r.drawExplods(f, explodsBehind, groundY, camX)
 	for i, fs := range []match.FighterState{p1, p2} {
@@ -701,6 +719,9 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 					case m.PalFX[i].Active():
 						mul, add := m.PalFX[i].Tint()
 						w.SpriteTinted(t, x, y, flip, blend == BlendAdd, mul, add)
+					case m.AllPalFX:
+						mul, add := m.StagePalFX.Tint()
+						w.SpriteTinted(t, x, y, flip, blend == BlendAdd, mul, add)
 					default:
 						w.SpriteBlended(t, x, y, float32(t.W), float32(t.H), flip, blend, alpha)
 					}
@@ -718,7 +739,9 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	}
 	r.drawProjectiles(f, groundY, camX)
 	r.drawExplods(f, explodsFront, groundY, camX)
-	r.drawLayers(f, r.front, m.Ticks(), r.camX)
+	if !env {
+		r.drawLayers(f, r.front, m.Ticks(), r.camX)
+	}
 	r.drawSparks(f, groundY, camX)
 	r.drawExplods(f, explodsOnTop, groundY, camX)
 	w.EndShift()

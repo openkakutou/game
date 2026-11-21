@@ -278,6 +278,11 @@ func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 // where it is opaque (a PalFX): a second, additive pass paints the add colour
 // through the sprite's alpha.
 func (w *Window) SpriteTinted(t *Texture, x, y float32, flip, additive bool, mul, add [3]float32) {
+	w.SpriteTintedSized(t, x, y, float32(t.W), float32(t.H), flip, additive, mul, add)
+}
+
+// SpriteTintedSized is SpriteTinted stretched to wd x ht.
+func (w *Window) SpriteTintedSized(t *Texture, x, y, wd, ht float32, flip, additive bool, mul, add [3]float32) {
 	w.Flush()
 	if additive {
 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
@@ -291,7 +296,7 @@ func (w *Window) SpriteTinted(t *Texture, x, y float32, flip, additive bool, mul
 		u0, u1 = 1, 0
 	}
 	quad := func() {
-		x2, y2 := x+float32(t.W), y+float32(t.H)
+		x2, y2 := x+wd, y+ht
 		gl.Begin(gl.QUADS)
 		gl.TexCoord2f(u0, 0)
 		gl.Vertex2f(x, y)

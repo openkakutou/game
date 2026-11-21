@@ -22,6 +22,18 @@ type Cue struct {
 	LowPriority bool
 	// Lifebar is a lifebar call's sound, read from its fight.snd.
 	Lifebar bool
+	// Stop is a StopSnd: halt Side's sound on Channel, every fighter sound
+	// for a Channel of -1, instead of playing one.
+	Stop bool
+}
+
+// queueStop queues a StopSnd of side (channel, -1 for every fighter sound).
+func (m *Match) queueStop(side match.Side, e evaluator.ControllerEvent) {
+	channel := -1
+	if v := e.Param("channel").Values; len(v) > 0 {
+		channel = int(v[0])
+	}
+	m.cues = append(m.cues, Cue{Side: side, Channel: channel, Stop: true})
 }
 
 // QueueLifebarSound queues a lifebar call's sound (group, sample).

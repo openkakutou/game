@@ -76,3 +76,24 @@ func TestMatch_KOSlowMotion(t *testing.T) {
 		t.Errorf("after the slow motion every frame steps, got %v", steps[8:])
 	}
 }
+
+// envColor.Run (bytecode.go) and system.go:2888: an EnvColor fills the
+// screen white for 1 tick unless told, then counts down; -1 holds.
+func TestEnvColor_FillsForItsTime(t *testing.T) {
+	var e EnvColor
+	e.Start(evaluator.ControllerEvent{Type: "EnvColor"})
+	if !e.Active() || e.Color != [3]int{255, 255, 255} || e.Under {
+		t.Fatalf("default fill = %+v", e)
+	}
+	e.Step()
+	if e.Active() {
+		t.Error("a 1-tick fill still active")
+	}
+	e.Start(evaluator.ControllerEvent{Params: []evaluator.EventParam{{Name: "time", Values: []float64{-1}}, {Name: "value", Values: []float64{0, 0, 0}}, {Name: "under", Values: []float64{1}}}})
+	for range 10 {
+		e.Step()
+	}
+	if !e.Active() || !e.Under || e.Color != [3]int{} {
+		t.Errorf("held black fill = %+v", e)
+	}
+}
