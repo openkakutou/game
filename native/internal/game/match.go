@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 	"fmt"
+	"github.com/openkakutou/character/air"
 	"io/fs"
 	"log"
 	"path"
@@ -178,6 +179,8 @@ type Match struct {
 	// LifeMax is each fighter's life, its character's [Data] life (Ikemen GO
 	// lifeMax): the life a round starts with and the bars' full length.
 	LifeMax [2]int
+	// Sparks are the hit sparks being shown.
+	Sparks Sparks
 	// Over/Winner report that the match is decided.
 	Over   bool
 	Winner match.Side
@@ -197,7 +200,9 @@ type Match struct {
 	// Training life tracking, per side: the full life, the life seen last
 	// tick, and the ticks it has stayed the same.
 	maxHealth, lastHealth, quiet [2]int
-	cues                         []Cue // PlaySnd events not yet drained
+	cues                         []Cue           // PlaySnd events not yet drained
+	commonAnims                  []air.Animation // common fightfx, for the sparks
+	fighterAnims                 [2][]air.Animation
 }
 
 // NewMatch assembles round 1 of a match.
@@ -220,6 +225,9 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 	for i, f := range []*Fighter{p1, p2} {
 		m.programs[i] = f.Program
 		m.missing[i] = f.Missing
+		if f.Char != nil {
+			m.fighterAnims[i] = f.Char.Animations
+		}
 		m.LifeMax[i] = f.Program.Constants.Lookup("data.life").Int()
 		if m.LifeMax[i] <= 0 {
 			m.LifeMax[i] = DefaultHealth
@@ -292,6 +300,7 @@ func (m *Match) reset(roundNo int) error {
 	m.tick = 0
 	m.camX = m.cam.Follow(m.cam.Start(), m.starting[0].Position.X, m.starting[1].Position.X, true)
 	m.cues = m.cues[:0]
+	m.Sparks.Live = m.Sparks.Live[:0]
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
 	return nil
@@ -350,6 +359,8 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	m.camX = m.cam.Follow(m.camX, min(x0, x1), max(x0, x1), false)
 	m.syncAnim()
 	m.queueCues(res.Sounds)
+	m.Sparks.Step(m.commonAnims, m.fighterAnims)
+	m.Sparks.Add(res.Events, [2]match.Facing{m.State.Fighters[0].Facing, m.State.Fighters[1].Facing})
 	if m.Setup.Training {
 		// A KO the engine reports is dropped: the life is back before anyone sees it.
 		m.refillLife()

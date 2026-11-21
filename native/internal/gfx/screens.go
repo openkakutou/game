@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"path"
 	"time"
 
 	"github.com/openkakutou/character/air"
@@ -51,6 +52,8 @@ type Renderer struct {
 	behind, front []int
 	// stageAxis is each loaded stage sprite's axis, from the stage's sheet.
 	stageAxis map[spriteKey][2]int
+	// fxAxis is each common fightfx sprite's axis.
+	fxAxis map[spriteKey][2]int
 	// camX is the match camera in view pixels; the view mapping is set up
 	// once per match.
 	camX              float64
@@ -166,6 +169,7 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 		r.lifebar.tick = -1
 	}
 	r.loadStageSprites(f)
+	r.loadSparkSprites(f)
 	for i, fighter := range f.Fighters {
 		file, err := openSprites(f.FS, fighter.SffPath)
 		if err != nil {
@@ -184,6 +188,88 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 				r.sprites[k] = NewTexture(px, wd, ht)
 			}
 		}
+	}
+}
+
+// commonFXSheet is the spriteKey.fighter value of the common fightfx sheet.
+const commonFXSheet = -3
+
+// loadSparkSprites uploads the sprites of the common fightfx animations, with
+// their axes, for the hit sparks.
+func (r *Renderer) loadSparkSprites(f *game.Flow) {
+	anims := f.Match.CommonAnimations()
+	if len(anims) == 0 {
+		return
+	}
+	file, err := openSprites(f.FS, path.Join(game.CommonFolder(f.FS), "fightfx.sff"))
+	if err != nil {
+		return
+	}
+	groups, err := sff.Load(file)
+	if err != nil {
+		return
+	}
+	if r.fxAxis == nil {
+		r.fxAxis = map[spriteKey][2]int{}
+	}
+	for _, g := range groups {
+		for _, sp := range g.Sprites {
+			r.fxAxis[spriteKey{commonFXSheet, sp.Group, sp.Image}] = [2]int{sp.AxisX, sp.AxisY}
+		}
+	}
+	for _, a := range anims {
+		for _, fr := range a.Frames {
+			k := spriteKey{commonFXSheet, fr.Group, fr.Image}
+			if fr.IsBlank() || r.sprites[k] != nil {
+				continue
+			}
+			px, wd, ht, err := sff.ResolveSpritePixels(file, fr.Group, fr.Image, nil)
+			if err != nil || wd == 0 || ht == 0 {
+				continue
+			}
+			r.sprites[k] = NewTexture(px, wd, ht)
+		}
+	}
+}
+
+// drawSparks draws the match's hit sparks over the stage, common ones from
+// the fightfx sheet, own ones from their character's.
+func (r *Renderer) drawSparks(f *game.Flow, groundY, camX float32) {
+	m := f.Match
+	for _, sp := range m.Sparks.Live {
+		anims, sheet := m.CommonAnimations(), commonFXSheet
+		if sp.Own {
+			anims, sheet = f.Fighters[sp.Side].Char.Animations, int(sp.Side)
+		}
+		fr, ok := currentFrame(anims, sp.Anim, sp.Age)
+		if !ok || fr.IsBlank() {
+			continue
+		}
+		k := spriteKey{sheet, fr.Group, fr.Image}
+		t := r.sprites[k]
+		if t == nil {
+			continue
+		}
+		axis, ok := r.fxAxis[k]
+		if sp.Own {
+			meta, found := spriteMeta(f.Fighters[sp.Side], fr)
+			axis, ok = [2]int{meta.AxisX, meta.AxisY}, found
+		}
+		if !ok {
+			continue
+		}
+		flip := sp.Facing == match.FacingLeft
+		sx := VW/2 + float32(sp.X) - camX
+		sy := fighterScreenY(groundY, float32(sp.Y))
+		ox := float32(fr.X - axis[0])
+		if flip {
+			ox = -float32(fr.X) - float32(t.W-axis[0])
+		}
+		if additiveBlend(string(fr.Blend)) {
+			r.win.SpriteAdd(t, sx+ox, sy+float32(fr.Y-axis[1]), flip)
+			continue
+		}
+		r.win.Sprite(t, sx+ox, sy+float32(fr.Y-axis[1]), flip)
 	}
 }
 
@@ -338,7 +424,11 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 					if flip {
 						ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
 					}
-					w.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
+					if additiveBlend(string(fr.Blend)) {
+						w.SpriteAdd(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
+					} else {
+						w.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
+					}
 					drawn = true
 				}
 			}
@@ -352,6 +442,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 		}
 	}
 	r.drawLayers(f, r.front, m.Ticks(), r.camX)
+	r.drawSparks(f, groundY, camX)
 	r.drawHUD(f)
 }
 

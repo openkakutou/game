@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: done
 depends_on: [037, 050]
 ---
 # Load common combat files from `common/`
@@ -12,8 +12,8 @@ Roadmap decision `031`: the common files MUGEN/Ikemen GO characters rely on live
 Cross-repo: an unmodified real common1 needs engine#035.
 
 ## Acceptance Criteria
-- [ ] Characters fall into the common get-hit, guard and lying-down states from `common/`
-- [ ] Hit sparks and common sounds come from `common/`
+- [x] Characters fall into the common get-hit, guard and lying-down states from `common/`
+- [x] Hit sparks and common sounds come from `common/`
 - [x] Replacing a file in `common/` changes the game accordingly
 - [x] `common/LICENSES.md` lists the source and license of every shipped file; no file ships without a verified license
 
@@ -22,3 +22,6 @@ Cross-repo: an unmodified real common1 needs engine#035.
 
 ## Blocked
 2026-11-20 — Shipped: Ikemen GO's `common1.cns.zss` (MIT, pinned 54d4148a) with its notice, picked up by `stcommon = common1.cns`; F-prefixed `PlaySnd` reads `common/common.snd` in the native build; a test keeps `common/LICENSES.md` complete. Left: get-hit, guard and lying-down through the unmodified common1 need engine#035; hit sparks need item 024 (engine Explod/sparks); HitDef `hitsound`/`guardsound` need the engine to emit them as sound events. Channels and `lowPriority` stay in item 055.
+
+## Done
+2026-11-21 — Engine v2.36.0 runs both real common1 files through get-hit, guard, fall, lying down and getting up (engine items 023, 035, 049-052) and reports hit sparks and hit/guard sounds; the native game draws common sparks from common/fightfx (additive blend) and plays common sounds from common/common.snd. Checked in the real game: kfm's light kick on kfm shows its spark (capture). The web build does not draw sparks yet.

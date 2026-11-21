@@ -718,6 +718,13 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 		f.fail(fmt.Sprintf("Could not start the match: %v", err))
 		return
 	}
+	// The common hit sparks (common/fightfx.air); without it a hit shows no
+	// spark.
+	if f.FS != nil {
+		if raw, err := fs.ReadFile(f.FS, path.Join(CommonFolder(f.FS), "fightfx.air")); err == nil {
+			_ = m.SetCommonAnimations(raw) // an unreadable file shows no common spark
+		}
+	}
 	f.Match, f.Screen, f.RoundOverTicks = m, ScreenMatch, 0
 	for i, level := range setup.AILevel {
 		f.cpus[i] = nil

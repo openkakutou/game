@@ -274,6 +274,25 @@ func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 	gl.Disable(gl.TEXTURE_2D)
 }
 
+// SpriteAdd is Sprite drawn additively: the sprite's colours are added to
+// what is behind it, as an .air frame's A blend asks.
+func (w *Window) SpriteAdd(t *Texture, x, y float32, flip bool) {
+	w.Flush()
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
+	w.Sprite(t, x, y, flip)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+}
+
+// additiveBlend reports whether an .air frame's blend adds the sprite (A,
+// A1, AS…D…).
+// shortcut: the source/destination weights of AS…D… and the S
+// (subtractive) blend are not applied; upgrade with the shader renderer
+// (decision 028).
+func additiveBlend(blend string) bool {
+	b := strings.TrimSpace(blend)
+	return b != "" && (b[0] == 'A' || b[0] == 'a')
+}
+
 // Clip limits drawing to the virtual rectangle x, y, wd, ht until NoClip.
 func (w *Window) Clip(x, y, wd, ht float32) {
 	w.Flush()

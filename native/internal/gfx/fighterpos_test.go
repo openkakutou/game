@@ -12,3 +12,13 @@ func TestFighterScreenY_AirborneIsAboveTheGround(t *testing.T) {
 		t.Errorf("on the ground = %v, want 180", got)
 	}
 }
+
+// A frame's blend in the .air (Ikemen GO anim.go): A, A1 and AS…D… add the
+// sprite to what is behind, so its black stays invisible.
+func TestAdditiveBlend(t *testing.T) {
+	for blend, want := range map[string]bool{"A": true, "a1": true, "AS256D256": true, "": false, "S": false, " A ": true} {
+		if got := additiveBlend(blend); got != want {
+			t.Errorf("additiveBlend(%q) = %v, want %v", blend, got, want)
+		}
+	}
+}
