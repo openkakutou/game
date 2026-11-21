@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Up-forward and up-back jump diagonally instead of straight up: a "$" command step (holdfwd, holdback) holds whatever else is held, as Ikemen GO (engine v2.75.0).
 - The combo counter ends once the knocked out opponent lies down (state 5150) and starts over each round, as Ikemen GO.
 - In the desktop game, a jumping fighter is drawn in the air instead of sinking below the ground.
 - In the desktop game's Appearance options, the sample lifebar no longer covers the page heading.
