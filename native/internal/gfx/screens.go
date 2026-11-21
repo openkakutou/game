@@ -524,6 +524,8 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	p2 := m.State.Fighters[match.SideP2]
 	r.camX = m.CameraX() * r.stageScale // the match's camera, in view pixels
 	camX := float32(r.camX)
+	// The screen shake moves the whole match view, not the HUD.
+	w.BeginShift(float32(m.Shake.Offset() * r.stageScale))
 	r.drawLayers(f, r.behind, m.Ticks(), r.camX)
 	if a := superDarkness(m.State); a > 0 {
 		w.Rect(0, 0, VW, VH, Color{0, 0, 0, a})
@@ -566,6 +568,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	r.drawLayers(f, r.front, m.Ticks(), r.camX)
 	r.drawSparks(f, groundY, camX)
 	r.drawExplods(f, explodsOnTop, groundY, camX)
+	w.EndShift()
 	r.drawHUD(f)
 }
 

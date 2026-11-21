@@ -228,6 +228,8 @@ type Match struct {
 	LifeMax [2]int
 	// Sparks are the hit sparks being shown.
 	Sparks Sparks
+	// Shake is the screen shake (EnvShake, FallEnvShake).
+	Shake Shake
 	// Over/Winner report that the match is decided.
 	Over   bool
 	Winner match.Side
@@ -370,6 +372,7 @@ func (m *Match) reset(roundNo int) error {
 	m.camX = m.cam.Follow(m.cam.Start(), m.starting[0].Position.X, m.starting[1].Position.X, true)
 	m.cues = m.cues[:0]
 	m.Sparks.Live = m.Sparks.Live[:0]
+	m.Shake = Shake{}
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
 	return nil
@@ -441,6 +444,14 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	m.syncAnim()
 	m.queueCues(res.Sounds)
 	m.Sparks.Step(m.commonAnims, m.fighterAnims)
+	for _, evs := range res.Events {
+		for _, e := range evs {
+			if e.Type == "EnvShake" {
+				m.Shake.Start(e)
+			}
+		}
+	}
+	m.Shake.Step()
 	m.Sparks.Add(res.Events, [2]match.Facing{m.State.Fighters[0].Facing, m.State.Fighters[1].Facing})
 	if m.Setup.Training {
 		// A KO the engine reports is dropped: the life is back before anyone sees it.
