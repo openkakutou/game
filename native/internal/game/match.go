@@ -478,8 +478,9 @@ func (m *Match) Step(in [2]input.TickInput) error {
 		return err
 	}
 	m.State, m.runtimes = res.State, res.Fighters
-	x0, x1 := m.State.Fighters[0].Position.X, m.State.Fighters[1].Position.X
-	m.camX = m.cam.Follow(m.camX, min(x0, x1), max(x0, x1), false)
+	if leftest, rightest, ok := m.cameraTargets(); ok {
+		m.camX = m.cam.Follow(m.camX, leftest, rightest, false)
+	}
 	m.syncAnim()
 	m.queueCues(res.Sounds)
 	m.Sparks.Step(m.commonAnims, m.fighterAnims)
@@ -576,6 +577,24 @@ func (m *Match) Advances() bool {
 // Ghosts appends to dst side's afterimage ghosts to draw, newest first.
 func (m *Match) Ghosts(side int, dst []GhostDraw) []GhostDraw {
 	return m.AfterImages[side].Ghosts(dst, m.programs[side].IkemenVersion == [3]uint16{})
+}
+
+// cameraTargets are the leftmost and rightmost fighters the camera follows:
+// those a ScreenBound has not taken off it (Ikemen GO CSF_movecamera_x,
+// char.go:12826); ok is false when it follows none.
+func (m *Match) cameraTargets() (leftest, rightest float64, ok bool) {
+	for i := range m.runtimes {
+		if !m.runtimes[i].Context.MoveCamera[0] {
+			continue
+		}
+		x := m.State.Fighters[i].Position.X
+		if !ok {
+			leftest, rightest, ok = x, x, true
+			continue
+		}
+		leftest, rightest = min(leftest, x), max(rightest, x)
+	}
+	return leftest, rightest, ok
 }
 
 // Intro is the round clock's Ikemen GO sys.intro, and whether the match has

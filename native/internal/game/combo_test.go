@@ -80,3 +80,18 @@ func TestMatch_ComboEndsOnAnOpponentLyingKO(t *testing.T) {
 		t.Errorf("lying KO: combo = %d, want 0", got)
 	}
 }
+
+// char.go:12826: the camera follows only the fighters whose movecamera x is on.
+func TestMatch_CameraFollowsOnlyMoveCameraFighters(t *testing.T) {
+	m := &Match{}
+	m.State.Fighters[0].Position.X, m.State.Fighters[1].Position.X = -50, 80
+	m.runtimes[0].Context.MoveCamera = [2]bool{true, true}
+	m.runtimes[1].Context.MoveCamera = [2]bool{false, true}
+	if l, r, ok := m.cameraTargets(); !ok || l != -50 || r != -50 {
+		t.Errorf("targets = %v %v %v, want P1 only", l, r, ok)
+	}
+	m.runtimes[0].Context.MoveCamera[0] = false
+	if _, _, ok := m.cameraTargets(); ok {
+		t.Error("no fighter followed, want none")
+	}
+}
