@@ -123,3 +123,18 @@ func TestMatch_ProjectilesAndHelpersAreShownAndClearedOnTheNextRound(t *testing.
 		t.Errorf("explods after the round reset: %d, want none", len(got))
 	}
 }
+
+// A fighter showing its opponent's animation (ChangeAnim2, a thrown kfm) is
+// drawn from the opponent's animations.
+func TestMatch_AnimOwnerFollowsChangeAnim2(t *testing.T) {
+	a, b := kfmPair(t)
+	m, err := NewMatch(a, b, wideStage(), Setup{Rounds: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.runtimes[1].Context.AnimFromOpponent = true
+	m.syncAnim()
+	if m.AnimOwner != [2]match.Side{match.SideP1, match.SideP1} {
+		t.Errorf("owners = %v, want P1 for both", m.AnimOwner)
+	}
+}

@@ -217,6 +217,10 @@ type Match struct {
 	// elapsed in it (engine Context.AnimElapsed), indexed by side.
 	AnimNo   [2]int
 	AnimTime [2]int
+	// AnimOwner is the side whose animations and sprites each fighter's
+	// animation is drawn from: its own, or its opponent's when it shows the
+	// thrower's (ChangeAnim2 in a custom state).
+	AnimOwner [2]match.Side
 	// LastRound is the outcome of the round that just ended (OutcomeNone while fighting).
 	LastRound round.RoundResult
 	// LifeMax is each fighter's life, its character's [Data] life (Ikemen GO
@@ -404,6 +408,10 @@ func (m *Match) syncAnim() {
 	for i := range m.runtimes {
 		m.AnimNo[i] = m.runtimes[i].Context.Anim
 		m.AnimTime[i] = m.runtimes[i].Context.AnimElapsed
+		m.AnimOwner[i] = match.Side(i)
+		if m.runtimes[i].Context.AnimFromOpponent {
+			m.AnimOwner[i] = match.Side(1 - i)
+		}
 	}
 }
 

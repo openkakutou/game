@@ -522,9 +522,12 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 		sy := fighterScreenY(groundY, float32(fs.Position.Y))
 		flip := fs.Facing == match.FacingLeft
 		drawn := false
-		if fr, ok := currentFrame(f.Fighters[i].Char.Animations, m.AnimNo[i], m.AnimTime[i]); ok && !fr.IsBlank() {
-			if t := r.sprites[spriteKey{i, fr.Group, fr.Image}]; t != nil {
-				if sp, ok := spriteMeta(f.Fighters[i], fr); ok {
+		// A thrown fighter may show its thrower's animation, drawn with the
+		// thrower's sprites.
+		owner := int(m.AnimOwner[i])
+		if fr, ok := currentFrame(f.Fighters[owner].Char.Animations, m.AnimNo[i], m.AnimTime[i]); ok && !fr.IsBlank() {
+			if t := r.sprites[spriteKey{owner, fr.Group, fr.Image}]; t != nil {
+				if sp, ok := spriteMeta(f.Fighters[owner], fr); ok {
 					ox := float32(fr.X - sp.AxisX)
 					if flip {
 						ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)

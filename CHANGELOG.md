@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- Throws work in the desktop game (engine v2.50.0): kfm grabs, lifts and throws its opponent, the thrown fighter drawn with the thrower's animation while it is held; a HitDef now only hits the stances its hitflag allows.
 - The round's timings (wait before the intros, control time, KO wait, win pose and round end times) come from the lifebar's [Round] section, Ikemen GO's defaults otherwise.
 - The round banner follows the round: "Round N" during the intros, "Fight!" as the fight starts, the outcome (KO, Time over...) as soon as the round is decided.
 - Rounds play as in Ikemen GO (engine v2.46.0): the fighters start in their intro (kfm kicks its wood pieces) without control, the fight starts once the intros are done, and after a KO the round goes on, the inputs pause, the winner plays its win pose and the loser its lose pose before the next round. Training still fights from the first tick.
