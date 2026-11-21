@@ -92,7 +92,7 @@ func (l *lifebarHUD) elements() []lifebar.Element {
 		out = append(out, fa.Bg, fa.Bg0, fa.Bg1, fa.Bg2, fa.Top, fa.Ko)
 		wi := l.hud.WinIcon[i]
 		ic := wi.Icons
-		out = append(out, wi.Bg0, wi.Top, ic.Normal, ic.Time, ic.Perfect)
+		out = append(out, wi.Bg0, wi.Top, ic.Normal, ic.Time, ic.Perfect, l.hud.Combo[i].Bg, l.hud.Combo[i].Top)
 	}
 	out = append(out, l.hud.Time.Bg, l.hud.Time.Top)
 	r := &l.hud.Round
@@ -163,7 +163,46 @@ func (l *lifebarHUD) draw(w *Window, f *game.Flow, faces [2]faceSprite) {
 	l.paint(w, m.Ticks(), l.meters, power, names, timerText(f))
 	l.drawFaces(w, m, faces)
 	l.drawWinIcons(w, m)
+	l.drawCombos(w, f)
 	l.drawCalls(w, f)
+}
+
+// drawCombos draws each side's combo counter where it has slid to
+// (FightScreenCombo.draw, fs.go:2723): its background, the counter (%i the
+// hits), the text (%i the hits, %d the damage), the top.
+// shortcut: autoalign, the hit-count font variants, %p and the shakes are
+// not applied.
+func (l *lifebarHUD) drawCombos(w *Window, f *game.Flow) {
+	s := l.screen()
+	ticks := f.Match.Ticks()
+	for i, co := range l.hud.Combo {
+		c := f.Combos[i]
+		if !c.Visible(co) {
+			continue
+		}
+		pos := co.Pos
+		if co.StartX <= 0 {
+			if i == 0 {
+				pos[0] += int(c.X)
+			} else {
+				pos[0] -= int(c.X)
+			}
+		}
+		for layer := range 3 {
+			l.drawElement(w, s, co.Bg, pos, layer, ticks)
+		}
+		hits := strconv.Itoa(c.Hits)
+		if co.Counter.Font.No >= 0 {
+			l.print(w, s, co.Counter, pos, strings.Replace(co.Counter.Text, "%i", hits, 1))
+		}
+		if co.Text.Font.No >= 0 {
+			text := strings.Replace(co.Text.Text, "%i", hits, 1)
+			l.print(w, s, co.Text, pos, strings.Replace(text, "%d", strconv.Itoa(c.Damage), 1))
+		}
+		for layer := range 3 {
+			l.drawElement(w, s, co.Top, pos, layer, ticks)
+		}
+	}
 }
 
 // drawFaces draws each player's portrait (FightScreenFace.draw,

@@ -186,6 +186,8 @@ type Flow struct {
 	Lifebar *HUDLifebar
 	// Announcer paces the lifebar's round, fight and KO calls.
 	Announcer Announcer
+	// Combos are each side's lifebar combo counter.
+	Combos [2]ComboCounter
 	// Lifebars are the usable folders of lifebars/ and Packs the installed
 	// screenpacks' names, which Options > Appearance offers.
 	Lifebars []lifebar.Entry
@@ -734,7 +736,7 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 			_ = m.SetCommonAnimations(raw) // an unreadable file shows no common spark
 		}
 	}
-	f.Match, f.Screen, f.RoundOverTicks, f.Announcer = m, ScreenMatch, 0, Announcer{}
+	f.Match, f.Screen, f.RoundOverTicks, f.Announcer, f.Combos = m, ScreenMatch, 0, Announcer{}, [2]ComboCounter{}
 	for i, level := range setup.AILevel {
 		f.cpus[i] = nil
 		if level > 0 {
@@ -847,6 +849,11 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 	}
 	if intro, ok := f.Match.Intro(); ok && f.Lifebar != nil {
 		f.Announcer.Tick(f.Lifebar.Lifebar, f.Match.State.Round, intro, f.Match.Decided())
+	}
+	if f.Lifebar != nil {
+		for i := range f.Combos {
+			f.Combos[i].Step(f.Lifebar.Combo[i], f.Lifebar.Localcoord[0], f.Match.ComboHits(i), f.Match.State.Fighters[1-i].Health)
+		}
 	}
 	if f.Match.RoundEnded() {
 		f.RoundOverTicks = RoundEndTicks
