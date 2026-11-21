@@ -713,6 +713,7 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 		r := f.Lifebar.Round
 		setup.Timings = round.Timings{StartWaitTime: r.StartWaitTime, CtrlTime: r.CtrlTime,
 			OverWaitTime: r.OverWaitTime, OverWinTime: r.OverWinTime, OverTime: r.OverTime}
+		setup.Slow = SlowMotion{Time: r.SlowTime, FadeTime: r.SlowFadeTime, Speed: float64(r.SlowSpeed)}
 	}
 	for i, cpu := range setup.CPU {
 		if cpu && setup.AILevel[i] <= 0 {
@@ -831,6 +832,9 @@ func (f *Flow) Tick(in [2]input.TickInput) {
 		}
 		f.decideCPU(i, cpu)
 		in[i] = f.cpuIn[i]
+	}
+	if !f.Match.Advances() {
+		return // the KO slow motion holds this frame
 	}
 	if err := f.Match.Step(in); err != nil {
 		f.fail(fmt.Sprintf("The match stopped: %v", err))

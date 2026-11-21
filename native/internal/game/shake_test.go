@@ -47,3 +47,32 @@ func TestShake_DefaultsAndMul(t *testing.T) {
 		t.Errorf("after a cycle offset = %v, want +-4", s.Offset())
 	}
 }
+
+// system.go:2986-2997: after a KO the match runs at slow.speed, easing back
+// to full speed over the last slow.fadetime; without one every frame steps.
+func TestMatch_KOSlowMotion(t *testing.T) {
+	m := &Match{Setup: Setup{Slow: SlowMotion{Time: 8, FadeTime: 4, Speed: 0.25}}}
+	for range 3 {
+		if !m.Advances() {
+			t.Fatal("a frame without slow motion must step")
+		}
+	}
+	m.slowLeft = 8
+	var steps []bool
+	for range 10 {
+		steps = append(steps, m.Advances())
+	}
+	stepped := 0
+	for _, s := range steps[:8] {
+		if s {
+			stepped++
+		}
+	}
+	// 4 frames at 0.25, then 0.25+0.75*(0/4..3/4): 0.25,0.25,0.25,0.25 (1), 0.25 0.4375 0.625 0.8125 (2.125): 3 steps.
+	if stepped != 3 {
+		t.Errorf("steps in the slow motion = %d (%v), want 3", stepped, steps)
+	}
+	if !steps[8] || !steps[9] {
+		t.Errorf("after the slow motion every frame steps, got %v", steps[8:])
+	}
+}

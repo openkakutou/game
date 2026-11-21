@@ -136,6 +136,32 @@ type Setup struct {
 	// Timings are the round's announcement times, the lifebar's [Round]
 	// values; zero ones are Ikemen GO's defaults.
 	Timings round.Timings
+	// Slow is the KO slow motion, the lifebar's slow.time, slow.fadetime
+	// and slow.speed; zero ones are Ikemen GO's defaults.
+	Slow SlowMotion
+}
+
+// SlowMotion is the slow motion after a KO (fs.go:3303-3305): Time ticks at
+// Speed, back to full speed over the last FadeTime.
+type SlowMotion struct {
+	Time, FadeTime int
+	Speed          float64
+}
+
+// slowMotion is the setup's slow motion, Ikemen GO's defaults (60, 45,
+// 0.25) for the unset values.
+func (s Setup) slowMotion() SlowMotion {
+	m := s.Slow
+	if m.Time <= 0 {
+		m.Time = 60
+	}
+	if m.FadeTime <= 0 {
+		m.FadeTime = m.Time * 3 / 4
+	}
+	if m.Speed <= 0 || m.Speed > 1 {
+		m.Speed = 0.25
+	}
+	return m
 }
 
 // roundTimings are the setup's timings, Ikemen GO's defaults for the unset
@@ -238,7 +264,11 @@ type Match struct {
 	// nil in training, which fights from the first tick; progress is what
 	// the fighters see of it, decided the round's result once known and
 	// roundOver set when the clock ends the round.
-	clock     *round.Clock
+	clock *round.Clock
+	// slowLeft counts the slow motion's ticks down; slowAcc is how much of
+	// a simulation tick the slowed frames have built up.
+	slowLeft  int
+	slowAcc   float64
 	progress  engine.RoundProgress
 	decided   round.RoundResult
 	roundOver bool
@@ -368,6 +398,7 @@ func (m *Match) reset(roundNo int) error {
 	}
 	m.State = *state
 	m.decided, m.roundOver = round.RoundResult{}, false
+	m.slowLeft, m.slowAcc = 0, 0
 	m.tick = 0
 	m.camX = m.cam.Follow(m.cam.Start(), m.starting[0].Position.X, m.starting[1].Position.X, true)
 	m.cues = m.cues[:0]
@@ -460,6 +491,10 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	}
 	if res.Round.Outcome != round.OutcomeNone && m.decided.Outcome == round.OutcomeNone {
 		m.decided, m.LastRound = res.Round, res.Round
+		// A KO (not a time over) slows the match down (system.go:2986-2997).
+		if res.Round.Outcome == round.OutcomeKO || res.Round.Outcome == round.OutcomeDoubleKO {
+			m.slowLeft = m.Setup.slowMotion().Time
+		}
 	}
 	return m.stepClock()
 }
@@ -492,6 +527,28 @@ func (m *Match) stepClock() error {
 func (m *Match) matchEndsWith(r round.RoundResult) bool {
 	over, _ := m.Progress.RecordRoundResult(r).MatchOutcome()
 	return over
+}
+
+// Advances reports whether this frame steps the simulation: always, but in
+// the KO slow motion, where frames build up its speed (slow.speed, eased back
+// to full speed over the last slow.fadetime, system.go:2986-2997) and step
+// once a whole tick has built up.
+func (m *Match) Advances() bool {
+	if m.slowLeft <= 0 {
+		return true
+	}
+	slow := m.Setup.slowMotion()
+	speed := slow.Speed
+	if m.slowLeft < slow.FadeTime {
+		speed += (1 - speed) * float64(slow.FadeTime-m.slowLeft) / float64(slow.FadeTime)
+	}
+	m.slowLeft--
+	m.slowAcc += speed
+	if m.slowAcc < 1 {
+		return false
+	}
+	m.slowAcc--
+	return true
 }
 
 // RoundState is the round's Ikemen GO RoundState (0 to 4); 2 in training.
