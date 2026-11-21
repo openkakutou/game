@@ -88,6 +88,11 @@ func (l *lifebarHUD) elements() []lifebar.Element {
 			out = append(out, b.Bg0, b.Bg1, b.Bg2, b.Mid, b.Front, b.Top)
 		}
 		out = append(out, l.hud.Name[i].Bg, l.hud.Name[i].Top)
+		fa := l.hud.Face[i]
+		out = append(out, fa.Bg, fa.Bg0, fa.Bg1, fa.Bg2, fa.Top, fa.Ko)
+		wi := l.hud.WinIcon[i]
+		ic := wi.Icons
+		out = append(out, wi.Bg0, wi.Top, ic.Normal, ic.Time, ic.Perfect)
 	}
 	out = append(out, l.hud.Time.Bg, l.hud.Time.Top)
 	r := &l.hud.Round
@@ -146,7 +151,7 @@ func lifeFraction(h, lifeMax int) float64 {
 }
 
 // draw paints the match's lifebar.
-func (l *lifebarHUD) draw(w *Window, f *game.Flow) {
+func (l *lifebarHUD) draw(w *Window, f *game.Flow, faces [2]faceSprite) {
 	m := f.Match
 	l.step(m)
 	var power [2]float64
@@ -156,7 +161,69 @@ func (l *lifebarHUD) draw(w *Window, f *game.Flow) {
 		names[i] = f.Fighters[i].Char.Name
 	}
 	l.paint(w, m.Ticks(), l.meters, power, names, timerText(f))
+	l.drawFaces(w, m, faces)
+	l.drawWinIcons(w, m)
 	l.drawCalls(w, f)
+}
+
+// drawFaces draws each player's portrait (FightScreenFace.draw,
+// fs.go:1970-2022): its backgrounds, the face sprite, the KO layer once the
+// player is out, then the top.
+// shortcut: palfx sharing, darken sharing and portraitscale are not applied.
+func (l *lifebarHUD) drawFaces(w *Window, m *game.Match, faces [2]faceSprite) {
+	s := l.screen()
+	ticks := m.Ticks()
+	for layer := range 3 {
+		for i, fa := range l.hud.Face {
+			for _, e := range []lifebar.Element{fa.Bg, fa.Bg0, fa.Bg1, fa.Bg2} {
+				l.drawElement(w, s, e, fa.Pos, layer, ticks)
+			}
+			if face := faces[i]; face.tex != nil && fa.FaceLayout.LayerNo == layer {
+				p := s.Place(lifebar.Element{HasSprite: true, Layout: fa.FaceLayout}, air.Frame{}, lifebar.SpriteBox{Axis: face.axis, Size: [2]int{face.tex.W, face.tex.H}}, fa.Pos)
+				w.SpriteSized(face.tex, float32(p.X), float32(p.Y), float32(p.W), float32(p.H), p.FlipX)
+			}
+			if m.State.Fighters[i].Health <= 0 {
+				l.drawElement(w, s, fa.Ko, fa.Pos, layer, ticks)
+			}
+			l.drawElement(w, s, fa.Top, fa.Pos, layer, ticks)
+		}
+	}
+}
+
+// drawWinIcons draws each player's win icons (FightScreenWinIcon.draw,
+// fs.go:2313-2357): a bg0 per round it takes to win, then an icon per round
+// won, the perfect icon over a perfect one; past useiconupto wins, the
+// counter text instead.
+func (l *lifebarHUD) drawWinIcons(w *Window, m *game.Match) {
+	s := l.screen()
+	ticks := m.Ticks()
+	for i, wi := range l.hud.WinIcon {
+		at := func(k int) [2]int {
+			return [2]int{wi.Pos[0] + wi.IconOffset[0]*k, wi.Pos[1] + wi.IconOffset[1]*k}
+		}
+		wins := m.Wins[i]
+		for layer := range 3 {
+			for k := range min(wi.UseIconUpTo, m.Progress.RoundsToWin()) {
+				l.drawElement(w, s, wi.Bg0, at(k), layer, ticks)
+			}
+			if len(wins) > wi.UseIconUpTo {
+				continue
+			}
+			for k, win := range wins {
+				icon := wi.Icons.Normal
+				if win.Time {
+					icon = wi.Icons.Time
+				}
+				l.drawElement(w, s, icon, at(k), layer, ticks)
+				if win.Perfect {
+					l.drawElement(w, s, wi.Icons.Perfect, at(k), layer, ticks)
+				}
+			}
+		}
+		if len(wins) > wi.UseIconUpTo && wi.Counter.Font.No >= 0 {
+			l.print(w, s, wi.Counter, wi.Pos, strings.Replace(wi.Counter.Text, "%i", strconv.Itoa(len(wins)), 1))
+		}
+	}
 }
 
 // drawCalls draws the round, fight and KO calls showing, at the [Round]

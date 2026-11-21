@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/openkakutou/engine/v2"
+	"io"
 	"io/fs"
 	"path"
 	"time"
@@ -49,6 +50,8 @@ type Renderer struct {
 	win       *Window
 	sprites   map[spriteKey]*Texture
 	loadedFor *game.Match
+	// faces are the fighters' lifebar portraits.
+	faces [2]faceSprite
 	// behind/front are the stage's layer indexes, split once per match.
 	behind, front []int
 	// stageAxis is each loaded stage sprite's axis, from the stage's sheet.
@@ -171,6 +174,7 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 	}
 	r.loadStageSprites(f)
 	r.loadSparkSprites(f)
+	r.loadFaces(f)
 	for i, fighter := range f.Fighters {
 		file, err := openSprites(f.FS, fighter.SffPath)
 		if err != nil {
@@ -190,6 +194,57 @@ func (r *Renderer) loadSprites(f *game.Flow) {
 			}
 		}
 	}
+}
+
+// faceSprite is a fighter's lifebar portrait.
+type faceSprite struct {
+	tex  *Texture
+	axis [2]int
+}
+
+// loadFaces uploads each fighter's portrait, the sprite the lifebar's
+// face.spr names in its character's sheet, in its palette.
+func (r *Renderer) loadFaces(f *game.Flow) {
+	for i := range r.faces {
+		if r.faces[i].tex != nil {
+			r.faces[i].tex.Delete()
+		}
+		r.faces[i] = faceSprite{}
+	}
+	if f.Lifebar == nil {
+		return
+	}
+	for i, fighter := range f.Fighters {
+		ref := f.Lifebar.Face[i].FaceSprite
+		if ref.Group < 0 {
+			continue
+		}
+		file, err := openSprites(f.FS, fighter.SffPath)
+		if err != nil {
+			continue
+		}
+		px, wd, ht, err := sff.ResolveCharacterSpritePixels(file, ref.Group, ref.Image, fighter.Palette)
+		if err != nil || wd == 0 || ht == 0 {
+			continue
+		}
+		r.faces[i] = faceSprite{tex: NewTexture(px, wd, ht), axis: spriteAxis(file, ref.Group, ref.Image)}
+	}
+}
+
+// spriteAxis is a sprite's axis in its sheet, 0,0 when it cannot be read.
+func spriteAxis(file io.ReaderAt, group, image int) [2]int {
+	groups, err := sff.Load(file)
+	if err != nil {
+		return [2]int{}
+	}
+	for _, g := range groups {
+		for _, sp := range g.Sprites {
+			if sp.Group == group && sp.Image == image {
+				return [2]int{sp.AxisX, sp.AxisY}
+			}
+		}
+	}
+	return [2]int{}
 }
 
 // commonFXSheet is the spriteKey.fighter value of the common fightfx sheet.
@@ -607,7 +662,7 @@ func (r *Renderer) drawLifebar(f *game.Flow) {
 		}
 		r.lifebar = newLifebarHUD(f.Lifebar, f.FS)
 	}
-	r.lifebar.draw(r.win, f)
+	r.lifebar.draw(r.win, f, r.faces)
 }
 
 // drawBuiltInBars is the HUD used when no lifebar is installed.

@@ -249,6 +249,8 @@ type Match struct {
 	AnimOwner [2]match.Side
 	// LastRound is the outcome of the round that just ended (OutcomeNone while fighting).
 	LastRound round.RoundResult
+	// Wins are the rounds each side won, in order, for the win icons.
+	Wins [2][]Win
 	// LifeMax is each fighter's life, its character's [Data] life (Ikemen GO
 	// lifeMax): the life a round starts with and the bars' full length.
 	LifeMax [2]int
@@ -526,6 +528,7 @@ func (m *Match) stepClock() error {
 	case round.EventRoundOver:
 		m.roundOver = true
 		m.Progress = m.Progress.RecordRoundResult(m.decided)
+		m.recordWin(m.decided)
 		m.Over, m.Winner = m.Progress.MatchOutcome()
 	}
 	m.syncAnim()

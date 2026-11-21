@@ -148,3 +148,17 @@ func TestEnded_FollowsAnimTextSndEnd(t *testing.T) {
 		t.Error("with inf it ends on reaching the held frame")
 	}
 }
+
+func TestRecordWin_KeepsTheWinnersRoundsAndTheirKind(t *testing.T) {
+	m := &Match{LifeMax: [2]int{1000, 1000}}
+	m.State.Fighters[0].Health, m.State.Fighters[1].Health = 1000, 400
+	m.recordWin(round.RoundResult{Outcome: round.OutcomeKO, Winner: 0})
+	m.recordWin(round.RoundResult{Outcome: round.OutcomeTimeout, Winner: 1})
+	m.recordWin(round.RoundResult{Outcome: round.OutcomeDoubleKO})
+	if len(m.Wins[0]) != 1 || !m.Wins[0][0].Perfect || m.Wins[0][0].Time {
+		t.Errorf("P1 wins = %+v, want one perfect KO", m.Wins[0])
+	}
+	if len(m.Wins[1]) != 1 || !m.Wins[1][0].Time || m.Wins[1][0].Perfect {
+		t.Errorf("P2 wins = %+v, want one time win", m.Wins[1])
+	}
+}
