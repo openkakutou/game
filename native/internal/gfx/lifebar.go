@@ -86,6 +86,11 @@ func (l *lifebarHUD) elements() []lifebar.Element {
 	for i := range 2 {
 		for _, b := range []lifebar.Bar{l.hud.Life[i].Bar, l.hud.Power[i].Bar} {
 			out = append(out, b.Bg0, b.Bg1, b.Bg2, b.Mid, b.Front, b.Top)
+			for _, vs := range [][]lifebar.Variant{b.Bg0Variants, b.Bg1Variants, b.Bg2Variants, b.FrontVariants} {
+				for _, v := range vs {
+					out = append(out, v.Element)
+				}
+			}
 		}
 		out = append(out, l.hud.Name[i].Bg, l.hud.Name[i].Top)
 		fa := l.hud.Face[i]
@@ -323,10 +328,12 @@ func (l *lifebarHUD) paint(w *Window, ticks int, life [2]lifebar.Meter, power [2
 	s := l.screen()
 	for layer := range 3 {
 		for i := range 2 {
-			l.drawBar(w, s, l.hud.Life[i].Bar, layer, ticks, life[i].Top, life[i].Mid)
+			bar := atValue(l.hud.Life[i].Bar, float64(life[i].Top)*100, 100)
+			l.drawBar(w, s, bar, layer, ticks, life[i].Top, life[i].Mid)
 		}
 		for i := range 2 {
-			l.drawBar(w, s, l.hud.Power[i].Bar, layer, ticks, float32(power[i]), float32(power[i]))
+			bar := atValue(l.hud.Power[i].Bar, power[i]*game.MaxPower, game.MaxPower)
+			l.drawBar(w, s, bar, layer, ticks, float32(power[i]), float32(power[i]))
 		}
 		for i := range 2 {
 			n := l.hud.Name[i]
@@ -342,6 +349,16 @@ func (l *lifebarHUD) paint(w *Window, ticks int, life [2]lifebar.Meter, power [2
 		}
 		l.drawElement(w, s, l.hud.Time.Top, l.hud.Time.Pos, layer, ticks)
 	}
+}
+
+// atValue is b with the backgrounds and front its per-value variants pick
+// at value (of max): a life percentage, or a power.
+func atValue(b lifebar.Bar, value, max float64) lifebar.Bar {
+	b.Bg0 = lifebar.Pick(b.Bg0, b.Bg0Variants, value, max)
+	b.Bg1 = lifebar.Pick(b.Bg1, b.Bg1Variants, value, max)
+	b.Bg2 = lifebar.Pick(b.Bg2, b.Bg2Variants, value, max)
+	b.Front = lifebar.Pick(b.Front, b.FrontVariants, value, max)
+	return b
 }
 
 func (l *lifebarHUD) drawBar(w *Window, s lifebar.Screen, b lifebar.Bar, layer, ticks int, top, mid float32) {

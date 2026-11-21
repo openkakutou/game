@@ -1,6 +1,7 @@
 package gfx
 
 import (
+	"github.com/openkakutou/lifebar"
 	"testing"
 
 	"github.com/openkakutou/engine/v2/match"
@@ -72,5 +73,15 @@ func TestCallText_PutsTheRoundNumber(t *testing.T) {
 	}
 	if got := callText("%s Wins", 3, "Kung Fu Man"); got != "Kung Fu Man Wins" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestAtValue_PicksTheBarsVariants(t *testing.T) {
+	b := lifebar.Bar{Front: lifebar.Element{Anim: 1}, FrontVariants: []lifebar.Variant{{From: 50, Element: lifebar.Element{Anim: 2}}}}
+	if got := atValue(b, 60, 100).Front.Anim; got != 2 {
+		t.Errorf("at 60%%: front anim %d, want 2", got)
+	}
+	if got := atValue(b, 40, 100).Front.Anim; got != 1 {
+		t.Errorf("at 40%%: front anim %d, want 1", got)
 	}
 }

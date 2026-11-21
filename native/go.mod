@@ -7,7 +7,7 @@ require (
 	github.com/openkakutou/character v0.23.1
 	github.com/openkakutou/engine/v2 v2.64.0
 	github.com/openkakutou/fnt v0.2.0
-	github.com/openkakutou/lifebar v0.2.0
+	github.com/openkakutou/lifebar v0.3.0
 	github.com/openkakutou/screenpack v0.7.0
 	github.com/openkakutou/sff v0.10.0
 	github.com/openkakutou/snd v0.7.2
