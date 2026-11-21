@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- The desktop game draws projectiles (engine v2.37.0) with their thrower's animations, flying across the stage until they hit or leave.
 - The desktop game shows hit sparks where hits land and plays the hit and guard sounds, from the game's own common effects and sounds (or a character's own when it asks for them); additive animation frames now blend as in Ikemen GO.
 - In the desktop game, fighters guard: holding back blocks attacks that can be blocked standing, crouching or in the air (low attacks need a crouching guard), with chip damage as in Ikemen GO; the Training dummy's Guard setting now really blocks (engine v2.35.0).
 - In the desktop game, attacks that start before they reach (sweeps, long-reaching moves) now hit, knocked-down fighters fall, lie down and get up by themselves, as in Ikemen GO (engine v2.34.0).

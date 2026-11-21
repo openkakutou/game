@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/openkakutou/character/air"
+	"github.com/openkakutou/engine/v2"
 	"github.com/openkakutou/engine/v2/evaluator"
 	"github.com/openkakutou/engine/v2/input"
 	"github.com/openkakutou/engine/v2/match"
@@ -82,5 +83,28 @@ func TestMatch_ALandedHitShowsItsSpark(t *testing.T) {
 	}
 	if !seen {
 		t.Fatal("the light kick never showed a spark")
+	}
+}
+
+// A projectile lives in the engine runtime; the match shows it until the
+// next round, which starts without any.
+func TestMatch_ProjectilesAreShownAndClearedOnTheNextRound(t *testing.T) {
+	a, b := kfmPair(t)
+	m, err := NewMatch(a, b, wideStage(), Setup{Rounds: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.runtimes[0].Projectiles = []engine.Projectile{{Anim: 0, Position: match.Position{X: 50}}}
+	if got := m.Projectiles(match.SideP1); len(got) != 1 || got[0].Position.X != 50 {
+		t.Fatalf("projectiles = %+v, want the one at 50", got)
+	}
+	if got := m.Projectiles(match.SideP2); len(got) != 0 {
+		t.Errorf("P2 projectiles = %+v, want none", got)
+	}
+	if err := m.reset(2); err != nil {
+		t.Fatal(err)
+	}
+	if got := m.Projectiles(match.SideP1); len(got) != 0 {
+		t.Errorf("after the round reset: %+v, want none", got)
 	}
 }

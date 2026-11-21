@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/openkakutou/character/air"
+	"github.com/openkakutou/engine/v2"
 	"github.com/openkakutou/engine/v2/evaluator"
 	"github.com/openkakutou/engine/v2/match"
 )
@@ -114,3 +115,8 @@ func (m *Match) SetCommonAnimations(raw []byte) error {
 
 // CommonAnimations are the common fightfx animations the sparks play.
 func (m *Match) CommonAnimations() []air.Animation { return m.commonAnims }
+
+// Projectiles are side's live projectiles, playing its own animations.
+func (m *Match) Projectiles(side match.Side) []engine.Projectile {
+	return m.runtimes[side].Projectiles
+}
