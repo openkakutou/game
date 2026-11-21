@@ -277,8 +277,12 @@ func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 // SpriteTinted is Sprite with its colours multiplied by mul and add added
 // where it is opaque (a PalFX): a second, additive pass paints the add colour
 // through the sprite's alpha.
-func (w *Window) SpriteTinted(t *Texture, x, y float32, flip bool, mul, add [3]float32) {
+func (w *Window) SpriteTinted(t *Texture, x, y float32, flip, additive bool, mul, add [3]float32) {
 	w.Flush()
+	if additive {
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
+		defer gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	}
 	gl.Enable(gl.TEXTURE_2D)
 	gl.BindTexture(gl.TEXTURE_2D, t.id)
 	gl.DisableClientState(gl.COLOR_ARRAY)
@@ -310,7 +314,9 @@ func (w *Window) SpriteTinted(t *Texture, x, y float32, flip bool, mul, add [3]f
 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
 		gl.Color4f(add[0], add[1], add[2], 1)
 		quad()
-		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+		if !additive {
+			gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+		}
 		gl.TexEnvi(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.MODULATE)
 	}
 	gl.Color4f(1, 1, 1, 1)

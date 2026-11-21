@@ -260,6 +260,8 @@ type Match struct {
 	Shake Shake
 	// PalFX is each fighter's palette effect.
 	PalFX [2]PalFX
+	// AfterImages are each fighter's afterimage trail.
+	AfterImages [2]AfterImage
 	// Over/Winner report that the match is decided.
 	Over   bool
 	Winner match.Side
@@ -409,6 +411,7 @@ func (m *Match) reset(roundNo int) error {
 	m.Sparks.Live = m.Sparks.Live[:0]
 	m.Shake = Shake{}
 	m.PalFX = [2]PalFX{}
+	m.AfterImages = [2]AfterImage{}
 	m.LastRound = round.RoundResult{}
 	m.syncAnim()
 	return nil
@@ -490,10 +493,17 @@ func (m *Match) Step(in [2]input.TickInput) error {
 				m.Shake.Start(e)
 			case "PalFX":
 				m.PalFX[side].Start(e)
+			case "AfterImage":
+				m.AfterImages[side].Start(e)
+			case "AfterImageTime":
+				m.AfterImages[side].SetTime(e)
 			}
 		}
 	}
 	m.Shake.Step()
+	for i := range m.AfterImages {
+		m.AfterImages[i].Record(Ghost{Anim: m.AnimNo[i], AnimTime: m.AnimTime[i], Position: m.State.Fighters[i].Position, Facing: m.State.Fighters[i].Facing})
+	}
 	m.Sparks.Add(res.Events, [2]match.Facing{m.State.Fighters[0].Facing, m.State.Fighters[1].Facing})
 	if m.Setup.Training {
 		// A KO the engine reports is dropped: the life is back before anyone sees it.
@@ -561,6 +571,11 @@ func (m *Match) Advances() bool {
 	}
 	m.slowAcc--
 	return true
+}
+
+// Ghosts appends to dst side's afterimage ghosts to draw, newest first.
+func (m *Match) Ghosts(side int, dst []GhostDraw) []GhostDraw {
+	return m.AfterImages[side].Ghosts(dst, m.programs[side].IkemenVersion == [3]uint16{})
 }
 
 // Intro is the round clock's Ikemen GO sys.intro, and whether the match has

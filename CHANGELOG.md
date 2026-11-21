@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the desktop game, a gamepad's B attack or the Backspace key no longer opens the pause menu during a match: only Escape and the gamepad's Start do.
 
 ### Added
+- AfterImage trails, as Ikemen GO records and tints them (length, timegap, framegap, palbright, palcontrast, paladd, palmul, palpostbright, additive trans; AfterImageTime) (engine v2.59.0).
 - The lifebar's win and draw calls follow the round's end as Ikemen GO paces them (over.waittime, win.time, display time, sound; %s is the winner's name) (lifebar v0.2.0).
 - The lifebar's round, fight and KO calls play their sounds from its fight.snd at their sndtime, as Ikemen GO.
 - More characters play (engine v2.58.0, character v0.22.0): BindToTarget throws, ModifyExplod, `!` after a value, `!MoveType = H`, lenient AnimElem / VarSet / Clsn lines as Ikemen GO reads them.

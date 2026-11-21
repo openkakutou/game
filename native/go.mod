@@ -5,7 +5,7 @@ go 1.26.7
 require (
 	github.com/go-gl/gl v0.0.0-20260331235117-4566fea9a276
 	github.com/openkakutou/character v0.23.0
-	github.com/openkakutou/engine/v2 v2.58.0
+	github.com/openkakutou/engine/v2 v2.59.0
 	github.com/openkakutou/fnt v0.2.0
 	github.com/openkakutou/lifebar v0.2.0
 	github.com/openkakutou/screenpack v0.7.0

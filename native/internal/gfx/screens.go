@@ -52,6 +52,8 @@ type Renderer struct {
 	loadedFor *game.Match
 	// faces are the fighters' lifebar portraits.
 	faces [2]faceSprite
+	// ghosts is the buffer of the afterimage ghosts drawn.
+	ghosts []game.GhostDraw
 	// behind/front are the stage's layer indexes, split once per match.
 	behind, front []int
 	// stageAxis is each loaded stage sprite's axis, from the stage's sheet.
@@ -343,6 +345,33 @@ func (r *Renderer) drawProjectiles(f *game.Flow, groundY, camX float32) {
 	}
 }
 
+// drawGhosts draws side's afterimage ghosts behind it, oldest first, each
+// tinted as its step asks.
+func (r *Renderer) drawGhosts(f *game.Flow, side int, groundY, camX float32) {
+	r.ghosts = f.Match.Ghosts(side, r.ghosts)
+	fighter := f.Fighters[side]
+	for k := len(r.ghosts) - 1; k >= 0; k-- {
+		g := r.ghosts[k]
+		fr, ok := currentFrame(fighter.Char.Animations, g.Anim, g.AnimTime)
+		if !ok || fr.IsBlank() {
+			continue
+		}
+		t := r.sprites[spriteKey{side, fr.Group, fr.Image}]
+		sp, found := spriteMeta(fighter, fr)
+		if t == nil || !found {
+			continue
+		}
+		flip := g.Facing == match.FacingLeft
+		ox := float32(fr.X - sp.AxisX)
+		if flip {
+			ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
+		}
+		sx := VW/2 + float32(g.Position.X) - camX
+		sy := fighterScreenY(groundY, float32(g.Position.Y))
+		r.win.SpriteTinted(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip, f.Match.AfterImages[side].Additive, g.Mul, g.Add)
+	}
+}
+
 // superDarkness is how dark the stage is drawn: half during a darkening
 // SuperPause (Ikemen GO's superbrightness 0.5), else not at all.
 func superDarkness(s match.MatchState) float32 {
@@ -603,6 +632,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 	}
 	r.drawExplods(f, explodsBehind, groundY, camX)
 	for i, fs := range []match.FighterState{p1, p2} {
+		r.drawGhosts(f, i, groundY, camX)
 		sx := VW/2 + float32(fs.Position.X) - camX
 		sy := fighterScreenY(groundY, float32(fs.Position.Y))
 		flip := fs.Facing == match.FacingLeft
@@ -622,7 +652,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 						w.SpriteAdd(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
 					case m.PalFX[i].Active():
 						mul, add := m.PalFX[i].Tint()
-						w.SpriteTinted(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip, mul, add)
+						w.SpriteTinted(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip, false, mul, add)
 					default:
 						w.Sprite(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip)
 					}
