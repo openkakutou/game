@@ -10,8 +10,8 @@ github.com/openkakutou/engine/v2 v2.77.0 h1:6gmkB7sAav7XnIm0bAdAGnNi/jAFT6fR2ZMu
 github.com/openkakutou/engine/v2 v2.77.0/go.mod h1:azFtvU6Yklcqesbtg+EdccoQ2jkxvqMqsrPI52NIhHc=
 github.com/openkakutou/fnt v0.2.0 h1:ZLMWv1eX8vSGkSOEz+634l9sCxPCCak3n5dihrJVP0A=
 github.com/openkakutou/fnt v0.2.0/go.mod h1:3Doe0iB5tRXZDPA6/q02zWDiL4caJ70qK7vBj+HAITM=
-github.com/openkakutou/lifebar v0.3.0 h1:UayYPG7AqdSoO1uKiBXzUeJCEU63SFCc3b39qJOzY9s=
-github.com/openkakutou/lifebar v0.3.0/go.mod h1:sfAUnLoFa+sVy6Xi1Vc1pb7WwqXTQCH4KFAYL8CpULA=
+github.com/openkakutou/lifebar v0.3.1 h1:Q+hkma6QrJN6FdxotgyvzMpzOL65fBJ6DHi0xp9QYuE=
+github.com/openkakutou/lifebar v0.3.1/go.mod h1:sfAUnLoFa+sVy6Xi1Vc1pb7WwqXTQCH4KFAYL8CpULA=
 github.com/openkakutou/screenpack v0.7.0 h1:+AUoBS1hR6ldMlHCKLSwkp+YM8DSgGelhTBia8OSdcs=
 github.com/openkakutou/screenpack v0.7.0/go.mod h1:MC9xU1YkLRl3OYYH6u2PHiSaiRLLvd8IMdmq1NNnf1I=
 github.com/openkakutou/sff v0.10.1 h1:iyBuIqsaTzODJbm2mvdqZJ9J2fS64Brkq5wkPfWCd+0=
