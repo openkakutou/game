@@ -11,7 +11,7 @@ require (
 	github.com/openkakutou/screenpack v0.7.0
 	github.com/openkakutou/sff v0.10.1
 	github.com/openkakutou/snd v0.7.2
-	github.com/openkakutou/stage v0.18.0
+	github.com/openkakutou/stage v0.18.1
 	github.com/veandco/go-sdl2 v0.4.40
 	golang.org/x/image v0.48.0
 )
