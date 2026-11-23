@@ -152,7 +152,11 @@
           },
           "if": { "properties": { "kind": { "const": "ladder" } } },
           "then": { "required": ["count"] },
-          "else": { "not": { "anyOf": [{ "required": ["count"] }, { "required": ["final"] }] } }
+          "else": {
+            "not": {
+              "anyOf": [{ "required": ["count"] }, { "required": ["final"] }]
+            }
+          }
         },
         "onWin": {
           "enum": ["results", "nextOpponent", "continue", "gameOver"]
@@ -173,15 +177,24 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "select": { "$ref": "#/$defs/filter", "description": "What the character select screens show." },
-                "opponents": { "$ref": "#/$defs/filter", "description": "The pool a CPU opponent can come from." }
+                "select": {
+                  "$ref": "#/$defs/filter",
+                  "description": "What the character select screens show."
+                },
+                "opponents": {
+                  "$ref": "#/$defs/filter",
+                  "description": "The pool a CPU opponent can come from."
+                }
               }
             },
             "stages": {
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "select": { "$ref": "#/$defs/filter", "description": "What the stage select screens show." }
+                "select": {
+                  "$ref": "#/$defs/filter",
+                  "description": "What the stage select screens show."
+                }
               }
             }
           }
