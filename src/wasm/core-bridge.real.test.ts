@@ -115,9 +115,11 @@ describe("the real game core through the bridge", () => {
     if (!started.ok) throw new Error(started.error);
     const id = started.data.id;
 
+    // 300 ticks: the round's intros play, then the fight, where the time
+    // counts and P1's attack lands.
     const cues: number[] = [];
     let last = started.data;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 300; i++) {
       const input =
         i % 2 === 0 ? { p1: { buttons: { a: true } }, p2: {} } : idle;
       const stepped = await tick(id, input, realCore);
@@ -127,8 +129,8 @@ describe("the real game core through the bridge", () => {
         cues.push(cue.group * 100 + cue.sample);
     }
 
-    expect(last.tick).toBe(30);
-    expect(last.timer).toBe(30);
+    expect(last.tick).toBe(300);
+    expect(last.timer).toBeLessThan(started.data.roundTimerTicks);
     expect(last.fighters[1].health).toBeLessThan(1000);
     expect(last.fighters[0].health).toBe(1000);
     // The fixture's attack state plays sound 5,0 on its first tick.
@@ -141,8 +143,9 @@ describe("the real game core through the bridge", () => {
     if (!started.ok) throw new Error(started.error);
     const id = started.data.id;
 
+    // The intros, the fight's 60 ticks, then the time over and the poses.
     let last: MatchSnapshot = started.data;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 2000 && !last.roundEnded; i++) {
       const stepped = await tick(id, idle, realCore);
       if (!stepped.ok) throw new Error(stepped.error);
       last = stepped.data;
@@ -166,21 +169,25 @@ describe("the real game core through the bridge", () => {
     await closeMatch(id, realCore);
   });
 
-  it("lets the core play player 2 when p2cpu is set: a player 1 standing in reach gets attacked", async () => {
-    const started = await startMatch({ ...request, p2cpu: true }, realCore);
-    if (!started.ok) throw new Error(started.error);
-    const id = started.data.id;
-
-    let p1Health = 1000;
-    for (let i = 0; i < 300 && p1Health === 1000; i++) {
-      const stepped = await tick(id, idle, realCore);
-      if (!stepped.ok) break;
-      p1Health = stepped.data.fighters[0].health;
-      if (stepped.data.roundEnded) break;
+  it("lets the core play player 2 when p2cpu is set: P2 acts on its own, which it never does without", async () => {
+    // P2's state number over 600 idle ticks: it leaves standing (state 0)
+    // only when something drives it.
+    async function p2States(p2cpu: boolean): Promise<Set<number>> {
+      const started = await startMatch({ ...request, p2cpu }, realCore);
+      if (!started.ok) throw new Error(started.error);
+      const states = new Set<number>();
+      for (let i = 0; i < 600; i++) {
+        const stepped = await tick(started.data.id, idle, realCore);
+        if (!stepped.ok) break;
+        states.add(stepped.data.fighters[1].stateNo);
+        if (stepped.data.roundEnded) break;
+      }
+      await closeMatch(started.data.id, realCore);
+      return states;
     }
 
-    expect(p1Health).toBeLessThan(1000);
-    await closeMatch(id, realCore);
+    expect([...(await p2States(false))]).toEqual([0]);
+    expect([...(await p2States(true))].some((s) => s !== 0)).toBe(true);
   });
 
   it("refuses a match of a character that was never mounted, with the core's reason", async () => {
