@@ -241,14 +241,8 @@ type Match struct {
 	Bounds   stage.StageBoundaries
 	State    match.MatchState
 	Progress round.Progress
-	// AnimNo/AnimTime are each fighter's current animation and the ticks
-	// elapsed in it (engine Context.AnimElapsed), indexed by side.
-	AnimNo   [2]int
-	AnimTime [2]int
-	// AnimOwner is the side whose animations and sprites each fighter's
-	// animation is drawn from: its own, or its opponent's when it shows the
-	// thrower's (ChangeAnim2 in a custom state).
-	AnimOwner [2]match.Side
+	// Anim is each fighter's current animation, indexed by side.
+	Anim [2]Anim
 	// LastRound is the outcome of the round that just ended (OutcomeNone while fighting).
 	LastRound round.RoundResult
 	// Wins are the rounds each side won, in order, for the win icons.
@@ -461,12 +455,12 @@ func (m *Match) missingNote(i int) string {
 
 func (m *Match) syncAnim() {
 	for i := range m.runtimes {
-		m.AnimNo[i] = m.runtimes[i].Context.Anim
-		m.AnimTime[i] = m.runtimes[i].Context.AnimElapsed
-		m.AnimOwner[i] = match.Side(i)
-		if m.runtimes[i].Context.AnimFromOpponent {
-			m.AnimOwner[i] = match.Side(1 - i)
+		ctx := &m.runtimes[i].Context
+		owner := match.Side(i)
+		if ctx.AnimFromOpponent {
+			owner = match.Side(1 - i)
 		}
+		m.Anim[i] = Anim{No: ctx.Anim, Time: ctx.AnimElapsed, Owner: owner}
 	}
 }
 
@@ -531,7 +525,7 @@ func (m *Match) Step(in [2]input.TickInput) error {
 	}
 	m.Shake.Step()
 	for i := range m.AfterImages {
-		m.AfterImages[i].Record(Ghost{Anim: m.AnimNo[i], AnimTime: m.AnimTime[i], Position: m.State.Fighters[i].Position, Facing: m.State.Fighters[i].Facing})
+		m.AfterImages[i].Record(Ghost{Anim: m.Anim[i], Position: m.State.Fighters[i].Position, Facing: m.State.Fighters[i].Facing})
 	}
 	m.Sparks.Add(res.Events, [2]match.Facing{m.State.Fighters[0].Facing, m.State.Fighters[1].Facing})
 	if m.Setup.Training {

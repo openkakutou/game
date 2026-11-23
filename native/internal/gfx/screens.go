@@ -350,14 +350,17 @@ func (r *Renderer) drawProjectiles(f *game.Flow, groundY, camX float32) {
 // tinted as its step asks.
 func (r *Renderer) drawGhosts(f *game.Flow, side int, groundY, camX float32) {
 	r.ghosts = f.Match.Ghosts(side, r.ghosts)
-	fighter := f.Fighters[side]
 	for k := len(r.ghosts) - 1; k >= 0; k-- {
 		g := r.ghosts[k]
-		fr, ok := currentFrame(fighter.Char.Animations, g.Anim, g.AnimTime)
+		// A ghost of a thrown fighter is drawn from the thrower's
+		// animations and sprites, as the fighter is.
+		owner := int(g.Anim.Owner)
+		fighter := f.Fighters[owner]
+		fr, ok := currentFrame(fighter.Char.Animations, g.Anim.No, g.Anim.Time)
 		if !ok || fr.IsBlank() {
 			continue
 		}
-		t := r.sprites[spriteKey{side, fr.Group, fr.Image}]
+		t := r.sprites[spriteKey{owner, fr.Group, fr.Image}]
 		sp, found := spriteMeta(fighter, fr)
 		if t == nil || !found {
 			continue
@@ -705,8 +708,9 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 		drawn := false
 		// A thrown fighter may show its thrower's animation, drawn with the
 		// thrower's sprites.
-		owner := int(m.AnimOwner[i])
-		if fr, ok := currentFrame(f.Fighters[owner].Char.Animations, m.AnimNo[i], m.AnimTime[i]); ok && !fr.IsBlank() {
+		anim := m.Anim[i]
+		owner := int(anim.Owner)
+		if fr, ok := currentFrame(f.Fighters[owner].Char.Animations, anim.No, anim.Time); ok && !fr.IsBlank() {
 			if t := r.sprites[spriteKey{owner, fr.Group, fr.Image}]; t != nil {
 				if sp, ok := spriteMeta(f.Fighters[owner], fr); ok {
 					ox := float32(fr.X - sp.AxisX)

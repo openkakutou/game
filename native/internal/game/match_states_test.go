@@ -94,9 +94,9 @@ func requireTicksIdle(t *testing.T, m *Match) {
 			t.Fatalf("tick %d: %v", n+1, err)
 		}
 	}
-	for i := range m.AnimNo {
-		if m.AnimNo[i] != 0 || m.runtimes[i].Context.StateNo != 0 {
-			t.Errorf("side %d after ticks: state %d anim %d, want state 0 anim 0", i, m.runtimes[i].Context.StateNo, m.AnimNo[i])
+	for i := range m.Anim {
+		if m.Anim[i].No != 0 || m.runtimes[i].Context.StateNo != 0 {
+			t.Errorf("side %d after ticks: state %d anim %d, want state 0 anim 0", i, m.runtimes[i].Context.StateNo, m.Anim[i].No)
 		}
 	}
 }

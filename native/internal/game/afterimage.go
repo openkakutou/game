@@ -11,12 +11,21 @@ import (
 // maxAfterImageLength is Ikemen GO's MaxAimgLength.
 const maxAfterImageLength = 60
 
-// Ghost is one recorded frame of an afterimage: the fighter's animation and
-// how far into it, where and facing which way.
+// Anim is a fighter's animation as drawn: its number, the ticks elapsed in
+// it (engine Context.AnimElapsed) and the side whose animations and sprites
+// it is drawn from -- the fighter's own, or its opponent's when it shows
+// the thrower's (ChangeAnim2 in a custom state).
+type Anim struct {
+	No, Time int
+	Owner    match.Side
+}
+
+// Ghost is one recorded frame of an afterimage: the fighter's animation,
+// where and facing which way.
 type Ghost struct {
-	Anim, AnimTime int
-	Position       match.Position
-	Facing         match.Facing
+	Anim     Anim
+	Position match.Position
+	Facing   match.Facing
 }
 
 // GhostDraw is a ghost to draw, tinted as a PalFX: colours multiplied by Mul

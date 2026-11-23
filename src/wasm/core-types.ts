@@ -22,13 +22,15 @@ export interface TickInput {
 /** How the round just played ended; "none" while it is still being fought. */
 export type RoundOutcome = "none" | "ko" | "doubleKo" | "timeout" | "draw";
 
-/** One fighter's state to draw: position in stage pixels (y up, 0 is the ground), animation to play and its elapsed ticks, health and power. */
+/** One fighter's state to draw: position in stage pixels (y up, 0 is the ground), animation to play, its elapsed ticks and the side whose animations and sprites it comes from, health and power. */
 export interface FighterSnapshot {
   x: number;
   y: number;
   facing: Facing;
   anim: number;
   animTime: number;
+  /** The fighter's own side, or its opponent's when it shows the thrower's animation (a thrown fighter, ChangeAnim2). */
+  animOwner: Side;
   stateNo: number;
   health: number;
   power: number;

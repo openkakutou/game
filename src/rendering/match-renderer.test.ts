@@ -99,6 +99,7 @@ function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
         facing: 1,
         anim: 0,
         animTime: 0,
+        animOwner: 0,
         stateNo: 0,
         health: 1000,
         power: 0,
@@ -109,6 +110,7 @@ function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
         facing: -1,
         anim: 0,
         animTime: 0,
+        animOwner: 1,
         stateNo: 0,
         health: 1000,
         power: 0,
@@ -826,6 +828,57 @@ describe("renderMatch", () => {
       expect(p2.canvasX).toBe(200 + 70 - 30);
       expect(p1.flipH).toBe(false);
       expect(p2.flipH).toBe(true);
+    });
+
+    it("draws a fighter showing its opponent's animation (a thrown fighter, ChangeAnim2) from the opponent's animations and sprite sheet", async () => {
+      const root = document.createElement("div");
+      const thrower = character();
+      thrower.animations.push({
+        number: 820,
+        frames: [
+          {
+            group: 9,
+            image: 0,
+            x: 0,
+            y: 0,
+            time: -1,
+            flip: "",
+            blend: "",
+            clsn1: [],
+            clsn2: [],
+          },
+        ],
+        loopStart: 0,
+      });
+      thrower.sprites[0].sprites.push({
+        group: 9,
+        image: 0,
+        width: 30,
+        height: 60,
+        axisX: 15,
+        axisY: 59,
+        palette: 0,
+      });
+      const start = startResponse();
+      if (!start.ok) throw new Error("fixture");
+      start.data.fighters[1] = {
+        ...start.data.fighters[1],
+        anim: 820,
+        animOwner: 0,
+      };
+      const options = baseOptions({ startMatch: vi.fn(async () => start) });
+      const input = baseInput();
+      input.player1.character = thrower;
+
+      await renderMatch(root, input, options);
+
+      const [, p2] = plan(options, 0);
+      expect(p2.kind).toBe("sprite");
+      expect(p2.axisX).toBe(15); // the thrower's sprite 9,0, not P2's 0,0 (20)
+      expect(options.resolveCharacterSprites).toHaveBeenCalledWith(
+        input.player1.sffBytes,
+        [[9, 0]],
+      );
     });
 
     it("redraws from the next snapshot's positions, not from the start", async () => {

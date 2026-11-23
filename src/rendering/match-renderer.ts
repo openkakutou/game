@@ -304,10 +304,12 @@ export async function renderMatch(
   // The latest state the core returned: what the next frame draws.
   let latest: MatchSnapshot = created.data;
 
+  // A thrown fighter may show its thrower's animation (ChangeAnim2): its
+  // frame, sprite sheet, cache and sprite metadata are the owner's.
   async function resolveFighterSprites(): Promise<[Frame, Frame]> {
-    const frames = latest.fighters.map((fighter, side) => {
+    const frames = latest.fighters.map((fighter) => {
       const animation = findAnimationByNumber(
-        characters[side].animations,
+        characters[fighter.animOwner].animations,
         fighter.anim,
       );
       return animation
@@ -322,8 +324,9 @@ export async function renderMatch(
     await Promise.all(
       frames.map((frame, side) => {
         if (frame.group < 0 || frame.image < 0) return Promise.resolve();
-        return characterCaches[side].resolveMissing(
-          sffBytesBySide[side],
+        const owner = latest.fighters[side].animOwner;
+        return characterCaches[owner].resolveMissing(
+          sffBytesBySide[owner],
           [[frame.group, frame.image]],
           deps.resolveCharacterSprites,
         );
@@ -388,11 +391,13 @@ export async function renderMatch(
         position: { x: latest.fighters[0].x, y: latest.fighters[0].y },
         facing: latest.fighters[0].facing,
         frame: frames[0],
+        owner: latest.fighters[0].animOwner,
       },
       {
         position: { x: latest.fighters[1].x, y: latest.fighters[1].y },
         facing: latest.fighters[1].facing,
         frame: frames[1],
+        owner: latest.fighters[1].animOwner,
       },
     ];
     const plan = buildMatchDrawPlan({

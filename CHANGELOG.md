@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- A thrown fighter showing its thrower's animation (kfm's throw, ChangeAnim2) is drawn with the thrower's sprites on the web too, and its afterimage in the desktop game, instead of the thrown character's own sprites with the same numbers.
 - On a high-resolution stage (localcoord wider than 320, such as a 1280x720 one) the fighters stay on screen and the camera follows them: the stage's camera, screen edges and bounds are taken into the fighters' 320-wide space, as Ikemen GO scales a stage by its localcoord. Found filming kfm on the Training stage.
 - A character missing a common state (walk, jump, get-hit…) or changing to a negative state behaves as in Ikemen GO instead of staying put (engine v2.76.0, v2.77.0).
 - Up-forward and up-back jump diagonally instead of straight up: a "$" command step (holdfwd, holdback) holds whatever else is held, as Ikemen GO (engine v2.75.0).

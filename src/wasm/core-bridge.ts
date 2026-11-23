@@ -231,6 +231,9 @@ function parseFighter(value: unknown, index: number): FighterSnapshot | string {
   if (value.facing !== 1 && value.facing !== -1) {
     return `fighter ${index} has no facing of 1 or -1`;
   }
+  if (!isSide(value.animOwner)) {
+    return `fighter ${index} has no animOwner of 0 or 1`;
+  }
   if ((value.health as number) < 0 || (value.power as number) < 0) {
     return `fighter ${index} has a negative health or power`;
   }

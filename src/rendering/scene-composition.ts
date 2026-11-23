@@ -253,6 +253,8 @@ export interface FighterRenderInput {
   position: Position;
   facing: Facing;
   frame: Frame;
+  /** The side whose sprites `frame` comes from: the fighter's own, or its thrower's (ChangeAnim2). */
+  owner: 0 | 1;
 }
 
 export interface BuildMatchDrawPlanInput {
@@ -321,13 +323,13 @@ export function buildMatchDrawPlan(
 
   const behindCommands = behind.map(buildElementCommand);
   const frontCommands = front.map(buildElementCommand);
-  const fighterCommands = input.fighters.map((fighter, side) =>
+  const fighterCommands = input.fighters.map((fighter) =>
     buildFighterDrawCommand(
       fighter.position,
       fighter.facing,
       fighter.frame,
-      input.fighterSpriteMetaByKey[side],
-      input.fighterPixelsByKey[side],
+      input.fighterSpriteMetaByKey[fighter.owner],
+      input.fighterPixelsByKey[fighter.owner],
       input.zOffset,
       input.localCoordWidth,
       input.cameraX,

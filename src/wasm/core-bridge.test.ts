@@ -66,6 +66,7 @@ function snapshotJSON(overrides: Record<string, unknown> = {}): string {
         facing: 1,
         anim: 0,
         animTime: 3,
+        animOwner: 0,
         stateNo: 0,
         health: 1000,
         power: 0,
@@ -76,6 +77,7 @@ function snapshotJSON(overrides: Record<string, unknown> = {}): string {
         facing: -1,
         anim: 0,
         animTime: 3,
+        animOwner: 1,
         stateNo: 0,
         health: 900,
         power: 150,
@@ -211,6 +213,26 @@ describe("tick", () => {
       expect(result.ok).toBe(false);
     },
   );
+
+  it("returns the side each fighter's animation is drawn from, and refuses a snapshot without one of 0 or 1", async () => {
+    const valid = JSON.parse(snapshotJSON());
+    valid.fighters[1].animOwner = 0;
+    core.tick.mockReturnValue(JSON.stringify(valid));
+    const thrown = await tick(4, { p1: {}, p2: {} }, loadOptions);
+    expect(thrown.ok).toBe(true);
+    if (!thrown.ok) return;
+    expect(thrown.data.fighters[1].animOwner).toBe(0);
+
+    for (const animOwner of [undefined, 2, -1]) {
+      const bad = JSON.parse(snapshotJSON());
+      bad.fighters[1].animOwner = animOwner;
+      core.tick.mockReturnValue(JSON.stringify(bad));
+      const refused = await tick(4, { p1: {}, p2: {} }, loadOptions);
+      expect(refused.ok).toBe(false);
+      if (refused.ok) return;
+      expect(refused.error).toContain("animOwner");
+    }
+  });
 
   it("returns an error when the core replies with something that is not JSON", async () => {
     core.tick.mockReturnValue("<html>");

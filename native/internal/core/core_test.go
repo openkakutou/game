@@ -213,8 +213,8 @@ func TestTick_SnapshotMatchesTheMatchItDrives(t *testing.T) {
 		s := m.State.Fighters[i]
 		if f["x"] != s.Position.X || f["y"] != s.Position.Y || f["health"] != float64(s.Health) ||
 			f["power"] != float64(s.Power) || f["stateNo"] != float64(s.StateNo) ||
-			f["anim"] != float64(m.AnimNo[i]) || f["animTime"] != float64(m.AnimTime[i]) {
-			t.Errorf("fighter %d = %v, match has %+v anim %d/%d", i, f, s, m.AnimNo[i], m.AnimTime[i])
+			f["anim"] != float64(m.Anim[i].No) || f["animTime"] != float64(m.Anim[i].Time) || f["animOwner"] != float64(m.Anim[i].Owner) {
+			t.Errorf("fighter %d = %v, match has %+v anim %+v", i, f, s, m.Anim[i])
 		}
 	}
 	// Pinned: 300 ticks of walking then attacking hurt P2 and not P1.
@@ -339,5 +339,19 @@ func TestTick_AllocatesOnlyTheResultString(t *testing.T) {
 	t.Logf("allocs: Tick %v, engine step alone %v", whole, engineOnly)
 	if whole > engineOnly+1 {
 		t.Errorf("Tick allocates %v per call, the engine step alone %v: the layer adds more than the result string", whole, engineOnly)
+	}
+}
+
+// A thrown fighter showing its thrower's animation (ChangeAnim2) is drawn
+// from the thrower's animations and sprites: the snapshot names that side.
+func TestSnapshot_CarriesTheSideEachAnimationIsDrawnFrom(t *testing.T) {
+	c := loaded(t)
+	id, _ := start(t, c, startReq)
+	s := c.matches[id]
+	s.match.Anim[1].Owner = 0
+	out := decode(t, s.snapshot(id))
+	f := out["fighters"].([]any)
+	if f[0].(map[string]any)["animOwner"] != 0.0 || f[1].(map[string]any)["animOwner"] != 0.0 {
+		t.Errorf("animOwner = %v, %v; want 0, 0 (P2 shows P1's animation)", f[0].(map[string]any)["animOwner"], f[1].(map[string]any)["animOwner"])
 	}
 }

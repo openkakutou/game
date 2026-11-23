@@ -134,7 +134,7 @@ func TestMatch_AnimOwnerFollowsChangeAnim2(t *testing.T) {
 	}
 	m.runtimes[1].Context.AnimFromOpponent = true
 	m.syncAnim()
-	if m.AnimOwner != [2]match.Side{match.SideP1, match.SideP1} {
-		t.Errorf("owners = %v, want P1 for both", m.AnimOwner)
+	if m.Anim[0].Owner != match.SideP1 || m.Anim[1].Owner != match.SideP1 {
+		t.Errorf("animations = %+v, want P1 owning both", m.Anim)
 	}
 }
