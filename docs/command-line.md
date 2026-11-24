@@ -28,8 +28,8 @@ The diagram shows what the game does with its arguments: two characters skip the
 | `<p1> <p2>` | The first two names, before any option, are player 1 and player 2. |
 | `-p1 <char>`, `-p2 <char>` | Player 1, player 2. |
 | `-p<n>.ai <level>` | Player 1 or 2 is played by the CPU at that level (Ikemen GO's 1 to 8) when it is above 0. |
-| `-p<n>.life <life>` | Player n's life for round 1, 1 to 1000. |
-| `-p<n>.power <power>` | Player n's power for round 1, 0 to 3000. |
+| `-p<n>.life <life>` | Player n's life for round 1, 1 or more; the character's life (its `[Data] life`) caps it. |
+| `-p<n>.power <power>` | Player n's power for round 1, 0 or more; the character's power (its `[Data] power`, 3000 unset) caps it. |
 | `-rounds <num>` | Rounds to win the match (default 2, so best of 3). |
 | `-time <num>` | Round time in seconds; `-1` for no limit (default 99). |
 | `-s <stage>` | The stage. Not found: the default stage is used, with a notice. |
