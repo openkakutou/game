@@ -118,8 +118,11 @@ sky=$(convert "$out/32-arcade-match.png" -format '%[hex:u.p{200,300}]' info:)
 [ "$sky" = "5A96E6" ] || { echo "the arcade match did not start on the stage: top-left pixel is $sky, want 5A96E6"; exit 1; }
 
 # 1b4. Training: the second mode of the main menu. Both fighters and the stage
-# are picked, the match starts at once (no setup, no VS screen) and runs (an
-# attack changes the picture); the
+# are picked, the match starts at once (no setup, no VS screen) and runs: P1's
+# attack (state 200) plays sound 5,0, which the fixture lacks, so the game logs
+# it. The log is checked, not the picture: the attack misses the distant
+# dummy and ends in 5 ticks, so a capture after it only differs when a HUD
+# animation happens to change phase (item 082). The
 # pause menu then offers Reset Positions and Dummy after Restart (the capture
 # is read by hand: Continue, Restart, Reset Positions, Dummy: Stand, ...).
 ./dist/openkakutou-linux-amd64 -content "$content" -width 960 -height 720 >"$out/training.log" 2>&1 &
@@ -128,13 +131,16 @@ sleep 2
 key Return; key Down Return                # title, Training
 key Return; key Right Return; key Return   # P1, P2 (the dummy), stage
 sleep 2; shot 33-training-match
-# A loaded machine can miss one press: up to 5 tries before failing (item 073).
+# A loaded machine can miss one press: up to 5 tries, each waiting up to 2 s
+# for the log line, before failing.
+attacked() { grep -q 'audio: skipping sound 5,0 of player 1' "$out/training.log"; }
 for try in 1 2 3 4 5; do
-  xdotool keydown f; sleep 1; xdotool keyup f; shot 34-training-match-attack
-  cmp -s "$out/33-training-match.png" "$out/34-training-match-attack.png" || break
-  [ "$try" = 5 ] && { echo "the Training match did not run"; exit 1; }
-  sleep 1
+  xdotool keydown f; sleep 0.2; xdotool keyup f
+  for wait in 1 2 3 4 5 6 7 8 9 10; do attacked && break; sleep 0.2; done
+  attacked && break
+  [ "$try" = 5 ] && { echo "the Training match did not run: no attack after 5 presses"; cat "$out/training.log"; exit 1; }
 done
+shot 34-training-match-attack
 key Escape; sleep 0.5; shot 35-training-pause
 [ "$(identify -format %k "$out/35-training-pause.png")" -gt 200 ] || { echo "35-training-pause: too few colours for the pause menu"; exit 1; }
 key Down Down Return; sleep 0.5            # Reset Positions: closes the menu
