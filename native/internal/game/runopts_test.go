@@ -51,8 +51,8 @@ func TestMaxPowerMode_FightersStartRoundOneWithFullPower(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := range 2 {
-		if got := m.State.Fighters[i].Power; got != MaxPower {
-			t.Errorf("side %d power = %d, want %d: max power mode wins over -p1.power", i, got, MaxPower)
+		if got := m.State.Fighters[i].Power; got != m.PowerMax[i] {
+			t.Errorf("side %d power = %d, want %d: max power mode wins over -p1.power", i, got, m.PowerMax[i])
 		}
 	}
 }

@@ -22,12 +22,10 @@ import (
 )
 
 // Placeholder gameplay constants. The web build plays through the same
-// core, so both targets simulate identically; web/hud keeps DefaultHealth
-// and MaxPower as its bar maxima.
+// core, so both targets simulate identically.
 const (
 	TickRateHz         = 60
 	DefaultHealth      = 1000
-	MaxPower           = 3000
 	DefaultGravity     = 0.5
 	DefaultComboWindow = 20
 	FallbackHalfWidth  = 200
@@ -250,6 +248,10 @@ type Match struct {
 	// LifeMax is each fighter's life, its character's [Data] life (Ikemen GO
 	// lifeMax): the life a round starts with and the bars' full length.
 	LifeMax [2]int
+	// PowerMax is each fighter's power cap, its character's [Data] power
+	// (Ikemen GO powerMax, engine Context.PowerMax): the power bars' full
+	// length.
+	PowerMax [2]int
 	// Sparks are the hit sparks being shown.
 	Sparks Sparks
 	// Shake is the screen shake (EnvShake, FallEnvShake).
@@ -336,6 +338,9 @@ func NewMatch(p1, p2 *Fighter, st *stage.Stage, setup Setup) (*Match, error) {
 	}
 	if err := m.reset(1); err != nil {
 		return nil, err
+	}
+	for i := range m.runtimes {
+		m.PowerMax[i] = m.runtimes[i].Context.PowerMax()
 	}
 	m.applyStart()
 	m.trackLife()
@@ -433,9 +438,10 @@ func (m *Match) applyStart() {
 			m.State.Fighters[i].Health = life
 			m.runtimes[i].Context.Health = life
 		}
-		power := start.Power
+		// Clamp(ocd.power, 0, powerMax), system.go:4426-4432.
+		power := min(start.Power, m.PowerMax[i])
 		if m.Setup.MaxPowerMode {
-			power = MaxPower
+			power = m.PowerMax[i]
 		}
 		if power > 0 {
 			m.State.Fighters[i].Power = power

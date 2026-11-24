@@ -2,6 +2,7 @@ package gfx
 
 import (
 	"fmt"
+	"github.com/openkakutou/engine/v2/evaluator"
 	"github.com/openkakutou/game/native/internal/bmfont"
 	"io/fs"
 	"os"
@@ -160,10 +161,10 @@ func lifeFraction(h, lifeMax int) float64 {
 func (l *lifebarHUD) draw(w *Window, f *game.Flow, faces [2]faceSprite) {
 	m := f.Match
 	l.step(m)
-	var power [2]float64
+	var power [2]powerLevel
 	var names [2]string
 	for i := range power {
-		power[i] = min(float64(m.State.Fighters[i].Power)/game.MaxPower, 1)
+		power[i] = powerLevel{value: float64(m.State.Fighters[i].Power), max: float64(m.PowerMax[i])}
 		names[i] = f.Fighters[i].Char.Name
 	}
 	l.paint(w, m.Ticks(), l.meters, power, names, timerText(f))
@@ -334,13 +335,27 @@ const sampleTimer = "99"
 func (l *lifebarHUD) drawSample(w *Window, ticks int) {
 	full := [2]lifebar.Meter{lifebar.NewMeter(), lifebar.NewMeter()}
 	full[0].Top, full[1].Top = 1, 1
-	l.paint(w, ticks, full, [2]float64{}, sampleNames, sampleTimer)
+	empty := powerLevel{max: evaluator.DefaultPowerMax}
+	l.paint(w, ticks, full, [2]powerLevel{empty, empty}, sampleNames, sampleTimer)
+}
+
+// powerLevel is a fighter's power and its power cap (PowerMax).
+type powerLevel struct {
+	value, max float64
+}
+
+// fraction is how full the power bar is, 0 to 1.
+func (p powerLevel) fraction() float64 {
+	if p.max <= 0 {
+		return 0
+	}
+	return min(max(p.value/p.max, 0), 1)
 }
 
 // paint draws the lifebar in Ikemen GO's order: layer by layer, life then
 // power bars, each one's backgrounds, trailing fill, front fill, top
 // (FightScreen.draw, fightscreen.go:5757).
-func (l *lifebarHUD) paint(w *Window, ticks int, life [2]lifebar.Meter, power [2]float64, names [2]string, timer string) {
+func (l *lifebarHUD) paint(w *Window, ticks int, life [2]lifebar.Meter, power [2]powerLevel, names [2]string, timer string) {
 	s := l.screen()
 	for layer := range 3 {
 		for i := range 2 {
@@ -348,8 +363,9 @@ func (l *lifebarHUD) paint(w *Window, ticks int, life [2]lifebar.Meter, power [2
 			l.drawBar(w, s, bar, layer, ticks, life[i].Top, life[i].Mid)
 		}
 		for i := range 2 {
-			bar := atValue(l.hud.Power[i].Bar, power[i]*game.MaxPower, game.MaxPower)
-			l.drawBar(w, s, bar, layer, ticks, float32(power[i]), float32(power[i]))
+			bar := atValue(l.hud.Power[i].Bar, min(power[i].value, power[i].max), power[i].max)
+			fill := float32(power[i].fraction())
+			l.drawBar(w, s, bar, layer, ticks, fill, fill)
 		}
 		for i := range 2 {
 			n := l.hud.Name[i]

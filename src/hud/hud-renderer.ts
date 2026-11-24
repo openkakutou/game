@@ -9,19 +9,9 @@
 import { onLocaleChange, t } from "../i18n/i18n.ts";
 import type { MatchSnapshot } from "../wasm/core-types.ts";
 
-/** Health a fighter starts a round with; a full lifebar. Mirrors `native/internal/game`'s `DefaultHealth`, which the core uses. */
-export const MAX_HEALTH = 1000;
-
-/** The power value of a full power bar. Mirrors `native/internal/game`'s `MaxPower`. */
-export const MAX_POWER = 3000;
-
 export interface HudOptions {
   /** The number of rounds the match is the best of, from the match setup. */
   bestOf: number;
-  /** The health value that reads as a 100% full lifebar. Defaults to `MAX_HEALTH`. */
-  maxHealth?: number;
-  /** The power value that reads as a 100% full power bar. Defaults to `MAX_POWER`. */
-  maxPower?: number;
 }
 
 interface HudRoundView {
@@ -33,6 +23,9 @@ interface HudRoundView {
 interface HudFighterView {
   health: number;
   power: number;
+  /** The fighter's character's life and power caps: a full bar. */
+  lifeMax: number;
+  powerMax: number;
   /** Health as a percentage of the max, clamped to [0, 100]. */
   healthPercent: number;
   /** Power as a percentage of the max, clamped to [0, 100]. */
@@ -135,9 +128,6 @@ function roundInfoEqual(a: HudRoundView, b: HudRoundView): boolean {
  * `renderMatch`).
  */
 export function createHud(options: HudOptions): Hud {
-  const maxHealth = options.maxHealth ?? MAX_HEALTH;
-  const maxPower = options.maxPower ?? MAX_POWER;
-
   const element = document.createElement("div");
   element.className = "hud";
 
@@ -231,7 +221,7 @@ export function createHud(options: HudOptions): Hud {
         players[side].healthFill,
         players[side].healthValueText,
         fighter.health,
-        maxHealth,
+        fighter.lifeMax,
         fighter.healthPercent,
       );
       renderBar(
@@ -239,7 +229,7 @@ export function createHud(options: HudOptions): Hud {
         players[side].powerFill,
         players[side].powerValueText,
         fighter.power,
-        maxPower,
+        fighter.powerMax,
         fighter.powerPercent,
       );
     }
@@ -270,12 +260,16 @@ export function createHud(options: HudOptions): Hud {
   function fighterView(fighter: {
     health: number;
     power: number;
+    lifeMax: number;
+    powerMax: number;
   }): HudFighterView {
     return {
       health: fighter.health,
       power: fighter.power,
-      healthPercent: clampPercent(fighter.health, maxHealth),
-      powerPercent: clampPercent(fighter.power, maxPower),
+      lifeMax: fighter.lifeMax,
+      powerMax: fighter.powerMax,
+      healthPercent: clampPercent(fighter.health, fighter.lifeMax),
+      powerPercent: clampPercent(fighter.power, fighter.powerMax),
     };
   }
 

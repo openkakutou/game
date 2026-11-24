@@ -113,6 +113,8 @@ func (s *session) appendFighter(b []byte, i int) []byte {
 	b = appendInt(b, "stateNo", f.StateNo)
 	b = appendInt(b, "health", f.Health)
 	b = appendInt(b, "power", f.Power)
+	b = appendInt(b, "lifeMax", s.match.LifeMax[i])
+	b = appendInt(b, "powerMax", s.match.PowerMax[i])
 	return append(b, '}')
 }
 

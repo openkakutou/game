@@ -103,6 +103,8 @@ function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
         stateNo: 0,
         health: 1000,
         power: 0,
+        lifeMax: 1000,
+        powerMax: 3000,
       },
       {
         x: 70,
@@ -114,6 +116,8 @@ function snapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
         stateNo: 0,
         health: 1000,
         power: 0,
+        lifeMax: 1000,
+        powerMax: 3000,
       },
     ],
     cues: [],

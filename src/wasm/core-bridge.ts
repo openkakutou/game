@@ -222,6 +222,8 @@ function parseFighter(value: unknown, index: number): FighterSnapshot | string {
     "stateNo",
     "health",
     "power",
+    "lifeMax",
+    "powerMax",
   ] as const;
   for (const key of numbers) {
     if (!isFiniteNumber(value[key])) {
@@ -236,6 +238,9 @@ function parseFighter(value: unknown, index: number): FighterSnapshot | string {
   }
   if ((value.health as number) < 0 || (value.power as number) < 0) {
     return `fighter ${index} has a negative health or power`;
+  }
+  if ((value.lifeMax as number) <= 0 || (value.powerMax as number) <= 0) {
+    return `fighter ${index} has no positive lifeMax and powerMax`;
   }
   return value as unknown as FighterSnapshot;
 }

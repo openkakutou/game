@@ -200,7 +200,7 @@ func QuickVersusFrom(cl CommandLine) (q QuickVersus, ok bool, notices []string, 
 		if life, given := intFlag(p+".life", func(n int) bool { return n >= 1 }, "1 or more (the character's life caps it)"); given {
 			q.Start[i].Life = life
 		}
-		if power, given := intFlag(p+".power", func(n int) bool { return n >= 0 && n <= MaxPower }, fmt.Sprintf("between 0 and %d", MaxPower)); given {
+		if power, given := intFlag(p+".power", func(n int) bool { return n >= 0 }, "0 or more (the character's power caps it)"); given {
 			q.Start[i].Power = power
 		}
 	}

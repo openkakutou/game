@@ -34,6 +34,9 @@ export interface FighterSnapshot {
   stateNo: number;
   health: number;
   power: number;
+  /** The character's life and power caps (its [Data] life and power): a full bar. */
+  lifeMax: number;
+  powerMax: number;
 }
 
 /** A sound a fighter triggered this tick (`PlaySnd`): the same (group, sample) reference its decoded sounds are keyed by. */

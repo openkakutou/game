@@ -3,18 +3,29 @@ import { initAppI18n } from "../i18n/i18n.ts";
 import type { MatchSnapshot } from "../wasm/core-types.ts";
 import { createHud } from "./hud-renderer.ts";
 
+interface FighterValues {
+  health: number;
+  power: number;
+  lifeMax?: number;
+  powerMax?: number;
+}
+
+// Each fighter carries its character's maxima; 1000 life and 3000 power
+// unless given.
 function snapshot(
   round: number,
-  fighters: [
-    { health: number; power: number },
-    { health: number; power: number },
-  ],
+  fighters: [FighterValues, FighterValues],
   wins: [number, number] = [0, 0],
 ) {
+  const withMaxima = (f: FighterValues) => ({
+    lifeMax: 1000,
+    powerMax: 3000,
+    ...f,
+  });
   return {
     round,
     wins,
-    fighters: [fighters[0], fighters[1]] as [
+    fighters: [withMaxima(fighters[0]), withMaxima(fighters[1])] as [
       MatchSnapshot["fighters"][0],
       MatchSnapshot["fighters"][1],
     ],
@@ -23,7 +34,7 @@ function snapshot(
 
 describe("createHud", () => {
   it("renders both players' health/power bars with the real placeholder ranges on the first update", () => {
-    const hud = createHud({ bestOf: 3, maxHealth: 1000, maxPower: 3000 });
+    const hud = createHud({ bestOf: 3 });
 
     hud.update(
       snapshot(
@@ -57,15 +68,15 @@ describe("createHud", () => {
     expect(p2Power?.getAttribute("aria-valuenow")).toBe("1500");
   });
 
-  it("uses a custom max health/power range when supplied, never a hardcoded 100", () => {
-    const hud = createHud({ bestOf: 1, maxHealth: 500, maxPower: 200 });
+  it("uses each fighter's own max health/power from the snapshot, never a hardcoded 100", () => {
+    const hud = createHud({ bestOf: 1 });
 
     hud.update(
       snapshot(
         1,
         [
-          { health: 250, power: 100 },
-          { health: 500, power: 200 },
+          { health: 250, power: 100, lifeMax: 500, powerMax: 200 },
+          { health: 500, power: 200, lifeMax: 500, powerMax: 200 },
         ],
         [0, 0],
       ),
@@ -79,6 +90,33 @@ describe("createHud", () => {
       ".hud__health-fill--1",
     ) as HTMLElement;
     expect(fill.style.width).toBe("50%");
+  });
+
+  it("reads a full bar at round start for a character whose life is not 1000, and fills power against its own power", () => {
+    const hud = createHud({ bestOf: 1 });
+
+    hud.update(
+      snapshot(1, [
+        { health: 1200, power: 3000, lifeMax: 1200, powerMax: 5000 },
+        { health: 800, power: 0, lifeMax: 800, powerMax: 3000 },
+      ]),
+    );
+
+    const fill = (selector: string) =>
+      (hud.element.querySelector(selector) as HTMLElement).style.width;
+    expect(fill(".hud__health-fill--1")).toBe("100%");
+    expect(fill(".hud__health-fill--2")).toBe("100%");
+    expect(fill(".hud__power-fill--1")).toBe("60%");
+    expect(
+      hud.element
+        .querySelector('[aria-label="Player 1 health"]')
+        ?.getAttribute("aria-valuemax"),
+    ).toBe("1200");
+    expect(
+      hud.element
+        .querySelector('[aria-label="Player 1 power"]')
+        ?.getAttribute("aria-valuemax"),
+    ).toBe("5000");
   });
 
   it("shows the current round number, each player's win count, and the best-of setting", () => {
@@ -166,7 +204,7 @@ describe("createHud", () => {
   });
 
   it("fills a bar to 100% at most and 0% at least, whatever value the snapshot carries", () => {
-    const hud = createHud({ bestOf: 3, maxHealth: 1000, maxPower: 3000 });
+    const hud = createHud({ bestOf: 3 });
 
     hud.update(
       snapshot(1, [
@@ -183,7 +221,7 @@ describe("createHud", () => {
   });
 
   it("fills a bar in proportion to the value over the max", () => {
-    const hud = createHud({ bestOf: 3, maxHealth: 1000, maxPower: 3000 });
+    const hud = createHud({ bestOf: 3 });
 
     hud.update(
       snapshot(1, [

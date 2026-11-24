@@ -70,6 +70,8 @@ function snapshotJSON(overrides: Record<string, unknown> = {}): string {
         stateNo: 0,
         health: 1000,
         power: 0,
+        lifeMax: 1000,
+        powerMax: 3000,
       },
       {
         x: 70,
@@ -81,6 +83,8 @@ function snapshotJSON(overrides: Record<string, unknown> = {}): string {
         stateNo: 0,
         health: 900,
         power: 150,
+        lifeMax: 1000,
+        powerMax: 3000,
       },
     ],
     cues: [{ side: 1, group: 5, sample: 0 }],
@@ -231,6 +235,22 @@ describe("tick", () => {
       expect(refused.ok).toBe(false);
       if (refused.ok) return;
       expect(refused.error).toContain("animOwner");
+    }
+  });
+
+  it("refuses a snapshot whose fighter has no positive lifeMax and powerMax", async () => {
+    for (const [key, value] of [
+      ["lifeMax", undefined],
+      ["lifeMax", 0],
+      ["powerMax", -1],
+    ] as const) {
+      const bad = JSON.parse(snapshotJSON());
+      bad.fighters[0][key] = value;
+      core.tick.mockReturnValue(JSON.stringify(bad));
+      const refused = await tick(4, { p1: {}, p2: {} }, loadOptions);
+      expect(refused.ok).toBe(false);
+      if (refused.ok) return;
+      expect(refused.error).toContain(key);
     }
   });
 

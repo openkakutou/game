@@ -355,3 +355,18 @@ func TestSnapshot_CarriesTheSideEachAnimationIsDrawnFrom(t *testing.T) {
 		t.Errorf("animOwner = %v, %v; want 0, 0 (P2 shows P1's animation)", f[0].(map[string]any)["animOwner"], f[1].(map[string]any)["animOwner"])
 	}
 }
+
+// The HUD fills each bar against the fighter's own maxima: the snapshot
+// carries the character's life and power caps.
+func TestSnapshot_CarriesEachFightersLifeAndPowerMaxima(t *testing.T) {
+	c := loaded(t)
+	id, _ := start(t, c, startReq)
+	s := c.matches[id]
+	s.match.LifeMax[1], s.match.PowerMax[1] = 1200, 5000
+	out := decode(t, s.snapshot(id))
+	f := out["fighters"].([]any)
+	p1, p2 := f[0].(map[string]any), f[1].(map[string]any)
+	if p1["lifeMax"] != 1000.0 || p1["powerMax"] != 3000.0 || p2["lifeMax"] != 1200.0 || p2["powerMax"] != 5000.0 {
+		t.Errorf("maxima = %v/%v, %v/%v; want 1000/3000, 1200/5000", p1["lifeMax"], p1["powerMax"], p2["lifeMax"], p2["powerMax"])
+	}
+}
