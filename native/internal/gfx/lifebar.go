@@ -3,6 +3,7 @@ package gfx
 import (
 	"fmt"
 	"github.com/openkakutou/engine/v2/evaluator"
+	"github.com/openkakutou/engine/v2/round"
 	"github.com/openkakutou/game/native/internal/bmfont"
 	"io/fs"
 	"os"
@@ -303,7 +304,7 @@ func (l *lifebarHUD) drawCalls(w *Window, f *game.Flow) {
 			l.drawElement(w, s, a.Element, pos, layer, shown.Elapsed)
 		}
 		if a.Text.Text != "" {
-			l.print(w, s, a.Text, pos, callText(a.Text.Text, f.Match.State.Round, winnerName(f)))
+			l.print(w, s, a.Text, pos, callText(a.Text.Text, f.Match.State.Round, winnerName(f.Fighters, f.Announcer.Result())))
 		}
 	}
 }
@@ -315,13 +316,17 @@ func callText(text string, roundNo int, winner string) string {
 	return strings.ReplaceAll(text, "%s", winner)
 }
 
-// winnerName is the name of the round's winner.
-func winnerName(f *game.Flow) string {
-	w := int(f.Announcer.Result().Winner)
-	if w < 0 || w >= len(f.Fighters) || f.Fighters[w].Char == nil {
+// winnerName is the name of the round's winner, "" when the round has none:
+// Winner is only set on a KO or a time over (round.RoundResult).
+func winnerName(fighters [2]*game.Fighter, r round.RoundResult) string {
+	if r.Outcome != round.OutcomeKO && r.Outcome != round.OutcomeTimeout {
 		return ""
 	}
-	return f.Fighters[w].Char.Name
+	w := int(r.Winner)
+	if w < 0 || w >= len(fighters) || fighters[w].Char == nil {
+		return ""
+	}
+	return fighters[w].Char.Name
 }
 
 // sampleNames and sampleTimer are the texts of the sample lifebar the

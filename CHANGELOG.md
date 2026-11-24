@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- In the desktop game, a round without a winner (a time over draw, a double KO) no longer puts player 1's name in a lifebar call whose text uses `%s`.
 - The power bars fill against each fighter's own power, its character's `[Data] power` (3000 unset), in the desktop game and on the web: a 5000-power character's bar no longer reads full at 3000. `-maxpowermode` fills it to that power and `-p<n>.power` is capped by it, as Ikemen GO.
 - On the web, the life bars fill against each fighter's own life (`[Data] life`), as the desktop game already did: a character whose life is not 1000 starts a round with a full bar.
 - A thrown fighter showing its thrower's animation (kfm's throw, ChangeAnim2) is drawn with the thrower's sprites on the web too, and its afterimage in the desktop game, instead of the thrown character's own sprites with the same numbers.
