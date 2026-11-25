@@ -26,7 +26,6 @@ import (
 const (
 	TickRateHz         = 60
 	DefaultHealth      = 1000
-	DefaultGravity     = 0.5
 	DefaultComboWindow = 20
 	FallbackHalfWidth  = 200
 	StartingOffset     = 70
@@ -477,7 +476,7 @@ func (m *Match) Step(in [2]input.TickInput) error {
 		return fmt.Errorf("match is already over")
 	}
 	m.tick++
-	cfg := engine.TickConfig{Bounds: &m.Bounds, Screen: m.Screen(), Gravity: DefaultGravity, Tick: m.tick, ComboWindow: DefaultComboWindow}
+	cfg := engine.TickConfig{Bounds: &m.Bounds, Screen: m.Screen(), Tick: m.tick, ComboWindow: DefaultComboWindow}
 	if m.clock != nil && m.clock.InputWait() {
 		in = [2]input.TickInput{} // the players' inputs wait (Ikemen GO inputWait)
 	}
