@@ -29,40 +29,19 @@ const (
 	packError
 )
 
+// packScreens maps the flow's screenpack screen names (Flow.PackScreen) to
+// the screens drawn here.
+var packScreens = map[string]packScreen{
+	"title": packTitle, "options": packOptions, "characterSelect": packSelect,
+	"stageSelect": packStage, "pause": packPause, "moveList": packMoveList,
+	"matchSetup": packSetup, "versus": packVersus, "results": packResult,
+	"continue": packContinue, "victory": packVictory, "error": packError,
+}
+
 // packScreenOf is the screenpack screen drawing f's screen: none for the
 // screens still drawn by the renderer itself. Pause is drawn over the match.
 func packScreenOf(f *game.Flow) packScreen {
-	switch f.Screen {
-	case game.ScreenTitle, game.ScreenMainMenu:
-		return packTitle
-	case game.ScreenOptions, game.ScreenOptionsGameplay, game.ScreenOptionsAudio, game.ScreenOptionsVideo,
-		game.ScreenOptionsControls, game.ScreenOptionsBindings, game.ScreenOptionsAppearance:
-		return packOptions
-	case game.ScreenSelect:
-		return packSelect
-	case game.ScreenStage:
-		return packStage
-	case game.ScreenSetup:
-		return packSetup
-	case game.ScreenVersus:
-		return packVersus
-	case game.ScreenResult:
-		return packResult
-	case game.ScreenContinue:
-		return packContinue
-	case game.ScreenVictory:
-		return packVictory
-	case game.ScreenError:
-		return packError
-	case game.ScreenMatch:
-		if f.MoveListOpen() {
-			return packMoveList
-		}
-		if f.Paused {
-			return packPause
-		}
-	}
-	return packNone
+	return packScreens[f.PackScreen()]
 }
 
 // drawPack draws a screenpack screen over the whole window, in pixels.
