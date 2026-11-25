@@ -71,7 +71,7 @@ func TestVersusMode_WalksSelectStageSetupVersusMatchResults(t *testing.T) {
 	if f.Screen != ScreenSetup {
 		t.Fatalf("screen=%v, want setup", f.Screen)
 	}
-	if s := f.Setup(); s.Rounds != 3 || s.TimeLimitSeconds != 99 || s.CPU != [2]bool{false, false} {
+	if s := f.Setup(); s.Rounds != 3 || s.TimeLimitSeconds != 99 || s.CPU() != [2]bool{false, false} {
 		t.Fatalf("setup preselects %+v, want the rules: 3 rounds, 99 seconds, no CPU", s)
 	}
 	f.Navigate(NavConfirm) // Start
@@ -187,7 +187,7 @@ func TestFlowWithoutMatchSetup_UsesTheRules(t *testing.T) {
 	if f.Screen != ScreenMatch {
 		t.Fatalf("screen=%v msg=%q, want the match straight after the stage", f.Screen, f.Message)
 	}
-	if s := f.Match.Setup; s.Rounds != 5 || s.TimeLimitSeconds != 45 || s.CPU != [2]bool{false, true} {
+	if s := f.Match.Setup; s.Rounds != 5 || s.TimeLimitSeconds != 45 || s.CPU() != [2]bool{false, true} {
 		t.Errorf("setup = %+v, want 5 rounds, 45 seconds, P2 CPU", s)
 	}
 	if f.cpus[0] != nil || f.cpus[1] == nil {
@@ -245,7 +245,7 @@ func TestMatchSetup_ControlCpuSideIsCPUDrivenWithoutARowAndHumanNever(t *testing
 	for range 4 {
 		h.Navigate(NavConfirm)
 	}
-	if h.cpus[1] != nil || h.Setup().CPU != [2]bool{false, false} {
+	if h.cpus[1] != nil || h.Setup().CPU() != [2]bool{false, false} {
 		t.Errorf("a human side must never be CPU-driven: %+v", h.Setup())
 	}
 }
@@ -324,7 +324,7 @@ func TestWatchMode_BothSidesCPUDrivenWithoutAPlayer2RowAndPreselectedFromTheRule
 	if f.Screen != ScreenSetup || f.HasPlayer2Row() {
 		t.Fatalf("screen=%v player2Row=%v, want setup without a Player 2 row", f.Screen, f.HasPlayer2Row())
 	}
-	if s := f.Setup(); s.Rounds != 3 || s.TimeLimitSeconds != 99 || s.CPU != [2]bool{true, true} {
+	if s := f.Setup(); s.Rounds != 3 || s.TimeLimitSeconds != 99 || s.CPU() != [2]bool{true, true} {
 		t.Fatalf("setup preselects %+v, want 3 rounds, 99 seconds, both CPU", s)
 	}
 	f.Navigate(NavUp)

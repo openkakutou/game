@@ -406,8 +406,8 @@ func TestArcade_BuiltInMode_FightsTheFixtureRivalThenVictory(t *testing.T) {
 		t.Fatalf("screen = %v, picks = %v, want the VS screen: fighter against rival", f.Screen, f.Picks)
 	}
 	f.Navigate(NavConfirm)
-	if f.Screen != ScreenMatch || !f.Setup().CPU[1] || f.Setup().CPU[0] {
-		t.Fatalf("screen = %v (%q), cpu = %v, want a match with the CPU on side 2", f.Screen, f.Message, f.Setup().CPU)
+	if f.Screen != ScreenMatch || !f.Setup().CPU()[1] || f.Setup().CPU()[0] {
+		t.Fatalf("screen = %v (%q), cpu = %v, want a match with the CPU on side 2", f.Screen, f.Message, f.Setup().CPU())
 	}
 	finishMatch(t, f, match.SideP1)
 	if f.Screen != ScreenVictory {

@@ -108,7 +108,7 @@ func (c *Core) StartMatch(req string) string {
 	if err != nil {
 		return fail("cannot load stage %q: %v", r.Stage, err)
 	}
-	setup := game.Setup{Rounds: r.Setup.Rounds, TimeLimitSeconds: r.Setup.TimeLimitSeconds, CPU: [2]bool{false, r.P2CPU}}
+	setup := game.Setup{Rounds: r.Setup.Rounds, TimeLimitSeconds: r.Setup.TimeLimitSeconds}
 	if r.P2CPU {
 		setup.AILevel[1] = game.DefaultAILevel
 	}

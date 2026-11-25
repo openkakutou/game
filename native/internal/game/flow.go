@@ -374,7 +374,13 @@ func (f *Flow) Setup() Setup {
 	}
 	sides := f.Mode.Rules.Sides
 	cpu := [2]bool{sides[0].Control == mode.ControlCPU, sides[1].Control == mode.ControlCPU || f.Player2CPU}
-	return Setup{Rounds: f.roundOpts[f.RoundIdx], TimeLimitSeconds: f.timeOpts[f.TimeIdx], CPU: cpu, Training: f.Mode.Rules.Training}
+	setup := Setup{Rounds: f.roundOpts[f.RoundIdx], TimeLimitSeconds: f.timeOpts[f.TimeIdx], Training: f.Mode.Rules.Training}
+	for i, isCPU := range cpu {
+		if isCPU {
+			setup.AILevel[i] = f.AILevel()
+		}
+	}
+	return setup
 }
 
 func wrap(i, delta, n int) int { return ((i+delta)%n + n) % n }
@@ -721,11 +727,6 @@ func (f *Flow) start(chars [2]Entry, se Entry) {
 		setup.Timings = round.Timings{StartWaitTime: r.StartWaitTime, CtrlTime: r.CtrlTime,
 			OverWaitTime: r.OverWaitTime, OverWinTime: r.OverWinTime, OverTime: r.OverTime}
 		setup.Slow = SlowMotion{Time: r.SlowTime, FadeTime: r.SlowFadeTime, Speed: float64(r.SlowSpeed)}
-	}
-	for i, cpu := range setup.CPU {
-		if cpu && setup.AILevel[i] <= 0 {
-			setup.AILevel[i] = f.AILevel()
-		}
 	}
 	m, err := NewMatch(f.Fighters[0], f.Fighters[1], st, setup)
 	if err != nil {

@@ -120,8 +120,6 @@ func LoadStage(fsys fs.FS, defName string) (*stage.Stage, error) {
 type Setup struct {
 	Rounds           int
 	TimeLimitSeconds int
-	// CPU makes the CPU opponent drive a side instead of its controls.
-	CPU [2]bool
 	// Start overrides each side's life and power at the start of the match.
 	Start [2]StartValues
 	// Training refills a fighter's life after a second without a hit and ends
@@ -131,6 +129,7 @@ type Setup struct {
 	MaxPowerMode bool
 	// AILevel is each CPU side's level, 1 to 8 (Ikemen GO's sys.aiLevel),
 	// given to its state machine for the AILevel trigger; 0 for a human side.
+	// A side with a level is driven by the CPU opponent.
 	AILevel [2]float64
 	// Timings are the round's announcement times, the lifebar's [Round]
 	// values; zero ones are Ikemen GO's defaults.
@@ -723,4 +722,9 @@ func (m *Match) NextRound() error {
 		return fmt.Errorf("match is already over")
 	}
 	return m.reset(m.State.Round + 1)
+}
+
+// CPU tells which sides the CPU opponent drives: those with an AI level.
+func (s Setup) CPU() [2]bool {
+	return [2]bool{s.AILevel[0] > 0, s.AILevel[1] > 0}
 }

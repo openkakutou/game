@@ -74,7 +74,7 @@ func TestQuickVersus_AILevelOfEachSide(t *testing.T) {
 	if !ok || err != nil {
 		t.Fatal(ok, err)
 	}
-	if s := q.Setup(); s.AILevel != [2]float64{0, 7} || s.CPU != [2]bool{false, true} {
+	if s := q.Setup(); s.AILevel != [2]float64{0, 7} || s.CPU() != [2]bool{false, true} {
 		t.Errorf("setup = %+v, want player 2 on the CPU at level 7", s)
 	}
 	if len(notices) != 0 {

@@ -166,7 +166,7 @@ func (c *setupRows) update(f *game.Flow) {
 		ui.Row{Label: "Time", Values: [2]string{limit}})
 	if hasP2 {
 		who := "Human"
-		if choice.CPU[1] {
+		if choice.CPU()[1] {
 			who = "CPU"
 		}
 		c.rows = append(c.rows, ui.Row{Label: "Player 2", Values: [2]string{who}})

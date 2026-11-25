@@ -82,7 +82,7 @@ func TestQuickVersusFrom_DefaultsAndOptions(t *testing.T) {
 	}
 	s := qv.Setup()
 	// -rounds is the rounds to win (main.lua:1110-1115, setMatchWins): 3 wins = best of 5.
-	if s.Rounds != 5 || s.TimeLimitSeconds != 60 || !s.CPU[1] || s.CPU[0] {
+	if s.Rounds != 5 || s.TimeLimitSeconds != 60 || !s.CPU()[1] || s.CPU()[0] {
 		t.Errorf("setup = %+v", s)
 	}
 	if s.Start[0].Life != 500 || s.Start[1].Power != 3000 || s.Start[1].Life != 0 {
@@ -93,7 +93,7 @@ func TestQuickVersusFrom_DefaultsAndOptions(t *testing.T) {
 	}
 
 	qv, _, _, _ = QuickVersusFrom(ParseArgs([]string{"kfm", "kfm"}))
-	if s := qv.Setup(); s.Rounds != 3 || s.TimeLimitSeconds != 99 || s.CPU != [2]bool{} {
+	if s := qv.Setup(); s.Rounds != 3 || s.TimeLimitSeconds != 99 || s.CPU() != [2]bool{} {
 		t.Errorf("defaults = %+v, want best of 3 (2 wins), 99 s, both human (Ikemen GO's defaults)", s)
 	}
 	qv, _, _, _ = QuickVersusFrom(ParseArgs([]string{"kfm", "kfm", "-time", "-1"}))

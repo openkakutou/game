@@ -408,7 +408,7 @@ func TestFlow_SetupHasPlayer2ControlRowDefaultingToHuman(t *testing.T) {
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
 	f.Navigate(NavConfirm)
-	if f.Screen != ScreenSetup || f.Setup().CPU[1] {
+	if f.Screen != ScreenSetup || f.Setup().CPU()[1] {
 		t.Fatalf("screen=%v setup=%+v, want setup with a human player 2", f.Screen, f.Setup())
 	}
 	if f.SetupRow != SetupRowStart {
@@ -416,11 +416,11 @@ func TestFlow_SetupHasPlayer2ControlRowDefaultingToHuman(t *testing.T) {
 	}
 	f.Navigate(NavUp) // player 2 control row
 	f.Navigate(NavRight)
-	if !f.Setup().CPU[1] {
+	if !f.Setup().CPU()[1] {
 		t.Error("Right on the Player 2 row should switch to CPU")
 	}
 	f.Navigate(NavLeft)
-	if f.Setup().CPU[1] {
+	if f.Setup().CPU()[1] {
 		t.Error("Left should switch back to Human")
 	}
 }
@@ -452,7 +452,7 @@ func TestFlow_CPUDrivesPlayer2IgnoringItsKeysAndSurvivesRematch(t *testing.T) {
 		t.Fatal("CPU controller missing during a CPU match")
 	}
 	f.Navigate(NavConfirm) // rematch keeps the choice
-	if f.Screen != ScreenMatch || !f.Setup().CPU[1] || f.cpus[1] == nil {
+	if f.Screen != ScreenMatch || !f.Setup().CPU()[1] || f.cpus[1] == nil {
 		t.Error("rematch must keep the CPU opponent")
 	}
 }

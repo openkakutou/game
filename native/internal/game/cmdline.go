@@ -120,8 +120,7 @@ type QuickVersus struct {
 	Stage  string // stage declaration; "" for the default stage
 	Wins   int    // rounds to win (-rounds)
 	Time   int    // round time in seconds, -1 for none (-time)
-	CPU    [2]bool
-	// AILevel is -p<n>.ai, the level of a CPU side.
+	// AILevel is -p<n>.ai, the level of a CPU side; 0 for a human side.
 	AILevel [2]float64
 	Start   [2]StartValues
 }
@@ -139,7 +138,7 @@ func (q QuickVersus) Setup() Setup {
 	if limit < 0 {
 		limit = 0
 	}
-	return Setup{Rounds: 2*q.Wins - 1, TimeLimitSeconds: limit, CPU: q.CPU, AILevel: q.AILevel, Start: q.Start}
+	return Setup{Rounds: 2*q.Wins - 1, TimeLimitSeconds: limit, AILevel: q.AILevel, Start: q.Start}
 }
 
 // handledFlags are the flags this game reads.
@@ -194,7 +193,6 @@ func QuickVersusFrom(cl CommandLine) (q QuickVersus, ok bool, notices []string, 
 	for i := range 2 {
 		p := fmt.Sprintf("-p%d", i+1)
 		if level, given := intFlag(p+".ai", func(n int) bool { return n >= 0 }, "an AI level, 0 for a human player"); given {
-			q.CPU[i] = level > 0
 			q.AILevel[i] = float64(level)
 		}
 		if life, given := intFlag(p+".life", func(n int) bool { return n >= 1 }, "1 or more (the character's life caps it)"); given {
