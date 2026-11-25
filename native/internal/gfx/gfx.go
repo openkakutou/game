@@ -436,15 +436,24 @@ func (w *Window) SavePNG(path string) error {
 	for y := 0; y < int(w.H); y++ {
 		copy(img.Pix[y*stride:(y+1)*stride], pix[(int(w.H)-1-y)*stride:(int(w.H)-y)*stride])
 	}
+	return writePNG(path, img)
+}
+
+// writePNG writes img to path, which must end in .png; any other path is
+// refused before the file is touched.
+func writePNG(path string, img image.Image) error {
+	if !strings.HasSuffix(path, ".png") {
+		return fmt.Errorf("capture path must end in .png")
+	}
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if !strings.HasSuffix(path, ".png") {
-		return fmt.Errorf("capture path must end in .png")
+	if err := png.Encode(f, img); err != nil {
+		f.Close()
+		return err
 	}
-	return png.Encode(f, img)
+	return f.Close()
 }
 
 // BeginShift moves everything drawn until EndShift down by dy virtual
