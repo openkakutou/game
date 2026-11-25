@@ -123,3 +123,24 @@ func TestAngleDrawn(t *testing.T) {
 		t.Errorf("no AngleDraw: %+v", at)
 	}
 }
+
+// A sprite's x offset from the fighter is its frame offset minus its axis;
+// facing left it is mirrored around the fighter: the sprite's far edge sits
+// as far on the other side.
+func TestSpriteOffsetX_MirrorsAroundTheFighterFacingLeft(t *testing.T) {
+	for _, c := range []struct {
+		frameX, width, axisX int
+		flip                 bool
+		want                 float32
+	}{
+		{0, 40, 20, false, -20},
+		{0, 40, 20, true, -20},
+		{5, 40, 10, false, -5},
+		{5, 40, 10, true, -35},
+		{0, 0, 0, true, 0},
+	} {
+		if got := spriteOffsetX(c.frameX, c.width, c.axisX, c.flip); got != c.want {
+			t.Errorf("spriteOffsetX(%d, %d, %d, %v) = %v, want %v", c.frameX, c.width, c.axisX, c.flip, got, c.want)
+		}
+	}
+}

@@ -255,6 +255,13 @@ func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 	gl.BindTexture(gl.TEXTURE_2D, t.id)
 	gl.Color4f(1, 1, 1, 1)
 	gl.DisableClientState(gl.COLOR_ARRAY)
+	texturedQuad(x, y, wd, ht, flip)
+	gl.EnableClientState(gl.COLOR_ARRAY)
+	gl.Disable(gl.TEXTURE_2D)
+}
+
+// texturedQuad draws the bound texture over x, y, wd, ht, mirrored when flip.
+func texturedQuad(x, y, wd, ht float32, flip bool) {
 	u0, u1 := float32(0), float32(1)
 	if flip {
 		u0, u1 = 1, 0
@@ -270,8 +277,6 @@ func (w *Window) SpriteSized(t *Texture, x, y, wd, ht float32, flip bool) {
 	gl.TexCoord2f(u0, 1)
 	gl.Vertex2f(x, y2)
 	gl.End()
-	gl.EnableClientState(gl.COLOR_ARRAY)
-	gl.Disable(gl.TEXTURE_2D)
 }
 
 // SpriteTinted is Sprite with its colours multiplied by mul and add added
@@ -291,25 +296,8 @@ func (w *Window) SpriteTintedSized(t *Texture, x, y, wd, ht float32, flip, addit
 	gl.Enable(gl.TEXTURE_2D)
 	gl.BindTexture(gl.TEXTURE_2D, t.id)
 	gl.DisableClientState(gl.COLOR_ARRAY)
-	u0, u1 := float32(0), float32(1)
-	if flip {
-		u0, u1 = 1, 0
-	}
-	quad := func() {
-		x2, y2 := x+wd, y+ht
-		gl.Begin(gl.QUADS)
-		gl.TexCoord2f(u0, 0)
-		gl.Vertex2f(x, y)
-		gl.TexCoord2f(u1, 0)
-		gl.Vertex2f(x2, y)
-		gl.TexCoord2f(u1, 1)
-		gl.Vertex2f(x2, y2)
-		gl.TexCoord2f(u0, 1)
-		gl.Vertex2f(x, y2)
-		gl.End()
-	}
 	gl.Color4f(mul[0], mul[1], mul[2], 1)
-	quad()
+	texturedQuad(x, y, wd, ht, flip)
 	if add != [3]float32{} {
 		gl.TexEnvi(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.COMBINE)
 		gl.TexEnvi(gl.TEXTURE_ENV, gl.COMBINE_RGB, gl.REPLACE)
@@ -318,7 +306,7 @@ func (w *Window) SpriteTintedSized(t *Texture, x, y, wd, ht float32, flip, addit
 		gl.TexEnvi(gl.TEXTURE_ENV, gl.SOURCE0_ALPHA, gl.TEXTURE)
 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE)
 		gl.Color4f(add[0], add[1], add[2], 1)
-		quad()
+		texturedQuad(x, y, wd, ht, flip)
 		if !additive {
 			gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 		}
@@ -366,21 +354,7 @@ func (w *Window) SpriteRotated(t *Texture, x, y, wd, ht float32, flip bool, blen
 	gl.BindTexture(gl.TEXTURE_2D, t.id)
 	gl.Color4f(1, 1, 1, alpha)
 	gl.DisableClientState(gl.COLOR_ARRAY)
-	u0, u1 := float32(0), float32(1)
-	if flip {
-		u0, u1 = 1, 0
-	}
-	x2, y2 := x+wd, y+ht
-	gl.Begin(gl.QUADS)
-	gl.TexCoord2f(u0, 0)
-	gl.Vertex2f(x, y)
-	gl.TexCoord2f(u1, 0)
-	gl.Vertex2f(x2, y)
-	gl.TexCoord2f(u1, 1)
-	gl.Vertex2f(x2, y2)
-	gl.TexCoord2f(u0, 1)
-	gl.Vertex2f(x, y2)
-	gl.End()
+	texturedQuad(x, y, wd, ht, flip)
 	gl.EnableClientState(gl.COLOR_ARRAY)
 	gl.Disable(gl.TEXTURE_2D)
 	gl.Color4f(1, 1, 1, 1)

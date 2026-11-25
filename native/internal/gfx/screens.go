@@ -320,10 +320,7 @@ func (r *Renderer) drawSparks(f *game.Flow, groundY, camX float32) {
 		flip := sp.Facing == match.FacingLeft
 		sx := VW/2 + float32(sp.X) - camX
 		sy := fighterScreenY(groundY, float32(sp.Y))
-		ox := float32(fr.X - axis[0])
-		if flip {
-			ox = -float32(fr.X) - float32(t.W-axis[0])
-		}
+		ox := spriteOffsetX(fr.X, t.W, axis[0], flip)
 		if additiveBlend(string(fr.Blend)) {
 			r.win.SpriteAdd(t, sx+ox, sy+float32(fr.Y-axis[1]), flip)
 			continue
@@ -366,10 +363,7 @@ func (r *Renderer) drawGhosts(f *game.Flow, side int, groundY, camX float32) {
 			continue
 		}
 		flip := g.Facing == match.FacingLeft
-		ox := float32(fr.X - sp.AxisX)
-		if flip {
-			ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
-		}
+		ox := spriteOffsetX(fr.X, sp.Width, sp.AxisX, flip)
 		sx := VW/2 + float32(g.Position.X) - camX
 		sy := fighterScreenY(groundY, float32(g.Position.Y))
 		r.win.SpriteTinted(t, sx+ox, sy+float32(fr.Y-sp.AxisY), flip, f.Match.AfterImages[side].Additive, g.Mul, g.Add)
@@ -483,10 +477,7 @@ func (r *Renderer) blit(t *Texture, fr air.Frame, axis [2]int, at placed, ground
 	kx, ky := float32(at.scale[0]), float32(at.scale[1])
 	sx := VW/2 + float32(at.pos.X) - camX
 	sy := fighterScreenY(groundY, float32(at.pos.Y))
-	ox := float32(fr.X - axis[0])
-	if flip {
-		ox = -float32(fr.X) - float32(t.W-axis[0])
-	}
+	ox := spriteOffsetX(fr.X, t.W, axis[0], flip)
 	x, y := sx+ox*kx, sy+float32(fr.Y-axis[1])*ky
 	w, h := float32(t.W)*kx, float32(t.H)*ky
 	blend, alpha := spriteBlend(at.trans, at.alpha, string(fr.Blend))
@@ -712,10 +703,7 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 		if fr, ok := currentFrame(f.Fighters[owner].Char.Animations, anim.No, anim.Time); ok && !fr.IsBlank() {
 			if t := r.sprites[spriteKey{owner, fr.Group, fr.Image}]; t != nil {
 				if sp, ok := spriteMeta(f.Fighters[owner], fr); ok {
-					ox := float32(fr.X - sp.AxisX)
-					if flip {
-						ox = -float32(fr.X) - float32(sp.Width-sp.AxisX)
-					}
+					ox := spriteOffsetX(fr.X, sp.Width, sp.AxisX, flip)
 					x, y := sx+ox, sy+float32(fr.Y-sp.AxisY)
 					trans, transAlpha := m.Trans(i)
 					blend, alpha := spriteBlend(trans, transAlpha, string(fr.Blend))
@@ -760,6 +748,16 @@ func (r *Renderer) drawMatch(f *game.Flow) {
 // fighterScreenY is the view row of a fighter at height y (the engine's Y
 // points up) over the ground line.
 func fighterScreenY(groundY, y float32) float32 { return groundY - y }
+
+// spriteOffsetX is how far right of the fighter a sprite of width, axis
+// axisX and frame offset frameX starts; facing left (flip) the sprite is
+// mirrored around the fighter.
+func spriteOffsetX(frameX, width, axisX int, flip bool) float32 {
+	if flip {
+		return -float32(frameX) - float32(width-axisX)
+	}
+	return float32(frameX - axisX)
+}
 
 func spriteMeta(fighter *game.Fighter, fr air.Frame) (sff.Sprite, bool) {
 	sp, err := fighter.Char.ResolveSprite(fr)
