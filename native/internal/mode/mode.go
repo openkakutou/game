@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -188,15 +187,6 @@ func (e *Error) Error() string {
 		return fmt.Sprintf("%s: %s", e.File, e.Reason)
 	}
 	return fmt.Sprintf("%s: %s: %s", e.File, e.Field, e.Reason)
-}
-
-// Load reads and validates the mode file at path.
-func Load(path string) (Mode, error) {
-	src, err := os.ReadFile(path)
-	if err != nil {
-		return Mode{}, &Error{File: path, Reason: err.Error()}
-	}
-	return Parse(path, src)
 }
 
 // Parse validates src, the JSONC text of the mode file named file.

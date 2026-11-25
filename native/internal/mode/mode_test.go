@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -135,18 +134,10 @@ func TestParse_NotJSON_ReturnsAnErrorNamingTheFile(t *testing.T) {
 	}
 }
 
-func TestLoad_ReadsAFileAndNamesItInErrors(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "x.jsonc")
-	if err := os.WriteFile(path, []byte(strings.Replace(valid, `"rounds": 3`, `"rounds": 0`, 1)), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, err := Load(path)
-	if err == nil || !strings.Contains(err.Error(), path) {
-		t.Fatalf("err = %v, want one naming %s", err, path)
-	}
-	if _, err := Load(filepath.Join(dir, "missing.jsonc")); err == nil {
-		t.Fatal("missing file: want an error")
+func TestParse_NamesTheFileInErrors(t *testing.T) {
+	_, err := Parse("modes/x.jsonc", []byte(strings.Replace(valid, `"rounds": 3`, `"rounds": 0`, 1)))
+	if err == nil || !strings.Contains(err.Error(), "modes/x.jsonc") {
+		t.Fatalf("err = %v, want one naming modes/x.jsonc", err)
 	}
 }
 

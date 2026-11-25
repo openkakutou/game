@@ -37,7 +37,6 @@ type Announcer struct {
 	koPhase, koTimer       int
 	winPhase, winTimer     int
 	outro                  bool
-	finish                 round.Outcome
 	result                 round.RoundResult
 	// lastIntro is the round clock's intro at the last tick.
 	lastIntro int
@@ -84,7 +83,7 @@ func (a *Announcer) Showing(lb *sharedlifebar.Lifebar) [4]Shown {
 		out[1] = Shown{CallFight, max(a.fightTimer-r.FightTime-1, 0)}
 	}
 	if a.koPhase == 1 {
-		out[2] = Shown{koCall(a.finish), max(a.koTimer-KOCallTime(lb, a.finish)-mugenKODelay-1, 0)}
+		out[2] = Shown{koCall(a.result.Outcome), max(a.koTimer-KOCallTime(lb, a.result.Outcome)-mugenKODelay-1, 0)}
 	}
 	if call := winCall(lb, a.result); a.winPhase == 1 && call != CallNone {
 		out[3] = Shown{call, max(a.winTimer-r.WinTime-1, 0)}
@@ -116,7 +115,7 @@ func (a *Announcer) Tick(lb *sharedlifebar.Lifebar, roundNo, intro int, result r
 		a.intro(lb, roundNo)
 	}
 	if a.fightPhase == 2 && intro < 0 && finish != round.OutcomeNone && !a.outro {
-		a.outro, a.finish, a.result = true, finish, result
+		a.outro, a.result = true, result
 		a.stepOutro(lb)
 	}
 }
@@ -214,13 +213,13 @@ func (a *Announcer) stepKO(lb *sharedlifebar.Lifebar) {
 	if a.koPhase >= 2 {
 		return
 	}
-	start := KOCallTime(lb, a.finish) + mugenKODelay
-	if a.koTimer == koSoundTime(lb, a.finish)+mugenKODelay {
-		a.queueSound(KOCall(lb, a.finish).Sound)
+	start := KOCallTime(lb, a.result.Outcome) + mugenKODelay
+	if a.koTimer == koSoundTime(lb, a.result.Outcome)+mugenKODelay {
+		a.queueSound(KOCall(lb, a.result.Outcome).Sound)
 	}
 	if a.koTimer >= start {
 		a.koPhase = 1
-		if ended(lb, KOCall(lb, a.finish), a.koTimer-start+1, false) {
+		if ended(lb, KOCall(lb, a.result.Outcome), a.koTimer-start+1, false) {
 			a.koPhase = 2
 		}
 	}

@@ -2,6 +2,7 @@ package game
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -71,9 +72,8 @@ func TestCommonSounds_MissingFileIsSilenceWithOneWarning(t *testing.T) {
 	if _, ok := c.Find(6, 0); ok {
 		t.Fatal("no common.snd: want not found")
 	}
-	warns := c.Warnings()
-	if len(warns) != 1 {
-		t.Fatalf("warnings = %q, want exactly one for the missing file", warns)
+	if err := c.Err(); err == nil || !strings.Contains(err.Error(), "cannot read common/common.snd") {
+		t.Fatalf("Err() = %v, want the missing file named", err)
 	}
 }
 
@@ -83,8 +83,8 @@ func TestCommonSounds_CorruptFileIsSilenceWithOneWarning(t *testing.T) {
 		t.Fatal("corrupt common.snd: want not found")
 	}
 	c.Find(5, 1)
-	if len(c.Warnings()) != 1 {
-		t.Fatalf("warnings = %q, want one", c.Warnings())
+	if err := c.Err(); err == nil || !strings.Contains(err.Error(), "not a sound file") {
+		t.Fatalf("Err() = %v, want the corrupt file reported", err)
 	}
 }
 
@@ -104,10 +104,21 @@ func TestFindCueSound_CommonCueReadsCommonFileNotTheFighter(t *testing.T) {
 	}
 	f := NewFlow(commonFS(t, raw), nil, nil, DefaultLoader(commonFS(t, raw), "common"), nil)
 	f.Fighters[0] = &Fighter{}
-	if _, ok := f.FindCueSound(Cue{Group: 5, Sample: 0, Common: true}); !ok {
-		t.Fatal("common cue 5,0 not found in common/common.snd")
+	if _, err := f.FindCueSound(Cue{Group: 5, Sample: 0, Common: true}); err != nil {
+		t.Fatalf("common cue 5,0: %v, want it found in common/common.snd", err)
 	}
-	if _, ok := f.FindCueSound(Cue{Group: 5, Sample: 0}); ok {
+	if _, err := f.FindCueSound(Cue{Group: 5, Sample: 0}); err == nil {
 		t.Fatal("a fighter without sounds must not play 5,0 from the common file")
+	}
+}
+
+// A common cue without a readable common.snd fails with why the file is
+// unusable, which the audio player prints, not just "no such sample".
+func TestFindCueSound_CommonCueWithoutTheFileSaysWhy(t *testing.T) {
+	fsys := commonFS(t, nil)
+	f := NewFlow(fsys, nil, nil, DefaultLoader(fsys, "common"), nil)
+	_, err := f.FindCueSound(Cue{Group: 5, Sample: 0, Common: true})
+	if err == nil || !strings.Contains(err.Error(), "cannot read common/common.snd") {
+		t.Fatalf("FindCueSound = %v, want the missing common.snd named", err)
 	}
 }

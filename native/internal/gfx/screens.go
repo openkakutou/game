@@ -631,12 +631,11 @@ func currentFrame(anims []air.Animation, animNo, animTime int) (air.Frame, bool)
 			continue
 		}
 		total := 0
-		for i, fr := range a.Frames {
+		for _, fr := range a.Frames {
 			if fr.Time < 0 {
 				return fr, true
 			}
 			total += fr.Time
-			_ = i
 		}
 		t := animTime
 		if t >= total {

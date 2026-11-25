@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
@@ -17,11 +18,12 @@ import (
 type CommonSounds struct {
 	fsys fs.FS
 	// name is the file read; "" is common/common.snd.
-	name     string
-	read     bool
-	data     []byte
-	sounds   map[soundKey]character.Sound
-	warnings []string
+	name   string
+	read   bool
+	data   []byte
+	sounds map[soundKey]character.Sound
+	// err is why the file cannot be used, nil until a lookup finds out.
+	err error
 }
 
 // NewCommonSounds returns the common sounds of fsys's common/ folder.
@@ -36,7 +38,7 @@ func NewSoundFile(fsys fs.FS, name string) *CommonSounds {
 }
 
 // Find returns the decoded common sample (group, sample). A missing or
-// unreadable file is silence: false, and one warning for the whole file.
+// unreadable file is silence: false, Err telling why.
 func (c *CommonSounds) Find(group, sample int) (character.Sound, bool) {
 	key := soundKey{group, sample}
 	if s, seen := c.sounds[key]; seen {
@@ -54,8 +56,9 @@ func (c *CommonSounds) Find(group, sample int) (character.Sound, bool) {
 	return s, len(s.PCM) > 0
 }
 
-// Warnings lists what went wrong reading the file, at most one entry.
-func (c *CommonSounds) Warnings() []string { return c.warnings }
+// Err is why the file cannot be used (missing, not a sound file), nil while
+// it can or before the first lookup.
+func (c *CommonSounds) Err() error { return c.err }
 
 func (c *CommonSounds) load() {
 	if c.read {
@@ -68,11 +71,11 @@ func (c *CommonSounds) load() {
 	}
 	data, err := fs.ReadFile(c.fsys, name)
 	if err != nil {
-		c.warnings = append(c.warnings, fmt.Sprintf("common sounds: cannot read %s: %v", name, err))
+		c.err = fmt.Errorf("cannot read %s: %w", name, err)
 		return
 	}
 	if err := checkSoundFile(data); err != nil {
-		c.warnings = append(c.warnings, fmt.Sprintf("common sounds: %s is not a sound file: %v", name, err))
+		c.err = fmt.Errorf("%s is not a sound file: %w", name, err)
 		return
 	}
 	c.data = data
@@ -88,17 +91,37 @@ func checkSoundFile(data []byte) error {
 	return err
 }
 
-// FindCueSound returns the sample a cue plays: from common/common.snd for a
-// common cue, from the cue's fighter otherwise.
-func (f *Flow) FindCueSound(c Cue) (character.Sound, bool) {
+// errNoSample is a cue whose sound file has no such sample.
+var errNoSample = errors.New("no such sample")
+
+// FindCueSound returns the sample a cue plays: from the lifebar's sound file
+// for a lifebar cue, from common/common.snd for a common cue, from the cue's
+// fighter otherwise. Not found, the error says why: the sound file cannot
+// be used, or it lacks the sample.
+func (f *Flow) FindCueSound(c Cue) (character.Sound, error) {
 	if c.Lifebar {
 		if f.Lifebar == nil || f.Lifebar.SoundFile == nil {
-			return character.Sound{}, false
+			return character.Sound{}, errors.New("the lifebar has no sound file")
 		}
-		return f.Lifebar.SoundFile.Find(c.Group, c.Sample)
+		return findIn(f.Lifebar.SoundFile, c)
 	}
 	if c.Common {
-		return f.CommonSounds.Find(c.Group, c.Sample)
+		return findIn(f.CommonSounds, c)
 	}
-	return f.Fighters[c.Side].FindSound(c.Group, c.Sample)
+	if s, ok := f.Fighters[c.Side].FindSound(c.Group, c.Sample); ok {
+		return s, nil
+	}
+	return character.Sound{}, errNoSample
+}
+
+// findIn looks c up in file, its error when the file cannot be used.
+func findIn(file *CommonSounds, c Cue) (character.Sound, error) {
+	s, ok := file.Find(c.Group, c.Sample)
+	if ok {
+		return s, nil
+	}
+	if file.Err() != nil {
+		return s, file.Err()
+	}
+	return s, errNoSample
 }

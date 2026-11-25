@@ -448,9 +448,9 @@ func (p *Player) requestChannel(c game.Cue) int {
 }
 
 func loadChunk(f *game.Flow, c game.Cue) (*mix.Chunk, error) {
-	snd, ok := f.FindCueSound(c)
-	if !ok {
-		return nil, fmt.Errorf("no such sample")
+	snd, err := f.FindCueSound(c)
+	if err != nil {
+		return nil, err
 	}
 	wav := game.WAVBytes(snd)
 	if wav == nil {

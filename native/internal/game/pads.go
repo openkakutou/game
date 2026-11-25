@@ -85,14 +85,6 @@ func (p *Pads) Has(player int) bool {
 	return player >= 0 && player < len(p.used) && p.used[player]
 }
 
-// ID returns the controller id assigned to the player.
-func (p *Pads) ID(player int) (int32, bool) {
-	if !p.Has(player) {
-		return 0, false
-	}
-	return p.ids[player], true
-}
-
 // Navs appends to dst the menu inputs newly pressed on the player's pad since
 // the previous call: directions from d-pad or stick, A confirm, B cancel, all
 // read from menu (the fixed menu buttons). Pause is menu's Start, except in a

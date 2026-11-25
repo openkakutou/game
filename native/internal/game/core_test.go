@@ -18,10 +18,16 @@ import (
 // host process, and the screen or sound device.
 var forbiddenImports = []string{"os", "io/ioutil", "github.com/veandco/go-sdl2", "github.com/go-gl"}
 
+// The core and the packages it imports (mode, lifebar, bmfont) read files
+// only through the fs.FS they are given, and draw nothing.
 func TestCore_ImportsNoFileAccessNorDrawing(t *testing.T) {
-	files, err := filepath.Glob("*.go")
-	if err != nil {
-		t.Fatal(err)
+	var files []string
+	for _, dir := range []string{".", "../mode", "../lifebar", "../bmfont"} {
+		found, err := filepath.Glob(filepath.Join(dir, "*.go"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, found...)
 	}
 	for _, name := range files {
 		if strings.HasSuffix(name, "_test.go") {

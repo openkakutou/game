@@ -18,10 +18,10 @@ func TestPads_FirstTwoControllersGoToP1ThenP2(t *testing.T) {
 	if slot, ok := p.Connect(3); !ok || slot != 1 {
 		t.Errorf("second pad: slot %d ok %v, want 1 true", slot, ok)
 	}
-	if id, ok := p.ID(0); !ok || id != 7 {
+	if id, ok := p.ids[0], p.Has(0); !ok || id != 7 {
 		t.Errorf("P1 pad = %d %v, want 7", id, ok)
 	}
-	if id, ok := p.ID(1); !ok || id != 3 {
+	if id, ok := p.ids[1], p.Has(1); !ok || id != 3 {
 		t.Errorf("P2 pad = %d %v, want 3", id, ok)
 	}
 }
@@ -33,10 +33,10 @@ func TestPads_ThirdControllerIsIgnored(t *testing.T) {
 	if _, ok := p.Connect(3); ok {
 		t.Error("third pad was assigned")
 	}
-	if id, _ := p.ID(0); id != 1 {
+	if id := p.ids[0]; id != 1 {
 		t.Errorf("P1 pad changed to %d", id)
 	}
-	if id, _ := p.ID(1); id != 2 {
+	if id := p.ids[1]; id != 2 {
 		t.Errorf("P2 pad changed to %d", id)
 	}
 }
@@ -90,9 +90,6 @@ func TestPads_NoPadsMeansNoPlayerHasOne(t *testing.T) {
 	var p Pads
 	if p.Has(0) || p.Has(1) {
 		t.Error("empty Pads reports a pad")
-	}
-	if _, ok := p.ID(0); ok {
-		t.Error("empty Pads returns an id")
 	}
 	if p.Has(-1) || p.Has(2) {
 		t.Error("out of range player reports a pad")
